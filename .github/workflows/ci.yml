@@ -12,8 +12,8 @@ jobs:
       # O prisma generate (postinstall) não conecta no banco; a URL só precisa existir.
       DATABASE_URL: postgres://ci:ci@localhost:5432/ci
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
