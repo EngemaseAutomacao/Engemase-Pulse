@@ -1,0 +1,145 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Tema "Ocean Deep" (identidade Engemase): superfícies azul-marinho e destaque
+ * turquesa. A interface é sempre escura — o <html> leva a classe .dark.
+ * Cada cliente pode trocar --primary / --accent-brand (ver TenantTheme).
+ */
+
+@theme inline {
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-sora), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", "SFMono-Regular", Menlo, monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  --color-brand-accent: var(--brand-accent);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  --radius: 0.75rem;
+
+  --background: #0a1c33;
+  --foreground: #e6f1f5;
+  --card: #0f2743;
+  --card-foreground: #e6f1f5;
+  --popover: #10294a;
+  --popover-foreground: #e6f1f5;
+  --primary: #5cbdb9;
+  --primary-foreground: #0c2340;
+  --brand-accent: #38bdf8;
+  --secondary: rgb(255 255 255 / 0.06);
+  --secondary-foreground: #e6f1f5;
+  --muted: rgb(255 255 255 / 0.05);
+  --muted-foreground: rgb(230 241 245 / 0.6);
+  --accent: rgb(92 189 185 / 0.12);
+  --accent-foreground: #eaf7f6;
+  --destructive: #ff6b6b;
+  --success: #34d399;
+  --warning: #fbbf24;
+  --info: #38bdf8;
+  --border: rgb(255 255 255 / 0.08);
+  --input: rgb(255 255 255 / 0.12);
+  --ring: #5cbdb9;
+
+  /*
+   * Séries dos gráficos, sempre nesta ordem (L1, L2, L3, total/média).
+   * Validadas contra o fundo #0f2743: daltonismo (ΔE ≥ 8), visão normal
+   * (ΔE ≥ 15) e contraste ≥ 3:1. Não mudam com as cores do cliente.
+   */
+  --chart-1: #3987e5;
+  --chart-2: #d95926;
+  --chart-3: #199e70;
+  --chart-4: #c98500;
+  --chart-5: #9085e9;
+
+  --sidebar: #0c2340;
+  --sidebar-foreground: #e6f1f5;
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: rgb(92 189 185 / 0.12);
+  --sidebar-accent-foreground: #eaf7f6;
+  --sidebar-border: rgb(255 255 255 / 0.08);
+  --sidebar-ring: var(--ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-heading);
+    letter-spacing: -0.01em;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+/* Cartão com leve profundidade, usado nos painéis. */
+@utility surface {
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 6px 24px -12px rgb(0 0 0 / 0.55);
+}
+
+/* Números de medição alinhados (largura fixa dos dígitos). */
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}

@@ -1,0 +1,318 @@
+// Banco principal: cadastros (clientes, unidades, medidores), usuários e sessões.
+// As leituras dos multimedidores NÃO ficam aqui — ficam no InfluxDB de cada unidade.
+//
+// Fluxo de alteração:  editar este arquivo  →  npm run db:migrate -- --name <descricao>
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// Papel do usuário dentro de um cliente.
+enum Role {
+  ADMIN
+  OPERATOR
+  VIEWER
+}
+
+/// De onde vêm as leituras dos medidores de uma unidade.
+enum TelemetrySource {
+  /// InfluxDB 2.x alimentado pelo gateway RS485.
+  INFLUXDB
+  /// Dados gerados pelo próprio sistema (demonstração e desenvolvimento).
+  SIMULATED
+}
+
+// ---------------------------------------------------------------------------
+// Clientes
+// ---------------------------------------------------------------------------
+
+model Tenant {
+  id           String   @id @default(uuid()) @db.Uuid
+  /// Identificador na URL: /app/<slug> e /login/<slug>.
+  slug         String   @unique
+  name         String
+  /// CNPJ (somente dígitos).
+  document     String?
+  active       Boolean  @default(true)
+  primaryColor String   @default("#5cbdb9") @map("primary_color")
+  accentColor  String   @default("#38bdf8") @map("accent_color")
+  loginTagline String?  @map("login_tagline")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  logo        TenantLogo?
+  sites       Site[]
+  memberships Membership[]
+  alarmRules  AlarmRule[]
+  alarms      Alarm[]
+
+  @@map("tenants")
+}
+
+/// Logo do cliente, separado da tabela principal para não trafegar bytes à toa.
+model TenantLogo {
+  tenantId  String   @id @map("tenant_id") @db.Uuid
+  data      Bytes
+  mimeType  String   @map("mime_type")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("tenant_logos")
+}
+
+// ---------------------------------------------------------------------------
+// Unidades (cada uma com sua fonte de telemetria)
+// ---------------------------------------------------------------------------
+
+model Site {
+  id       String  @id @default(uuid()) @db.Uuid
+  tenantId String  @map("tenant_id") @db.Uuid
+  name     String
+  address  String?
+  city     String?
+  state    String?
+  /// Fuso usado para agrupar consumo por hora/dia.
+  timezone String  @default("America/Sao_Paulo")
+
+  telemetrySource      TelemetrySource @default(INFLUXDB) @map("telemetry_source")
+  influxUrl            String?         @map("influx_url")
+  influxOrg            String?         @map("influx_org")
+  influxBucket         String?         @map("influx_bucket")
+  /// Bucket com médias horárias (opcional). Usado em históricos longos e consumo diário/mensal.
+  influxRollupBucket   String?         @map("influx_rollup_bucket")
+  /// Token cifrado com AES-256-GCM (APP_SECRET). Nunca sai do servidor.
+  influxTokenEncrypted String?         @map("influx_token_encrypted")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  meters Meter[]
+
+  @@unique([tenantId, name])
+  @@map("sites")
+}
+
+// ---------------------------------------------------------------------------
+// Multimedidores
+// ---------------------------------------------------------------------------
+
+model Meter {
+  id     String @id @default(uuid()) @db.Uuid
+  siteId String @map("site_id") @db.Uuid
+  /// Identificação curta na planta, ex.: "MM-01".
+  tag    String
+  name   String
+
+  location      String?
+  manufacturer  String?
+  model         String?
+  serialNumber  String? @map("serial_number")
+  /// Endereço Modbus do medidor no barramento RS485 (informativo).
+  modbusAddress Int?    @map("modbus_address")
+  /// Relações de TC e TP, ex.: "200/5" (informativo).
+  ctRatio       String? @map("ct_ratio")
+  ptRatio       String? @map("pt_ratio")
+
+  /// `_measurement` onde o gateway grava as leituras deste medidor.
+  influxMeasurement String  @map("influx_measurement")
+  /// Filtro opcional por tag, quando vários medidores dividem o mesmo measurement.
+  influxTagKey      String? @map("influx_tag_key")
+  influxTagValue    String? @map("influx_tag_value")
+
+  active    Boolean  @default(true)
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  site       Site        @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  alarmRules AlarmRule[]
+  alarms     Alarm[]
+
+  @@unique([siteId, tag])
+  @@map("meters")
+}
+
+// ---------------------------------------------------------------------------
+// Usuários, vínculos e sessões
+// ---------------------------------------------------------------------------
+
+model User {
+  id              String    @id @default(uuid()) @db.Uuid
+  /// Sempre gravado em minúsculas.
+  email           String    @unique
+  name            String
+  passwordHash    String    @map("password_hash")
+  /// Equipe da plataforma: acesso a todos os clientes e à administração.
+  isPlatformAdmin Boolean   @default(false) @map("is_platform_admin")
+  active          Boolean   @default(true)
+  lastLoginAt     DateTime? @map("last_login_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  memberships        Membership[]
+  sessions           Session[]
+  pushSubscriptions  PushSubscription[]
+  acknowledgedAlarms Alarm[]
+
+  @@map("users")
+}
+
+model Membership {
+  userId    String   @map("user_id") @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  role      Role     @default(VIEWER)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([userId, tenantId])
+  @@index([tenantId])
+  @@map("memberships")
+}
+
+/// O id é o SHA-256 do token do cookie; o token em si nunca é gravado.
+model Session {
+  id        String   @id
+  userId    String   @map("user_id") @db.Uuid
+  expiresAt DateTime @map("expires_at")
+  userAgent String?  @map("user_agent")
+  ip        String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+/// Tentativas de login, para limitar força bruta por e-mail.
+model LoginAttempt {
+  id        BigInt   @id @default(autoincrement())
+  email     String
+  ip        String?
+  success   Boolean
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([email, createdAt])
+  @@map("login_attempts")
+}
+
+/// Registro das alterações feitas na administração.
+model AuditLog {
+  id         BigInt   @id @default(autoincrement())
+  actorId    String?  @map("actor_id") @db.Uuid
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String?  @map("entity_id")
+  details    Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ---------------------------------------------------------------------------
+// Alarmes
+// ---------------------------------------------------------------------------
+
+enum AlarmSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+enum AlarmRuleKind {
+  /// Um campo passou de um limite (ex.: Total_kW acima de 500).
+  THRESHOLD
+  /// O medidor ficou sem enviar leituras por mais de N minutos.
+  OFFLINE
+}
+
+enum Comparison {
+  ABOVE
+  BELOW
+}
+
+/// Regra de alarme do cliente. Sem medidor = vale para todos os medidores do cliente.
+model AlarmRule {
+  id         String        @id @default(uuid()) @db.Uuid
+  tenantId   String        @map("tenant_id") @db.Uuid
+  meterId    String?       @map("meter_id") @db.Uuid
+  name       String
+  kind       AlarmRuleKind
+  /// Campo do medidor (THRESHOLD).
+  field      String?
+  comparison Comparison?
+  /// Limite do campo (THRESHOLD) ou minutos sem leitura (OFFLINE).
+  threshold  Float
+  severity   AlarmSeverity @default(WARNING)
+  enabled    Boolean       @default(true)
+  createdAt  DateTime      @default(now()) @map("created_at")
+  updatedAt  DateTime      @updatedAt @map("updated_at")
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  meter  Meter?  @relation(fields: [meterId], references: [id], onDelete: Cascade)
+  alarms Alarm[]
+
+  @@index([tenantId])
+  @@map("alarm_rules")
+}
+
+/// Ocorrência de alarme: abre quando a regra dispara e fecha quando a condição some.
+model Alarm {
+  id               String        @id @default(uuid()) @db.Uuid
+  tenantId         String        @map("tenant_id") @db.Uuid
+  meterId          String        @map("meter_id") @db.Uuid
+  ruleId           String?       @map("rule_id") @db.Uuid
+  severity         AlarmSeverity
+  title            String
+  message          String
+  /// Valor que disparou o alarme (THRESHOLD).
+  value            Float?
+  startedAt        DateTime      @default(now()) @map("started_at")
+  clearedAt        DateTime?     @map("cleared_at")
+  acknowledgedAt   DateTime?     @map("acknowledged_at")
+  acknowledgedById String?       @map("acknowledged_by_id") @db.Uuid
+  /// "regra:medidor" enquanto o alarme está aberto; null ao normalizar. A unicidade
+  /// garante no máximo um alarme aberto por regra e medidor, mesmo com avaliações simultâneas.
+  openKey          String?       @unique @map("open_key")
+
+  tenant         Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  meter          Meter      @relation(fields: [meterId], references: [id], onDelete: Cascade)
+  rule           AlarmRule? @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+  acknowledgedBy User?      @relation(fields: [acknowledgedById], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, clearedAt])
+  @@index([tenantId, startedAt])
+  @@index([ruleId, meterId, clearedAt])
+  @@map("alarms")
+}
+
+// ---------------------------------------------------------------------------
+// Notificações push (um registro por navegador/aparelho)
+// ---------------------------------------------------------------------------
+
+model PushSubscription {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?  @map("user_agent")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("push_subscriptions")
+}

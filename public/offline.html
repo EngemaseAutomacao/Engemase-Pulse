@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0a1c33" />
+    <title>Sem conexão</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background: #0a1c33;
+        color: #e6f1f5;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        text-align: center;
+      }
+      main {
+        max-width: 360px;
+      }
+      img {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+      }
+      h1 {
+        font-size: 1.4rem;
+        margin: 20px 0 8px;
+      }
+      p {
+        margin: 0 0 24px;
+        color: rgb(230 241 245 / 0.65);
+        line-height: 1.5;
+      }
+      button {
+        appearance: none;
+        border: 0;
+        border-radius: 10px;
+        padding: 12px 20px;
+        font: inherit;
+        font-weight: 600;
+        background: #5cbdb9;
+        color: #0c2340;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src="/icons/icon-192.png" alt="" />
+      <h1>Você está sem conexão</h1>
+      <p>As leituras dos medidores precisam de internet. Assim que a conexão voltar, toque em tentar de novo.</p>
+      <button type="button" onclick="location.reload()">Tentar de novo</button>
+    </main>
+    <script>
+      window.addEventListener("online", () => location.reload());
+    </script>
+  </body>
+</html>

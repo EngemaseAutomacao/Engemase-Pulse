@@ -1,0 +1,168 @@
+"use client";
+
+import { useActionState, useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Field, FormMessage, SubmitButton, fieldProps } from "@/components/forms/field";
+import { SwitchField } from "@/components/forms/switch-field";
+import { useActionToast } from "@/components/forms/use-action-toast";
+import { BRAND } from "@/config/app";
+import { IDLE, type ActionState } from "@/lib/action-state";
+import { brandThemeStyle } from "@/lib/color";
+import { formatCnpj } from "@/lib/format";
+
+type TenantFormValues = {
+  name: string;
+  slug: string;
+  document: string | null;
+  primaryColor: string;
+  accentColor: string;
+  loginTagline: string | null;
+  active: boolean;
+};
+
+/** Gera um slug a partir do nome: "Indústria Acme S.A." → "industria-acme-s-a". */
+function slugify(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48);
+}
+
+export function TenantForm({
+  action,
+  tenant,
+}: {
+  action: (state: ActionState, formData: FormData) => Promise<ActionState>;
+  tenant?: TenantFormValues;
+}) {
+  const [state, formAction] = useActionState(action, IDLE);
+  useActionToast(state);
+
+  const [name, setName] = useState(state.values?.name ?? tenant?.name ?? "");
+  const [slug, setSlug] = useState(state.values?.slug ?? tenant?.slug ?? "");
+  const [slugTouched, setSlugTouched] = useState(Boolean(tenant));
+  const [primary, setPrimary] = useState(tenant?.primaryColor ?? BRAND.primaryColor);
+  const [accent, setAccent] = useState(tenant?.accentColor ?? BRAND.accentColor);
+  const error = (field: string) => state.fieldErrors?.[field];
+
+  return (
+    <form action={formAction} className="grid gap-6 lg:grid-cols-[1fr_18rem]">
+      <div className="grid gap-4">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Nome do cliente" htmlFor="name" error={error("name")}>
+            <Input
+              id="name"
+              name="name"
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (!slugTouched) setSlug(slugify(e.target.value));
+              }}
+              required
+              aria-invalid={error("name") ? true : undefined}
+            />
+          </Field>
+          <Field
+            label="Endereço (slug)"
+            htmlFor="slug"
+            error={error("slug")}
+            hint={slug ? `Login: /login/${slug}` : "Letras minúsculas, números e hífen."}
+          >
+            <Input
+              id="slug"
+              name="slug"
+              value={slug}
+              onChange={(e) => {
+                setSlugTouched(true);
+                setSlug(e.target.value.toLowerCase());
+              }}
+              required
+              aria-invalid={error("slug") ? true : undefined}
+            />
+          </Field>
+        </div>
+        <Field label="CNPJ" htmlFor="document" error={error("document")} hint="Opcional.">
+          <Input
+            {...fieldProps(state, "document", tenant?.document ? formatCnpj(tenant.document) : "")}
+            inputMode="numeric"
+            placeholder="00.000.000/0000-00"
+          />
+        </Field>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ColorField label="Cor principal" name="primaryColor" value={primary} onChange={setPrimary} error={error("primaryColor")} />
+          <ColorField label="Cor de destaque" name="accentColor" value={accent} onChange={setAccent} error={error("accentColor")} />
+        </div>
+        <Field label="Frase da tela de login" htmlFor="loginTagline" error={error("loginTagline")} hint="Opcional, até 160 caracteres.">
+          <Textarea {...fieldProps(state, "loginTagline", tenant?.loginTagline)} rows={2} maxLength={160} />
+        </Field>
+        <SwitchField
+          name="active"
+          label="Cliente ativo"
+          description="Clientes inativos não conseguem entrar no sistema."
+          defaultChecked={tenant?.active ?? true}
+        />
+        <FormMessage state={state} />
+        <SubmitButton className="w-fit">{tenant ? "Salvar alterações" : "Criar cliente"}</SubmitButton>
+      </div>
+
+      <BrandPreview name={name || "Nome do cliente"} primary={primary} accent={accent} />
+    </form>
+  );
+}
+
+function ColorField({
+  label,
+  name,
+  value,
+  onChange,
+  error,
+}: {
+  label: string;
+  name: string;
+  value: string;
+  onChange: (value: string) => void;
+  error?: string;
+}) {
+  return (
+    <Field label={label} htmlFor={name} error={error}>
+      <div className="flex gap-2">
+        <input
+          type="color"
+          aria-label={`${label} (seletor)`}
+          value={/^#[0-9a-f]{6}$/i.test(value) ? value : "#000000"}
+          onChange={(e) => onChange(e.target.value)}
+          className="h-8 w-10 shrink-0 cursor-pointer rounded-lg border border-input bg-transparent p-0.5"
+        />
+        <Input id={name} name={name} value={value} onChange={(e) => onChange(e.target.value)} className="font-mono" />
+      </div>
+    </Field>
+  );
+}
+
+/** Prévia de como o menu e os botões ficam com as cores escolhidas. */
+function BrandPreview({ name, primary, accent }: { name: string; primary: string; accent: string }) {
+  const valid = /^#[0-9a-f]{6}$/i.test(primary) && /^#[0-9a-f]{6}$/i.test(accent);
+  return (
+    <aside className="space-y-2">
+      <p className="text-sm font-medium">Prévia</p>
+      <div
+        className="space-y-3 rounded-xl border bg-sidebar p-4"
+        style={valid ? brandThemeStyle(primary, accent) : undefined}
+      >
+        <p className="truncate font-heading font-bold text-primary">{name}</p>
+        <div className="rounded-lg border border-primary/20 bg-accent px-3 py-2 text-sm text-primary">Visão geral</div>
+        <div className="px-3 text-sm text-muted-foreground">Medidores</div>
+        <div className="flex gap-2 pt-2">
+          <span className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground">Botão</span>
+          <span className="rounded-lg border px-3 py-1.5 text-xs" style={{ borderColor: accent, color: accent }}>
+            Destaque
+          </span>
+        </div>
+      </div>
+    </aside>
+  );
+}
