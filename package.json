@@ -17,7 +17,7 @@
     "db:seed": "tsx --conditions=react-server prisma/seed.ts",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate",
-    "vercel-build": "prisma generate && prisma migrate deploy && next build",
+    "vercel-build": "prisma generate && prisma migrate deploy && npm run db:seed -- --if-configured && next build",
     "icons": "node scripts/generate-icons.mjs"
   },
   "dependencies": {

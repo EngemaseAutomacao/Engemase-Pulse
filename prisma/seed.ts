@@ -2,8 +2,10 @@
  * Cria o primeiro administrador da plataforma e, com --demo, um cliente de
  * demonstração com unidades simuladas (não precisa de gateway nem InfluxDB).
  *
- *   npm run db:seed              → só o administrador
- *   npm run db:seed -- --demo    → administrador + cliente de demonstração
+ *   npm run db:seed                       → só o administrador
+ *   npm run db:seed -- --demo             → administrador + cliente de demonstração
+ *   npm run db:seed -- --if-configured    → idem ao primeiro, mas sem SEED_ADMIN_* só avisa e sai
+ *                                           (usado no build da Vercel, ver "vercel-build")
  *
  * Variáveis: DATABASE_URL, SEED_ADMIN_EMAIL, SEED_ADMIN_PASSWORD (e DEMO_USER_PASSWORD para --demo).
  */
@@ -15,7 +17,8 @@ import { hashPassword } from "../src/server/crypto";
 const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: required("DATABASE_URL") }) });
 
 function required(name: string): string {
-  const value = process.env[name]?.trim();
+  // Aspas coladas junto no valor (ex.: "a@b.com" no painel da Vercel) viram parte dele; tira.
+  const value = process.env[name]?.trim().replace(/^(["'])(.*)\1$/, "$2");
   if (!value) {
     console.error(`✖ Defina ${name} (no .env ou na linha de comando).`);
     process.exit(1);
@@ -24,15 +27,22 @@ function required(name: string): string {
 }
 
 async function seedAdmin() {
+  if (process.argv.includes("--if-configured") && !process.env.SEED_ADMIN_EMAIL?.trim()) {
+    console.log("• SEED_ADMIN_EMAIL não definida — criação do administrador ignorada.");
+    return;
+  }
   const email = required("SEED_ADMIN_EMAIL").toLowerCase();
-  const password = required("SEED_ADMIN_PASSWORD");
-  if (password.length < 10) throw new Error("SEED_ADMIN_PASSWORD precisa de pelo menos 10 caracteres");
 
+  // Conta existente nunca é alterada (nem a senha), então depois do primeiro deploy
+  // SEED_ADMIN_PASSWORD pode ser apagada da Vercel.
   const existing = await db.user.findUnique({ where: { email } });
   if (existing) {
     console.log(`• Administrador ${email} já existe — mantido.`);
     return;
   }
+
+  const password = required("SEED_ADMIN_PASSWORD");
+  if (password.length < 10) throw new Error("SEED_ADMIN_PASSWORD precisa de pelo menos 10 caracteres");
   await db.user.create({
     data: { email, name: "Administrador", passwordHash: await hashPassword(password), isPlatformAdmin: true },
   });

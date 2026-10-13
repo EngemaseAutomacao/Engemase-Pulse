@@ -83,7 +83,8 @@ Entre com `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` do `.env`. O cliente demo f
 ## Deploy na Vercel
 
 1. Suba o projeto para um repositório Git e importe na Vercel (framework detectado: Next.js).
-   O build usa o script `vercel-build`: gera o client, **aplica as migrations** e compila.
+   O build usa o script `vercel-build`: gera o client, **aplica as migrations**, cria o primeiro
+   administrador (passo 4) e compila.
 2. Em **Storage → Neon → Create**, escolha a região **São Paulo (aws-sa-east-1)** e conecte ao projeto.
    A região **não pode ser trocada depois**. A integração cria `DATABASE_URL` (com pool, usada pelo app)
    e `DATABASE_URL_UNPOOLED` (direta, usada nas migrations). As funções já rodam em São Paulo (`gru1`,
@@ -96,7 +97,14 @@ Entre com `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` do `.env`. O cliente demo f
    - `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (`mailto:seu@email`).
    - `CRON_SECRET` — texto aleatório longo (protege o avaliador de alarmes).
    - `SESSION_TTL_DAYS` (opcional, padrão 7).
-5. Faça o deploy e crie o primeiro administrador apontando para o banco de produção:
+   - `SEED_ADMIN_EMAIL` e `SEED_ADMIN_PASSWORD` (mín. 10 caracteres) — o primeiro administrador.
+     **Sem elas o banco fica sem nenhum usuário e todo login dá "E-mail ou senha incorretos."**
+5. Faça o deploy (ou **Redeploy**, se as variáveis foram adicionadas depois). O log do build mostra
+   `✔ Administrador criado: …`; entre em `/login` com esse e-mail e senha.
+
+   Uma conta que já existe nunca é alterada — mudar `SEED_ADMIN_PASSWORD` depois **não** troca a senha
+   (use *Minha conta*). Depois do primeiro login, troque a senha lá e apague `SEED_ADMIN_PASSWORD` da Vercel.
+   Para criar o administrador sem novo deploy, rode o seed da sua máquina apontando para o banco de produção:
 
    ```bash
    DATABASE_URL="postgres://…" SEED_ADMIN_EMAIL="voce@engemase.com.br" SEED_ADMIN_PASSWORD="…" npm run db:seed
