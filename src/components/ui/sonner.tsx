@@ -2,12 +2,14 @@
 
 import { Toaster as Sonner, type ToasterProps } from "sonner"
 import { CircleCheckIcon, InfoIcon, TriangleAlertIcon, OctagonXIcon, Loader2Icon } from "lucide-react"
+import { useTheme } from "@/components/theme/use-theme"
 
-// A interface é sempre escura, então o tema é fixo (sem next-themes).
-const Toaster = ({ theme = "dark", ...props }: ToasterProps) => {
+// Segue o tema escolhido na interface (ver src/lib/theme.ts), não só o do sistema.
+const Toaster = ({ ...props }: ToasterProps) => {
+  const { theme } = useTheme()
   return (
     <Sonner
-      theme={theme}
+      theme={theme ?? "system"}
       className="toaster group"
       icons={{
         success: (

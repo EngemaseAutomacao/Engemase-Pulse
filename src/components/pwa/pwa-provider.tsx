@@ -22,7 +22,7 @@ export function PwaProvider() {
   return (
     <div
       role="status"
-      className="fixed inset-x-0 bottom-0 z-50 flex items-center justify-center gap-2 bg-warning px-4 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] text-sm font-medium text-[#3d2b06]"
+      className="fixed inset-x-0 bottom-0 z-50 flex items-center justify-center gap-2 bg-[#fbbf24] px-4 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] text-sm font-medium text-[#3d2b06]"
     >
       <WifiOffIcon className="size-4" aria-hidden />
       Sem conexão — os dados na tela podem estar desatualizados.

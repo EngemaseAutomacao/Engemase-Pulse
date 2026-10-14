@@ -8,7 +8,8 @@ import { SwitchField } from "@/components/forms/switch-field";
 import { useActionToast } from "@/components/forms/use-action-toast";
 import { BRAND } from "@/config/app";
 import { IDLE, type ActionState } from "@/lib/action-state";
-import { brandThemeStyle } from "@/lib/color";
+import { BRAND_THEME_CLASS, brandThemeStyle } from "@/lib/color";
+import { cn } from "@/lib/utils";
 import { formatCnpj } from "@/lib/format";
 
 type TenantFormValues = {
@@ -143,26 +144,37 @@ function ColorField({
   );
 }
 
-/** Prévia de como o menu e os botões ficam com as cores escolhidas. */
+/** Prévia de como o menu e os botões ficam com as cores escolhidas, nos dois temas. */
 function BrandPreview({ name, primary, accent }: { name: string; primary: string; accent: string }) {
   const valid = /^#[0-9a-f]{6}$/i.test(primary) && /^#[0-9a-f]{6}$/i.test(accent);
   return (
     <aside className="space-y-2">
       <p className="text-sm font-medium">Prévia</p>
-      <div
-        className="space-y-3 rounded-xl border bg-sidebar p-4"
-        style={valid ? brandThemeStyle(primary, accent) : undefined}
-      >
-        <p className="truncate font-heading font-bold text-primary">{name}</p>
-        <div className="rounded-lg border border-primary/20 bg-accent px-3 py-2 text-sm text-primary">Visão geral</div>
-        <div className="px-3 text-sm text-muted-foreground">Medidores</div>
-        <div className="flex gap-2 pt-2">
-          <span className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground">Botão</span>
-          <span className="rounded-lg border px-3 py-1.5 text-xs" style={{ borderColor: accent, color: accent }}>
-            Destaque
-          </span>
-        </div>
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
+        {(["dark", "light"] as const).map((theme) => (
+          <div
+            key={theme}
+            className={cn("space-y-3 rounded-xl border bg-sidebar p-4 text-foreground", theme, BRAND_THEME_CLASS)}
+            style={valid ? brandThemeStyle(primary, accent) : undefined}
+          >
+            <p className="text-xs text-muted-foreground">
+              Tema {theme === "dark" ? "escuro" : "claro"}
+            </p>
+            <p className="truncate font-heading font-bold text-primary">{name}</p>
+            <div className="rounded-lg border border-primary/20 bg-accent px-3 py-2 text-sm text-primary">Visão geral</div>
+            <div className="px-3 text-sm text-muted-foreground">Medidores</div>
+            <div className="flex gap-2 pt-2">
+              <span className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground">Botão</span>
+              <span className="rounded-lg border px-3 py-1.5 text-xs" style={{ borderColor: accent, color: accent }}>
+                Destaque
+              </span>
+            </div>
+          </div>
+        ))}
       </div>
+      <p className="text-xs text-muted-foreground">
+        No tema claro, cores claras são escurecidas automaticamente para o texto continuar legível.
+      </p>
     </aside>
   );
 }

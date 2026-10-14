@@ -30,6 +30,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useInstallPrompt } from "@/components/pwa/pwa-provider";
+import { ThemeMenuItems } from "@/components/theme/theme-switcher";
 import { logout } from "@/app/login/actions";
 import { initials } from "@/lib/format";
 
@@ -178,6 +179,8 @@ function ShellLayout({
                       Instalar aplicativo
                     </DropdownMenuItem>
                   )}
+                  <DropdownMenuSeparator />
+                  <ThemeMenuItems />
                   <DropdownMenuSeparator />
                   <form action={logout}>
                     <DropdownMenuItem asChild>

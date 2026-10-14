@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { ArrowLeftRightIcon, BellIcon, ChartColumnIcon, GaugeIcon, LayoutDashboardIcon, ShieldIcon } from "lucide-react";
 import { AppShell, type NavSection } from "@/components/shell/app-shell";
 import { ShellSkeleton } from "@/components/shell/shell-skeleton";
-import { brandThemeStyle } from "@/lib/color";
+import { BRAND_THEME_CLASS, brandThemeStyle } from "@/lib/color";
 import { requireTenant } from "@/server/auth/dal";
 import { ROLE_LABEL } from "@/server/auth/permissions";
 import { tenantLogoUrl } from "@/server/branding";
@@ -50,7 +50,7 @@ async function TenantShell({
   const canSwitchTenant = user.isPlatformAdmin || user.memberships.length > 1;
 
   return (
-    <div style={brandThemeStyle(tenant.primaryColor, tenant.accentColor)}>
+    <div className={BRAND_THEME_CLASS} style={brandThemeStyle(tenant.primaryColor, tenant.accentColor)}>
       <AppShell
         brand={{
           name: tenant.name,

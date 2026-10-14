@@ -1,6 +1,7 @@
 import { PageContainer, PageHeader } from "@/components/shell/page";
 import { ROLE_LABEL, type AuthUser } from "@/server/auth/permissions";
 import { NotificationSettings } from "@/components/pwa/notification-settings";
+import { ThemeSwitcher } from "@/components/theme/theme-switcher";
 import { ChangePasswordForm } from "./change-password-form";
 
 /** Conteúdo de "Minha conta", usado na área do cliente e na administração. */
@@ -25,6 +26,13 @@ export function AccountPage({ user }: { user: AuthUser }) {
               : user.memberships.map((m) => `${m.tenantName} (${ROLE_LABEL[m.role]})`).join(", ") || "—"}
           </p>
         </div>
+      </section>
+      <section className="surface flex flex-wrap items-center justify-between gap-4 p-5">
+        <div>
+          <h2 className="font-semibold">Aparência</h2>
+          <p className="text-sm text-muted-foreground">Automático acompanha o tema claro ou escuro do aparelho.</p>
+        </div>
+        <ThemeSwitcher />
       </section>
       <section className="surface space-y-4 p-5" id="notificacoes">
         <h2 className="font-semibold">Notificações no celular e no computador</h2>

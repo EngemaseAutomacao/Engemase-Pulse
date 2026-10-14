@@ -1,7 +1,9 @@
 import Image from "next/image";
 import { ActivityIcon, BarChart3Icon, Building2Icon } from "lucide-react";
 import { APP_NAME, BRAND, COMPANY_NAME } from "@/config/app";
-import { brandThemeStyle } from "@/lib/color";
+import { ThemeSwitcher } from "@/components/theme/theme-switcher";
+import { BRAND_THEME_CLASS, brandThemeStyle } from "@/lib/color";
+import { cn } from "@/lib/utils";
 
 export type LoginBrand = {
   name: string;
@@ -31,7 +33,7 @@ const FEATURES = [
 export function LoginScreen({ brand, children }: { brand: LoginBrand; children: React.ReactNode }) {
   return (
     <main
-      className="grid min-h-dvh lg:grid-cols-[1.1fr_1fr]"
+      className={cn("grid min-h-dvh lg:grid-cols-[1.1fr_1fr]", BRAND_THEME_CLASS)}
       style={brandThemeStyle(brand.primaryColor, brand.accentColor)}
     >
       <section className="relative hidden overflow-hidden bg-sidebar p-12 lg:flex lg:flex-col lg:justify-between">
@@ -101,7 +103,8 @@ export function LoginScreen({ brand, children }: { brand: LoginBrand; children: 
         </p>
       </section>
 
-      <section className="flex items-center justify-center px-4 py-12 sm:px-8">
+      <section className="relative flex items-center justify-center px-4 py-12 sm:px-8">
+        <ThemeSwitcher compact className="absolute top-4 right-4" />
         <div className="w-full max-w-sm space-y-8">
           <div className="flex items-center gap-3 lg:hidden">
             {/* eslint-disable-next-line @next/next/no-img-element -- logo do cliente vem do banco */}
