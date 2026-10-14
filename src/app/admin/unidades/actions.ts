@@ -3,12 +3,23 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { errorState, validationError, type ActionState } from "@/lib/action-state";
-import { siteSchema } from "@/lib/validation";
-import { isNotFound, isUniqueViolation, requireAdminForAction } from "@/server/admin/guard";
+import { siteSchema, tariffSchema } from "@/lib/validation";
+import { isForeignKeyViolation, isNotFound, isUniqueViolation, requireAdminForAction } from "@/server/admin/guard";
 import { invalidateSites } from "@/server/admin/invalidate";
-import { createSite, deleteSite, rotateSiteAgentToken, updateSite } from "@/server/admin/sites";
+import {
+  createSite,
+  deleteSite,
+  removeSiteTariff,
+  rotateSiteAgentToken,
+  setSiteTariff,
+  updateSite,
+} from "@/server/admin/sites";
 
-export async function saveSite(siteId: string | null, _previous: ActionState, formData: FormData): Promise<ActionState> {
+export async function saveSite(
+  siteId: string | null,
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
   const actor = await requireAdminForAction();
   const parsed = siteSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return validationError(parsed.error, formData);
@@ -25,7 +36,10 @@ export async function saveSite(siteId: string | null, _previous: ActionState, fo
     await invalidateSites([createdId], [parsed.data.tenantId]);
   } catch (error) {
     if (isUniqueViolation(error)) {
-      return { ...errorState("Revise os campos destacados.", formData), fieldErrors: { name: "Já existe uma unidade com este nome neste cliente" } };
+      return {
+        ...errorState("Revise os campos destacados.", formData),
+        fieldErrors: { name: "Já existe uma unidade com este nome neste cliente" },
+      };
     }
     if (isNotFound(error)) return errorState("Esta unidade não existe mais.");
     throw error;
@@ -42,7 +56,6 @@ export async function removeSite(siteId: string): Promise<void> {
   redirect("/admin/unidades");
 }
 
-
 export type AgentTokenResult = { ok: true; token: string } | { ok: false; message: string };
 
 /** Gera (ou troca) o token do Painel local. O anterior para de valer na hora. */
@@ -56,4 +69,23 @@ export async function rotateAgentToken(siteId: string): Promise<AgentTokenResult
     if (isNotFound(error)) return { ok: false, message: "Esta unidade não existe mais." };
     throw error;
   }
+}
+
+export async function saveSiteTariff(siteId: string, _previous: ActionState, formData: FormData): Promise<ActionState> {
+  const actor = await requireAdminForAction();
+  if (formData.get("remove") === "1") {
+    await removeSiteTariff(actor, siteId);
+    revalidatePath(`/admin/unidades/${siteId}`);
+    return { status: "success", message: "Tarifa removida." };
+  }
+  const parsed = tariffSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return validationError(parsed.error, formData);
+  try {
+    await setSiteTariff(actor, siteId, parsed.data);
+  } catch (error) {
+    if (isNotFound(error) || isForeignKeyViolation(error)) return errorState("Esta unidade não existe mais.");
+    throw error;
+  }
+  revalidatePath(`/admin/unidades/${siteId}`);
+  return { status: "success", message: "Tarifa salva." };
 }

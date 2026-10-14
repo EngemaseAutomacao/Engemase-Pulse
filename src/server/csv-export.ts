@@ -26,3 +26,11 @@ export function toCsv(headers: string[], series: Series, fields: string[], timeZ
 function escapeCell(value: string): string {
   return /[;"\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
 }
+
+/** Tabela pronta (linhas já montadas) no mesmo padrão: ";" e vírgula decimal. */
+export function tableToCsv(headers: string[], rows: (string | number | null)[][]): string {
+  const cell = (v: string | number | null) =>
+    v === null ? "" : typeof v === "number" ? decimal.format(v) : escapeCell(v);
+  const lines = [headers.map(escapeCell).join(";"), ...rows.map((r) => r.map(cell).join(";"))];
+  return "﻿" + lines.join("\r\n") + "\r\n";
+}

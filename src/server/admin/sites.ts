@@ -3,7 +3,7 @@ import { forgetAgentToken, generateAgentToken } from "@/server/agent/token";
 import { audit } from "@/server/audit";
 import { db } from "@/server/db";
 import type { AuthUser } from "@/server/auth/permissions";
-import type { SiteInput } from "@/lib/validation";
+import type { SiteInput, TariffInput } from "@/lib/validation";
 
 export function listSites(tenantId?: string) {
   return db.site.findMany({
@@ -28,7 +28,10 @@ export async function getSiteForEdit(id: string) {
     where: { id },
     include: {
       tenant: { select: { id: true, name: true, slug: true } },
-      meters: { orderBy: [{ sortOrder: "asc" }, { tag: "asc" }], select: { id: true, tag: true, name: true, active: true } },
+      meters: {
+        orderBy: [{ sortOrder: "asc" }, { tag: "asc" }],
+        select: { id: true, tag: true, name: true, active: true },
+      },
     },
   });
   if (!site) return null;
@@ -75,4 +78,28 @@ export async function deleteSite(actor: AuthUser, id: string) {
   const site = await db.site.delete({ where: { id } });
   await audit({ actorId: actor.id, action: "delete", entityType: "site", entityId: id, details: { name: site.name } });
   return site;
+}
+
+// ---------------------------------------------------------------------------
+// Tarifa
+// ---------------------------------------------------------------------------
+
+export function getSiteTariff(siteId: string) {
+  return db.siteTariff.findUnique({ where: { siteId } });
+}
+
+export async function setSiteTariff(actor: AuthUser, siteId: string, input: TariffInput) {
+  await db.siteTariff.upsert({ where: { siteId }, create: { siteId, ...input }, update: input });
+  await audit({
+    actorId: actor.id,
+    action: "update",
+    entityType: "site",
+    entityId: siteId,
+    details: { tariff: input },
+  });
+}
+
+export async function removeSiteTariff(actor: AuthUser, siteId: string) {
+  await db.siteTariff.deleteMany({ where: { siteId } });
+  await audit({ actorId: actor.id, action: "update", entityType: "site", entityId: siteId, details: { tariff: null } });
 }

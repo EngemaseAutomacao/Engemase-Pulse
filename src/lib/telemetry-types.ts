@@ -64,3 +64,53 @@ export type ConsumptionResponse = {
   unmeasured: { kwh: (number | null)[]; total: number } | null;
   error: string | null;
 };
+
+/** Consumo de um setor no mês, dia a dia. */
+export type SectorMonth = {
+  id: string;
+  tag: string;
+  name: string;
+  isMain: boolean;
+  /** Posição = dia de `MonthConsumptionResponse.days`; null = sem leitura no dia. */
+  kwh: (number | null)[];
+  total: number;
+  /** Custo da energia em R$ (com impostos), se a unidade tem tarifa. */
+  cost: number | null;
+  /** Mesmo trecho do mês anterior e do mesmo mês do ano anterior (kWh). */
+  previousTotal: number | null;
+  lastYearTotal: number | null;
+};
+
+/** Consumo de uma unidade num mês, por setor e dia, com comparações. */
+export type MonthConsumptionResponse = {
+  siteId: string;
+  /** AAAA-MM. */
+  month: string;
+  timeZone: string;
+  /** Início de cada dia do mês (epoch ms). */
+  days: number[];
+  sectors: SectorMonth[];
+  entrance: Omit<SectorMonth, "id" | "tag" | "name" | "isMain"> & { fromMain: boolean };
+  unmeasured: { kwh: (number | null)[]; total: number; cost: number | null } | null;
+  /**
+   * Trechos comparados. Com o mês em andamento, comparar com o mesmo trecho
+   * (ex.: dias 1 a 14) é justo; com o mês fechado, o mês inteiro.
+   */
+  comparison: { previous: { start: number; stop: number }; lastYear: { start: number; stop: number }; partial: boolean };
+  hasTariff: boolean;
+  error: string | null;
+};
+
+/** Fatura estimada de uma unidade num mês. */
+export type BillingResponse = {
+  siteId: string;
+  month: string;
+  timeZone: string;
+  tariff: import("./tariff").Tariff;
+  bill: import("./tariff").BillEstimate;
+  /** Maior demanda (média de 15 min) de cada dia, por posto (kW). */
+  dailyDemand: { day: number; peak: number | null; offPeak: number | null }[];
+  /** Sem entrada geral marcada: energia é a soma dos medidores e a demanda não é calculada. */
+  noMainMeter: boolean;
+  error: string | null;
+};

@@ -7,6 +7,7 @@ import {
   GitCompareArrowsIcon,
   LayoutDashboardIcon,
   NetworkIcon,
+  ReceiptTextIcon,
   ShieldIcon,
 } from "lucide-react";
 import { AppShell, type NavSection } from "@/components/shell/app-shell";
@@ -46,6 +47,7 @@ async function TenantShell({
         { label: "Medidores", href: `${base}/medidores`, icon: <GaugeIcon /> },
         { label: "Unifilar", href: `${base}/unifilar`, icon: <NetworkIcon /> },
         { label: "Consumo", href: `${base}/consumo`, icon: <ChartColumnIcon /> },
+        { label: "Fatura", href: `${base}/fatura`, icon: <ReceiptTextIcon /> },
         { label: "Comparar", href: `${base}/comparar`, icon: <GitCompareArrowsIcon /> },
         { label: "Alarmes", href: `${base}/alarmes`, icon: <BellIcon />, badge: activeAlarms },
       ],

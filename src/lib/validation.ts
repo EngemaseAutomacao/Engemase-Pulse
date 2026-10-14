@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { FIELD_KEYS } from "./meter-fields";
+import { TARIFF_MODALITIES, type TariffModality } from "./tariff";
 
 /**
  * Esquemas de validação dos formulários. Rodam no servidor (Server Actions);
@@ -38,11 +39,7 @@ const hexColor = z
   .regex(/^#[0-9a-fA-F]{6}$/, "Cor no formato #RRGGBB")
   .transform((v) => v.toLowerCase());
 
-const email = z
-  .string({ error: "Informe o e-mail" })
-  .trim()
-  .toLowerCase()
-  .pipe(z.email("E-mail inválido").max(254));
+const email = z.string({ error: "Informe o e-mail" }).trim().toLowerCase().pipe(z.email("E-mail inválido").max(254));
 
 export const PASSWORD_MIN_LENGTH = 10;
 
@@ -159,6 +156,84 @@ export const meterSchema = z.object({
   active: checkbox,
 });
 
+/**
+ * Número digitado em português ("0,85", "1.234,56") ou com ponto ("0.85").
+ * Vazio vira null.
+ */
+export function parseDecimal(value: unknown, thousandsDot = false): number | null {
+  if (typeof value !== "string" || value.trim() === "") return null;
+  const text = value.trim().replace(/\s/g, "");
+  // Em campos de kW, "1.200" é milhar (ninguém contrata 1,2 kW).
+  const dotIsThousands = text.includes(",") || (thousandsDot && /^\d{1,3}(\.\d{3})+$/.test(text));
+  const normalized = dotIsThousands ? text.replace(/\./g, "").replace(",", ".") : text;
+  const number = Number(normalized);
+  return Number.isFinite(number) ? number : Number.NaN;
+}
+
+const decimal = (max: number, thousandsDot = false) =>
+  z
+    .unknown()
+    .transform((v) => parseDecimal(v, thousandsDot))
+    .refine((v) => v === null || !Number.isNaN(v), "Número inválido")
+    .refine((v) => v === null || (v >= 0 && v <= max), `Entre 0 e ${max.toLocaleString("pt-BR")}`);
+
+const hour = (min: number, max: number) => z.coerce.number().int().min(min).max(max);
+
+/** Tarifa da unidade: os campos exigidos dependem da modalidade. */
+export const tariffSchema = z
+  .object({
+    modality: z.enum(TARIFF_MODALITIES, { error: "Escolha a modalidade" }),
+    energyOffPeak: decimal(100),
+    energyPeak: decimal(100),
+    energyIntermediate: decimal(100),
+    flagAdder: decimal(10),
+    demandPrice: decimal(10_000),
+    demandPeakPrice: decimal(10_000),
+    contractedDemand: decimal(1_000_000, true),
+    contractedDemandPeak: decimal(1_000_000, true),
+    peakStartHour: hour(0, 23),
+    peakEndHour: hour(1, 24),
+    taxRate: decimal(60),
+  })
+  .superRefine((t, ctx) => {
+    const need = (field: keyof typeof t, message = "Obrigatório nesta modalidade") => {
+      if (t[field] === null || t[field] === 0) ctx.addIssue({ code: "custom", path: [field], message });
+    };
+    need("energyOffPeak", t.modality === "CONVENTIONAL" ? "Informe o preço do kWh" : "Informe o kWh fora ponta");
+    if (t.modality !== "CONVENTIONAL") need("energyPeak");
+    if (t.modality === "WHITE") need("energyIntermediate");
+    if (t.modality === "GREEN" || t.modality === "BLUE") {
+      need("demandPrice");
+      need("contractedDemand");
+    }
+    if (t.modality === "BLUE") {
+      need("demandPeakPrice");
+      need("contractedDemandPeak");
+    }
+    if (t.peakEndHour <= t.peakStartHour) {
+      ctx.addIssue({ code: "custom", path: ["peakEndHour"], message: "O fim da ponta deve ser depois do início" });
+    }
+  })
+  .transform((t) => {
+    const only = <T>(value: T, ...modalities: TariffModality[]) => (modalities.includes(t.modality) ? value : null);
+    return {
+      modality: t.modality,
+      energyOffPeak: t.energyOffPeak!,
+      energyPeak: only(t.energyPeak, "WHITE", "GREEN", "BLUE"),
+      energyIntermediate: only(t.energyIntermediate, "WHITE"),
+      flagAdder: t.flagAdder ?? 0,
+      demandPrice: only(t.demandPrice, "GREEN", "BLUE"),
+      demandPeakPrice: only(t.demandPeakPrice, "BLUE"),
+      contractedDemand: only(t.contractedDemand, "GREEN", "BLUE"),
+      contractedDemandPeak: only(t.contractedDemandPeak, "BLUE"),
+      peakStartHour: t.peakStartHour,
+      peakEndHour: t.peakEndHour,
+      taxRate: t.taxRate ?? 0,
+    };
+  });
+
+export type TariffInput = z.infer<typeof tariffSchema>;
+
 export const ROLES = ["ADMIN", "OPERATOR", "VIEWER"] as const;
 
 const membershipEntry = z.object({ tenantId: uuid, role: z.enum(ROLES) });
@@ -234,9 +309,7 @@ export const alarmRuleSchema = z
     }
     if (!rule.comparison) ctx.addIssue({ code: "custom", path: ["comparison"], message: "Escolha acima ou abaixo" });
   })
-  .transform((rule) =>
-    rule.kind === "OFFLINE" ? { ...rule, field: null, comparison: null } : rule,
-  );
+  .transform((rule) => (rule.kind === "OFFLINE" ? { ...rule, field: null, comparison: null } : rule));
 
 export type AlarmRuleInput = z.infer<typeof alarmRuleSchema>;
 

@@ -47,7 +47,7 @@ export default async function SitesPage({ searchParams }: PageProps<"/admin/unid
       {sites.length === 0 ? (
         <EmptyState icon={<MapPinIcon />} title="Nenhuma unidade encontrada" />
       ) : (
-        <div className="surface overflow-hidden">
+        <div className="overflow-hidden surface">
           <Table>
             <TableHeader>
               <TableRow>
@@ -74,10 +74,12 @@ export default async function SitesPage({ searchParams }: PageProps<"/admin/unid
                     {s.agentLastSeenAt ? (
                       <RelativeTime value={s.agentLastSeenAt.toISOString()} />
                     ) : (
-                      <span className="text-muted-foreground">{s.agentTokenHash ? "Aguardando o 1º envio" : "Sem token"}</span>
+                      <span className="text-muted-foreground">
+                        {s.agentTokenHash ? "Aguardando o 1º envio" : "Sem token"}
+                      </span>
                     )}
                   </TableCell>
-                  <TableCell className="tabular text-right">{s._count.meters}</TableCell>
+                  <TableCell className="text-right tabular">{s._count.meters}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

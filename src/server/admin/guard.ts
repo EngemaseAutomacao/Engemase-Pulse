@@ -29,3 +29,8 @@ export function isUniqueViolation(error: unknown, field?: string): boolean {
 export function isNotFound(error: unknown): boolean {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025";
 }
+
+/** Chave estrangeira inexistente (P2003) — ex.: unidade apagada em outra aba. */
+export function isForeignKeyViolation(error: unknown): boolean {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003";
+}

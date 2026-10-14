@@ -1,14 +1,15 @@
 import "server-only";
 import { after } from "next/server";
 import { purgeOldAgentReadings } from "@/server/agent/retention";
+import { checkDemandOverruns } from "@/server/alarms/demand";
 import { evaluateAllTenants, type EvaluationSummary } from "@/server/alarms/engine";
 import { checkSiteHeartbeats, type HeartbeatResult } from "@/server/alarms/heartbeat";
 import { getCache } from "@/server/cache";
 import { purgeOldErrors, reportCaught } from "@/server/errors";
 
 /**
- * Tarefas periódicas: regras de alarme da nuvem, lojas sem comunicação e
- * limpeza do histórico antigo.
+ * Tarefas periódicas: regras de alarme da nuvem, lojas sem comunicação,
+ * ultrapassagem de demanda e limpeza do histórico antigo.
  *
  * Rodam pelo agendador (/api/cron/alarms, chamado pelo QStash, Cron da Vercel
  * ou GitHub Actions) e também "de carona" no tráfego normal: cada envio do
@@ -36,6 +37,7 @@ export async function runHousekeeping(budgetMs?: number): Promise<HousekeepingRe
     return 0;
   });
   await purgeOldErrors().catch((error: unknown) => reportCaught("tarefa", "limpeza dos erros", error));
+  await checkDemandOverruns().catch((error: unknown) => reportCaught("tarefa", "verificação de demanda", error));
   return { alarms, heartbeat, purgedReadings };
 }
 

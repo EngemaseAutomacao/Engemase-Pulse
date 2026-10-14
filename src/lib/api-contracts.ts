@@ -46,8 +46,20 @@ export const calendarDate = z
     return date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d;
   }, "Data inválida");
 
-/** Consumo por setor de uma unidade num dia. */
-export const consumptionParams = z.object({ site: z.uuid(), date: calendarDate });
+/** Mês do calendário (AAAA-MM). */
+export const calendarMonth = z
+  .string()
+  .regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Mês inválido")
+  .refine((v) => Number(v.slice(0, 4)) >= 2000 && Number(v.slice(0, 4)) <= 2100, "Mês inválido");
+
+/** Consumo por setor de uma unidade num dia (date) ou num mês (month). */
+export const consumptionParams = z.union([
+  z.object({ site: z.uuid(), date: calendarDate }),
+  z.object({ site: z.uuid(), month: calendarMonth }),
+]);
+
+/** Fatura estimada de uma unidade num mês. */
+export const billingParams = z.object({ site: z.uuid(), month: calendarMonth });
 
 /**
  * Leituras ao vivo: por padrão só os campos de resumo de todos os medidores;

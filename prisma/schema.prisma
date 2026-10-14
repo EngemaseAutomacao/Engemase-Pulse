@@ -100,6 +100,7 @@ model Site {
   meters       Meter[]
   liveSnapshot SiteLiveSnapshot?
   alarms       Alarm[]
+  tariff       SiteTariff?
 
   @@unique([tenantId, name])
   @@map("sites")
@@ -419,4 +420,40 @@ model ErrorLog {
 
   @@index([lastSeenAt])
   @@map("error_logs")
+}
+
+// ---------------------------------------------------------------------------
+// Tarifa e contrato de energia (custo em R$ e fatura estimada)
+// ---------------------------------------------------------------------------
+
+enum TariffModality {
+  CONVENTIONAL
+  WHITE
+  GREEN
+  BLUE
+}
+
+/// Tarifa da unidade. Preços em R$ (sem impostos se taxRate > 0). Ver src/lib/tariff.ts.
+model SiteTariff {
+  siteId               String         @id @map("site_id") @db.Uuid
+  modality             TariffModality
+  /// R$/kWh fora ponta (na convencional, o preço único).
+  energyOffPeak        Float          @map("energy_off_peak")
+  energyPeak           Float?         @map("energy_peak")
+  energyIntermediate   Float?         @map("energy_intermediate")
+  /// Adicional da bandeira tarifária vigente, R$/kWh.
+  flagAdder            Float          @default(0) @map("flag_adder")
+  demandPrice          Float?         @map("demand_price")
+  demandPeakPrice      Float?         @map("demand_peak_price")
+  contractedDemand     Float?         @map("contracted_demand")
+  contractedDemandPeak Float?         @map("contracted_demand_peak")
+  peakStartHour        Int            @default(18) @map("peak_start_hour")
+  peakEndHour          Int            @default(21) @map("peak_end_hour")
+  /// ICMS + PIS/COFINS (%), por dentro.
+  taxRate              Float          @default(0) @map("tax_rate")
+  updatedAt            DateTime       @updatedAt @map("updated_at")
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@map("site_tariffs")
 }

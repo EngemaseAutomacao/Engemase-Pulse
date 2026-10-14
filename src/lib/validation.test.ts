@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { alarmRuleSchema, isValidCnpj, loginSchema, siteSchema, tenantSchema } from "./validation";
+import { alarmRuleSchema, isValidCnpj, loginSchema, siteSchema, tariffSchema, tenantSchema } from "./validation";
 
 const TENANT = "3f2504e0-4f89-41d3-9a0c-0305e82c3301";
 
@@ -70,5 +70,54 @@ describe("alarmRuleSchema", () => {
       severity: "INFO",
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("tariffSchema", () => {
+  const green = {
+    modality: "GREEN",
+    energyOffPeak: "0,52",
+    energyPeak: "2,1",
+    energyIntermediate: "9",
+    flagAdder: "",
+    demandPrice: "32.40",
+    demandPeakPrice: "",
+    contractedDemand: "1.200",
+    contractedDemandPeak: "",
+    peakStartHour: "18",
+    peakEndHour: "21",
+    taxRate: "",
+  };
+
+  it("aceita vírgula ou ponto e limpa campos de outras modalidades", () => {
+    const parsed = tariffSchema.parse(green);
+    expect(parsed.energyOffPeak).toBe(0.52);
+    expect(parsed.demandPrice).toBe(32.4);
+    expect(parsed.contractedDemand).toBe(1200); // em kW, "1.200" é milhar
+    expect(parsed.energyIntermediate).toBeNull(); // só na branca
+    expect(parsed.flagAdder).toBe(0);
+    expect(parsed.taxRate).toBe(0);
+  });
+
+  it("milhar com vírgula decimal", () => {
+    expect(tariffSchema.parse({ ...green, contractedDemand: "1.200,5" }).contractedDemand).toBe(1200.5);
+  });
+
+  it("exige demanda contratada na verde e na azul", () => {
+    const result = tariffSchema.safeParse({ ...green, contractedDemand: "" });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0].path).toEqual(["contractedDemand"]);
+    expect(tariffSchema.safeParse({ ...green, modality: "BLUE" }).success).toBe(false);
+  });
+
+  it("convencional só precisa do preço do kWh", () => {
+    const parsed = tariffSchema.parse({ ...green, modality: "CONVENTIONAL", energyPeak: "", demandPrice: "" });
+    expect(parsed.energyPeak).toBeNull();
+    expect(parsed.contractedDemand).toBeNull();
+  });
+
+  it("recusa texto e ponta invertida", () => {
+    expect(tariffSchema.safeParse({ ...green, energyOffPeak: "abc" }).success).toBe(false);
+    expect(tariffSchema.safeParse({ ...green, peakStartHour: "21", peakEndHour: "18" }).success).toBe(false);
   });
 });

@@ -23,6 +23,7 @@ import { fetchJson } from "@/lib/fetcher";
 import { formatNumber } from "@/lib/format";
 import type { ConsumptionResponse } from "@/lib/telemetry-types";
 import { cn } from "@/lib/utils";
+import { MonthConsumption } from "./month-consumption";
 
 type SiteOption = { id: string; name: string; timezone: string };
 
@@ -35,9 +36,10 @@ export function ConsumptionView({ tenantSlug, sites }: { tenantSlug: string; sit
   const day = chosenDate && chosenDate <= today ? chosenDate : today;
   const [sameScale, setSameScale] = useState(true);
   const [showTable, setShowTable] = useState(false);
+  const [mode, setMode] = useState<"day" | "month">("day");
 
   const { data, error, isLoading } = useSWR<ConsumptionResponse>(
-    `/api/tenants/${tenantSlug}/consumption?site=${site.id}&date=${day}`,
+    mode === "day" ? `/api/tenants/${tenantSlug}/consumption?site=${site.id}&date=${day}` : null,
     fetchJson,
     { refreshInterval: day === today ? 300_000 : 0, keepPreviousData: true },
   );
@@ -61,60 +63,97 @@ export function ConsumptionView({ tenantSlug, sites }: { tenantSlug: string; sit
             ))}
           </NativeSelect>
         )}
-        <div className="flex items-center gap-1">
-          <Button variant="outline" size="icon-sm" onClick={() => goTo(shiftDate(day, -1))} aria-label="Dia anterior">
-            <ChevronLeftIcon />
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setChosenDate(null)} disabled={day === today}>
-            Hoje
-          </Button>
-          <Button
-            variant="outline"
-            size="icon-sm"
-            onClick={() => goTo(shiftDate(day, 1))}
-            disabled={day >= today}
-            aria-label="Próximo dia"
-          >
-            <ChevronRightIcon />
-          </Button>
+        <div role="radiogroup" aria-label="Período" className="flex rounded-lg border p-0.5">
+          {(
+            [
+              ["day", "Dia"],
+              ["month", "Mês"],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              role="radio"
+              aria-checked={mode === value}
+              onClick={() => setMode(value)}
+              className={cn(
+                "min-h-8 rounded-md px-3 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground",
+                mode === value && "bg-secondary text-foreground",
+              )}
+            >
+              {label}
+            </button>
+          ))}
         </div>
-        <Input
-          type="date"
-          value={day}
-          max={today}
-          onChange={(e) => e.target.value && goTo(e.target.value)}
-          aria-label="Dia"
-          className="w-40"
-        />
-        <span className="text-sm text-muted-foreground first-letter:uppercase">{longDate(day)}</span>
+        {mode === "day" && (
+          <>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="icon-sm"
+                onClick={() => goTo(shiftDate(day, -1))}
+                aria-label="Dia anterior"
+              >
+                <ChevronLeftIcon />
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setChosenDate(null)} disabled={day === today}>
+                Hoje
+              </Button>
+              <Button
+                variant="outline"
+                size="icon-sm"
+                onClick={() => goTo(shiftDate(day, 1))}
+                disabled={day >= today}
+                aria-label="Próximo dia"
+              >
+                <ChevronRightIcon />
+              </Button>
+            </div>
+            <Input
+              type="date"
+              value={day}
+              max={today}
+              onChange={(e) => e.target.value && goTo(e.target.value)}
+              aria-label="Dia"
+              className="w-40"
+            />
+            <span className="text-sm text-muted-foreground first-letter:uppercase">{longDate(day)}</span>
+          </>
+        )}
       </div>
 
-      {failure && (
-        <p
-          role="alert"
-          className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-        >
-          {failure}
-        </p>
-      )}
+      {mode === "month" ? (
+        <MonthConsumption key={site.id} tenantSlug={tenantSlug} site={site} />
+      ) : (
+        <>
+          {failure && (
+            <p
+              role="alert"
+              className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            >
+              {failure}
+            </p>
+          )}
 
-      {isLoading && !data ? (
-        <div className="h-40 surface">
-          <ChartMessage>Carregando…</ChartMessage>
-        </div>
-      ) : data ? (
-        <div className={cn("space-y-6 transition-opacity", isLoading && "opacity-60")}>
-          <Summary data={data} />
-          <HourByHour
-            data={data}
-            sameScale={sameScale}
-            onSameScale={setSameScale}
-            showTable={showTable}
-            onShowTable={setShowTable}
-          />
-          <Share data={data} />
-        </div>
-      ) : null}
+          {isLoading && !data ? (
+            <div className="h-40 surface">
+              <ChartMessage>Carregando…</ChartMessage>
+            </div>
+          ) : data ? (
+            <div className={cn("space-y-6 transition-opacity", isLoading && "opacity-60")}>
+              <Summary data={data} />
+              <HourByHour
+                data={data}
+                sameScale={sameScale}
+                onSameScale={setSameScale}
+                showTable={showTable}
+                onShowTable={setShowTable}
+              />
+              <Share data={data} />
+            </div>
+          ) : null}
+        </>
+      )}
     </div>
   );
 }

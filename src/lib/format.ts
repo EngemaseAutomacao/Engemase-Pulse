@@ -58,3 +58,23 @@ export function initials(name: string): string {
     .join("")
     .toUpperCase();
 }
+
+const moneyFormatter = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+const moneyFormatterRound = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+  maximumFractionDigits: 0,
+});
+
+/** Valor em reais: "R$ 1.234,56" (ou sem centavos com `round`). */
+export function formatMoney(value: number | null | undefined, round = false): string {
+  if (value === null || value === undefined || !Number.isFinite(value)) return "—";
+  return (round ? moneyFormatterRound : moneyFormatter).format(value);
+}
+
+/** Variação percentual com sinal: "+12,3 %"; null quando não há base de comparação. */
+export function formatChange(current: number, previous: number | null | undefined): string | null {
+  if (previous === null || previous === undefined || previous <= 0) return null;
+  const change = ((current - previous) / previous) * 100;
+  return `${change > 0 ? "+" : change < 0 ? "−" : ""}${numberFormatter(1).format(Math.abs(change))} %`;
+}

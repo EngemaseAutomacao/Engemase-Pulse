@@ -18,7 +18,7 @@ export default async function ConsumptionPage({ params }: PageProps<"/app/[tenan
     <PageContainer>
       <PageHeader
         title="Consumo de energia"
-        description="Consumo do dia por setor, hora a hora, no horário da unidade."
+        description="Consumo por setor, hora a hora no dia ou dia a dia no mês, com custo e comparações."
       />
       {sites.length === 0 ? (
         <EmptyState icon={<ChartColumnIcon />} title="Nenhum medidor cadastrado" />
