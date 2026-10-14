@@ -6,6 +6,7 @@ import { useLive } from "@/hooks/use-live";
 import { formatField } from "@/lib/format";
 import { FIELD_BY_KEY, isFieldOutOfRange } from "@/lib/meter-fields";
 import { cn } from "@/lib/utils";
+import { PhaseLoads } from "./breaker-load";
 import { RelativeTime } from "./relative-time";
 import { StatusBadge } from "./status-badge";
 
@@ -27,7 +28,16 @@ const HEADLINE_FIELDS = ["Total_kW", "PF_AVG", "Frequencia", "Total_net_kWh", "T
 /** Qualidade e demanda: nem todo medidor envia; o bloco só aparece com os que vierem. */
 const QUALITY_FIELDS = ["THD_V1", "THD_V2", "THD_V3", "THD_I1", "THD_I2", "THD_I3", "I_N", "Demand_kW"] as const;
 
-export function MeterLivePanel({ tenantSlug, meterId }: { tenantSlug: string; meterId: string }) {
+export function MeterLivePanel({
+  tenantSlug,
+  meterId,
+  breakerAmps,
+}: {
+  tenantSlug: string;
+  meterId: string;
+  /** Disjuntor do circuito (A), para mostrar a carga por fase. */
+  breakerAmps: number | null;
+}) {
   const { data, isLoading } = useLive(tenantSlug, { meterId });
   const live = data?.meters[meterId];
   const values = live?.values ?? {};
@@ -55,6 +65,8 @@ export function MeterLivePanel({ tenantSlug, meterId }: { tenantSlug: string; me
           </div>
         ))}
       </div>
+
+      {breakerAmps && live?.status === "online" && <PhaseLoads values={values} ratedAmps={breakerAmps} />}
 
       {qualityFields.length > 0 && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

@@ -102,6 +102,10 @@ export const FIELD_KEYS: readonly string[] = METER_FIELDS.map((f) => f.key);
  */
 export const SUMMARY_FIELDS = [
   "Total_kW",
+  // Correntes por fase: carga do disjuntor (fase mais carregada) nos cartões e no unifilar.
+  "I1",
+  "I2",
+  "I3",
   "Total_kVA",
   "Total_kVAr",
   "I_AVG",

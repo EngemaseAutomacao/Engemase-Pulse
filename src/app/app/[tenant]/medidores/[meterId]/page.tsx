@@ -50,7 +50,7 @@ export default async function MeterPage({ params }: PageProps<"/app/[tenant]/med
         }
       />
 
-      <MeterLivePanel tenantSlug={tenant.slug} meterId={meter.id} />
+      <MeterLivePanel tenantSlug={tenant.slug} meterId={meter.id} breakerAmps={meter.breakerAmps} />
 
       <div className="grid gap-6 xl:grid-cols-5">
         <div className="xl:col-span-3">

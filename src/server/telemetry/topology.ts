@@ -15,6 +15,8 @@ export type MeterTopology = {
   siteId: string;
   /** Entrada geral da unidade (os demais medidores são alimentadores dela). */
   isMain: boolean;
+  /** Corrente nominal do disjuntor do circuito (A), vinda do Painel. */
+  breakerAmps: number | null;
 };
 
 export type SiteTopology = {
@@ -24,7 +26,7 @@ export type SiteTopology = {
   meters: MeterTopology[];
 };
 
-const topologyKey = (tenantId: string) => `topology:v3:${tenantId}`;
+const topologyKey = (tenantId: string) => `topology:v4:${tenantId}`;
 
 export function getTenantTopology(tenantId: string): Promise<SiteTopology[]> {
   return cached(topologyKey(tenantId), configTtlMs(), () => loadTopology(tenantId));
@@ -52,6 +54,7 @@ async function loadTopology(tenantId: string): Promise<SiteTopology[]> {
           location: true,
           siteId: true,
           isMain: true,
+          breakerAmps: true,
         },
       },
     },

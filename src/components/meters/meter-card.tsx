@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { breakerLoad } from "@/lib/breaker";
 import { formatField, formatNumber } from "@/lib/format";
 import type { LiveMeter } from "@/lib/telemetry-types";
 import { cn } from "@/lib/utils";
+import { BreakerLoadBar } from "./breaker-load";
 import { RelativeTime } from "./relative-time";
 import { StatusBadge } from "./status-badge";
 
@@ -14,6 +16,8 @@ export type MeterSummary = {
   location: string | null;
   /** Entrada geral: nos totais, substitui a soma dos alimentadores da unidade. */
   isMain: boolean;
+  /** Disjuntor do circuito (A); sem ele o cartão não mostra a carga. */
+  breakerAmps: number | null;
 };
 
 const SECONDARY_FIELDS = [
@@ -37,6 +41,7 @@ export function MeterCard({
 }) {
   const values = live?.values ?? {};
   const stale = live?.status !== "online";
+  const load = live?.status === "online" ? breakerLoad(values, meter.breakerAmps) : null;
 
   return (
     <Link
@@ -72,6 +77,8 @@ export function MeterCard({
           </div>
         ))}
       </dl>
+
+      {load && <BreakerLoadBar load={load} />}
 
       <div className="mt-auto flex items-center justify-between gap-2 border-t pt-3 text-xs text-muted-foreground">
         <span className="tabular truncate">{formatField("Total_net_kWh", values.Total_net_kWh)}</span>
