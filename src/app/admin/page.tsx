@@ -23,6 +23,7 @@ const ENTITY_LABEL: Record<string, string> = {
   meter: "medidor",
   user: "usuário",
   "alarm-rule": "regra de alarme",
+  membership: "acesso de",
 };
 
 export default async function AdminHomePage() {

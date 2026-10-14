@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { CheckIcon, CopyIcon, KeyRoundIcon, Loader2Icon } from "lucide-react";
+import { KeyRoundIcon, Loader2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { CopyButton, CopyField } from "@/components/forms/copy-field";
 import { RelativeTime } from "@/components/meters/relative-time";
 import type { AgentTokenResult } from "@/app/admin/unidades/actions";
 
@@ -101,40 +101,5 @@ export function AgentConnection({
         </div>
       )}
     </div>
-  );
-}
-
-function CopyField({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex gap-2">
-      <Input
-        value={value}
-        readOnly
-        aria-label={label}
-        className="font-mono text-xs"
-        onFocus={(e) => e.target.select()}
-      />
-      <CopyButton value={value} label="Copiar" />
-    </div>
-  );
-}
-
-function CopyButton({ value, label }: { value: string; label: string }) {
-  const [copied, setCopied] = useState(false);
-  return (
-    <Button
-      type="button"
-      variant="outline"
-      size="sm"
-      className="w-fit"
-      onClick={async () => {
-        await navigator.clipboard.writeText(value);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      }}
-    >
-      {copied ? <CheckIcon /> : <CopyIcon />}
-      {copied ? "Copiado" : label}
-    </Button>
   );
 }

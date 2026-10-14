@@ -4,6 +4,7 @@ import { SITE_OFFLINE_AFTER_MS } from "@/server/alarms/heartbeat";
 import { getCache } from "@/server/cache";
 import { db } from "@/server/db";
 import { getSchedulerLastRun } from "@/server/housekeeping";
+import { appUrl, isEmailConfigured } from "@/server/email";
 import { isPushConfigured } from "@/server/push";
 
 /** Situação do sistema para a tela "Saúde do sistema" e o resumo da administração. */
@@ -121,6 +122,22 @@ export async function getSystemHealth() {
           status: "warn",
           detail: tasksAt ? `Última rodada às ${time(tasksAt)}.` : `Ainda não rodou${shared ? "" : " neste servidor"}.`,
           fix: "Rodam a cada envio de loja e pelo agendador. Se nenhuma loja está enviando, configure o agendador.",
+        },
+    isEmailConfigured()
+      ? {
+          key: "email",
+          label: "E-mail (senha e convites)",
+          status: "ok",
+          detail: `Ativo · links apontam para ${appUrl() ?? "?"}`,
+        }
+      : {
+          key: "email",
+          label: "E-mail (senha e convites)",
+          status: "warn",
+          detail: appUrl()
+            ? "Desativado: “Esqueci minha senha” não funciona e os convites mostram um link para repassar à pessoa."
+            : "Desativado, e sem o endereço público do sistema os links de senha e convite não podem ser gerados.",
+          fix: "Crie uma conta no Resend, verifique o domínio de envio e cadastre RESEND_API_KEY e EMAIL_FROM (ex.: Monitor de Energia <nao-responda@seudominio.com.br>) na Vercel. Se usar domínio próprio, cadastre também APP_URL.",
         },
     errors24h === 0
       ? { key: "errors", label: "Erros nas últimas 24 h", status: "ok", detail: "Nenhum" }

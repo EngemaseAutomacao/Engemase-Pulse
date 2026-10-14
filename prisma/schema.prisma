@@ -225,6 +225,7 @@ model User {
 
   memberships        Membership[]
   sessions           Session[]
+  passwordTokens     PasswordToken[]
   pushSubscriptions  PushSubscription[]
   acknowledgedAlarms Alarm[]
 
@@ -262,6 +263,24 @@ model Session {
 }
 
 /// Tentativas de login, para limitar força bruta por e-mail.
+/// Link de uso único para definir a senha: "esqueci a senha" ou convite de usuário novo.
+/// Só o hash do token fica no banco.
+model PasswordToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  /// reset (esqueci a senha) ou invite (primeiro acesso).
+  purpose   String
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_tokens")
+}
+
 model LoginAttempt {
   id        BigInt   @id @default(autoincrement())
   email     String

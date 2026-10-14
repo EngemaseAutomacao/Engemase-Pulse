@@ -9,6 +9,7 @@ import {
   NetworkIcon,
   ReceiptTextIcon,
   ShieldIcon,
+  UsersIcon,
 } from "lucide-react";
 import { AppShell, type NavSection } from "@/components/shell/app-shell";
 import { ShellSkeleton } from "@/components/shell/shell-skeleton";
@@ -53,6 +54,12 @@ async function TenantShell({
       ],
     },
   ];
+  if (role === "ADMIN") {
+    sections.push({
+      label: "Gestão",
+      items: [{ label: "Usuários", href: `${base}/usuarios`, icon: <UsersIcon /> }],
+    });
+  }
   if (user.isPlatformAdmin) {
     sections.push({
       label: "Plataforma",

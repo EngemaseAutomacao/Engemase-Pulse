@@ -14,6 +14,16 @@ const schema = z.object({
   VAPID_SUBJECT: z.string().default("mailto:admin@example.com"),
   /** Segredo exigido pela rota do avaliador de alarmes. */
   CRON_SECRET: z.string().min(16, "CRON_SECRET deve ter ao menos 16 caracteres").optional(),
+  /**
+   * Endereço público do sistema, para links enviados por e-mail. Na Vercel, sem
+   * isso usa o domínio de produção do projeto. Nunca vem do cabeçalho Host
+   * (dá para forjar e mandar o link de senha para outro site).
+   */
+  APP_URL: z.preprocess((v) => (v === "" ? undefined : v), z.url().optional()),
+  VERCEL_PROJECT_PRODUCTION_URL: z.string().optional(),
+  /** E-mail pelo Resend (opcional: sem isso, links de senha são entregues pela tela). */
+  RESEND_API_KEY: z.string().optional(),
+  EMAIL_FROM: z.string().optional(),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 });
 

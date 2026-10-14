@@ -2,10 +2,14 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { errorState, validationError, type ActionState } from "@/lib/action-state";
-import { loginSchema } from "@/lib/validation";
+import { forgotPasswordSchema, loginSchema, resetPasswordSchema } from "@/lib/validation";
 import { loadAuthUser } from "@/server/auth/dal";
 import { isLoginBlocked, recordLoginAttempt } from "@/server/auth/login-throttle";
+import { consumePasswordToken, createPasswordLink, deliverPasswordLink } from "@/server/auth/password-token";
+import { getCache } from "@/server/cache";
+import { isEmailConfigured } from "@/server/email";
 import { homePathFor, type AuthUser } from "@/server/auth/permissions";
 import { clientIp, createSession, deleteCurrentSession } from "@/server/auth/session";
 import { getDummyPasswordHash, verifyPassword } from "@/server/crypto";
@@ -59,4 +63,50 @@ function destination(user: AuthUser, next: string | null): string {
     return homePathFor(user);
   }
   return next;
+}
+
+const RESET_SENT =
+  "Se o e-mail estiver cadastrado, enviamos um link para criar uma nova senha. Confira também a caixa de spam.";
+
+/**
+ * "Esqueci minha senha": manda o link por e-mail. A resposta é sempre a mesma,
+ * exista o e-mail ou não (não revela quem tem conta), e o envio acontece
+ * depois da resposta (o tempo também não revela).
+ */
+export async function requestPasswordReset(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = forgotPasswordSchema.safeParse({ email: formData.get("email") });
+  if (!parsed.success) return validationError(parsed.error, formData);
+  if (!isEmailConfigured()) {
+    return errorState(
+      "O envio por e-mail ainda não está ativo. Peça ao administrador da sua empresa ou à Engemase um link para criar uma nova senha.",
+      formData,
+    );
+  }
+
+  const { email } = parsed.data;
+  const ip = clientIp(await headers()) ?? "sem-ip";
+  const cache = getCache();
+  // Um pedido por e-mail por minuto e um a cada 10 s por endereço: não vira disparador de e-mails.
+  if (!(await cache.acquire(`reset:${email}`, 60_000)) || !(await cache.acquire(`reset-ip:${ip}`, 10_000))) {
+    return { status: "success", message: RESET_SENT };
+  }
+  after(async () => {
+    const user = await db.user.findUnique({
+      where: { email },
+      select: { id: true, name: true, email: true, active: true },
+    });
+    if (!user?.active) return;
+    const path = await createPasswordLink(user.id, "reset");
+    await deliverPasswordLink(user, path, "reset");
+  });
+  return { status: "success", message: RESET_SENT };
+}
+
+/** Nova senha pelo link (esqueci a senha ou convite). */
+export async function resetPassword(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = resetPasswordSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return validationError(parsed.error, formData);
+  const ok = await consumePasswordToken(parsed.data.token, parsed.data.newPassword);
+  if (!ok) return errorState("Este link venceu ou já foi usado. Peça um novo link.");
+  redirect("/login?senha=definida");
 }

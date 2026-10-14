@@ -30,7 +30,17 @@ const FEATURES = [
 ];
 
 /** Tela de login em duas colunas: marca à esquerda, formulário à direita. */
-export function LoginScreen({ brand, children }: { brand: LoginBrand; children: React.ReactNode }) {
+export function LoginScreen({
+  brand,
+  children,
+  title = "Entrar",
+  subtitle = "Use o e-mail e a senha cadastrados para você.",
+}: {
+  brand: LoginBrand;
+  children: React.ReactNode;
+  title?: string;
+  subtitle?: string;
+}) {
   return (
     <main
       className={cn("grid min-h-dvh lg:grid-cols-[1.1fr_1fr]", BRAND_THEME_CLASS)}
@@ -112,8 +122,8 @@ export function LoginScreen({ brand, children }: { brand: LoginBrand; children: 
             <span className="font-heading text-xl font-bold text-primary">{brand.name}</span>
           </div>
           <div className="space-y-1.5">
-            <h2 className="text-2xl font-semibold">Entrar</h2>
-            <p className="text-sm text-muted-foreground">Use o e-mail e a senha cadastrados para você.</p>
+            <h2 className="text-2xl font-semibold">{title}</h2>
+            <p className="text-sm text-muted-foreground">{subtitle}</p>
           </div>
           {children}
         </div>

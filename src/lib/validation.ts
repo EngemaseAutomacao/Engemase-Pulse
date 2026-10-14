@@ -85,6 +85,20 @@ export const loginSchema = z.object({
     .transform((v) => (v && v.startsWith("/") && !v.startsWith("//") && !v.startsWith("/\\") ? v : null)),
 });
 
+export const forgotPasswordSchema = z.object({ email });
+
+/** Nova senha pelo link de uso único (esqueci a senha ou convite). */
+export const resetPasswordSchema = z
+  .object({
+    token: z.string().min(10).max(200),
+    newPassword,
+    confirmPassword: z.string(),
+  })
+  .refine((v) => v.newPassword === v.confirmPassword, {
+    message: "As senhas não conferem",
+    path: ["confirmPassword"],
+  });
+
 export const changePasswordSchema = z
   .object({
     currentPassword: z.string().min(1, "Informe a senha atual"),
@@ -262,6 +276,15 @@ export function membershipsFromForm(formData: FormData): { tenantId: string; rol
   }
   return entries;
 }
+
+/** Convite de usuário pelo administrador do cliente. */
+export const inviteMemberSchema = z.object({
+  name: requiredText("Nome"),
+  email,
+  role: z.enum(ROLES, { error: "Escolha o papel" }),
+});
+
+export type InviteMemberInput = z.infer<typeof inviteMemberSchema>;
 
 export type TenantInput = z.infer<typeof tenantSchema>;
 export type SiteInput = z.infer<typeof siteSchema>;

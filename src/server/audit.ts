@@ -6,7 +6,7 @@ export type AuditEntry = {
   /** null: feito pelo próprio sistema (ex.: medidor criado pelo Painel local). */
   actorId: string | null;
   action: "create" | "update" | "delete" | "reset-password" | "rotate-agent-token";
-  entityType: "tenant" | "site" | "meter" | "user" | "alarm-rule";
+  entityType: "tenant" | "site" | "meter" | "user" | "alarm-rule" | "membership";
   entityId?: string;
   details?: Prisma.InputJsonValue;
 };
