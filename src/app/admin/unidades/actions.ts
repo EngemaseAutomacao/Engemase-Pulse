@@ -6,7 +6,7 @@ import { errorState, validationError, type ActionState } from "@/lib/action-stat
 import { siteSchema } from "@/lib/validation";
 import { isNotFound, isUniqueViolation, requireAdminForAction } from "@/server/admin/guard";
 import { invalidateSites } from "@/server/admin/invalidate";
-import { createSite, deleteSite, updateSite } from "@/server/admin/sites";
+import { createSite, deleteSite, rotateSiteAgentToken, updateSite } from "@/server/admin/sites";
 import { db } from "@/server/db";
 import { influxSourceFor } from "@/server/telemetry/service";
 import { TelemetryError } from "@/server/telemetry/types";
@@ -97,5 +97,20 @@ export async function testSiteConnection(siteId: string | null, formData: FormDa
     };
   } catch (error) {
     return { ok: false, message: error instanceof TelemetryError ? error.message : "Falha inesperada no teste." };
+  }
+}
+
+export type AgentTokenResult = { ok: true; token: string } | { ok: false; message: string };
+
+/** Gera (ou troca) o token do Painel local. O anterior para de valer na hora. */
+export async function rotateAgentToken(siteId: string): Promise<AgentTokenResult> {
+  const actor = await requireAdminForAction();
+  try {
+    const token = await rotateSiteAgentToken(actor, siteId);
+    revalidatePath(`/admin/unidades/${siteId}`);
+    return { ok: true, token };
+  } catch (error) {
+    if (isNotFound(error)) return { ok: false, message: "Esta unidade não existe mais." };
+    throw error;
   }
 }

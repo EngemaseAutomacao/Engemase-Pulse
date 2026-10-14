@@ -73,6 +73,8 @@ export default async function SitesPage({ searchParams }: PageProps<"/admin/unid
                   <TableCell>
                     {s.telemetrySource === "SIMULATED" ? (
                       <Badge variant="outline">Simulado</Badge>
+                    ) : s.telemetrySource === "AGENT" ? (
+                      <span className="text-sm">Painel local</span>
                     ) : (
                       <span className="text-sm">
                         InfluxDB <span className="font-mono text-xs text-muted-foreground">{s.influxBucket ?? "—"}</span>

@@ -1,4 +1,5 @@
 import "server-only";
+import { invalidateAgentMeterIndex } from "@/server/agent/meters";
 import { invalidateAlarmState } from "@/server/alarms/state";
 import { db } from "@/server/db";
 import { invalidateSiteLive } from "@/server/telemetry/live";
@@ -14,6 +15,7 @@ export async function invalidateSites(siteIds: (string | null | undefined)[], kn
   const tenantIds = [...new Set([...knownTenantIds, ...sites.map((s) => s.tenantId)])];
   await Promise.all([
     invalidateSiteLive(...ids),
+    invalidateAgentMeterIndex(...ids),
     invalidateTenantTopology(...tenantIds),
     invalidateAlarmState(...tenantIds),
   ]);

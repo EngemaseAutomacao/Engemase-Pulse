@@ -18,6 +18,7 @@ export async function listTenantMeters(tenantId: string): Promise<{
         location: m.location,
         siteId: site.id,
         siteName: site.name,
+        isMain: m.isMain,
       })),
     ),
   };

@@ -1,4 +1,5 @@
 import "server-only";
+import type { TelemetrySource } from "@/generated/prisma/enums";
 import { cached, configTtlMs, getCache } from "@/server/cache";
 import { db } from "@/server/db";
 
@@ -14,6 +15,8 @@ export type MeterTopology = {
   name: string;
   location: string | null;
   siteId: string;
+  /** Entrada geral da unidade (os demais medidores são alimentadores dela). */
+  isMain: boolean;
   influxMeasurement: string;
   influxTagKey: string | null;
   influxTagValue: string | null;
@@ -23,7 +26,7 @@ export type SiteTopology = {
   id: string;
   name: string;
   timezone: string;
-  telemetrySource: "INFLUXDB" | "SIMULATED";
+  telemetrySource: TelemetrySource;
   influxUrl: string | null;
   influxOrg: string | null;
   influxBucket: string | null;
@@ -33,7 +36,7 @@ export type SiteTopology = {
   meters: MeterTopology[];
 };
 
-const topologyKey = (tenantId: string) => `topology:v1:${tenantId}`;
+const topologyKey = (tenantId: string) => `topology:v2:${tenantId}`;
 
 export function getTenantTopology(tenantId: string): Promise<SiteTopology[]> {
   return cached(topologyKey(tenantId), configTtlMs(), () => loadTopology(tenantId));
@@ -66,6 +69,7 @@ async function loadTopology(tenantId: string): Promise<SiteTopology[]> {
           name: true,
           location: true,
           siteId: true,
+          isMain: true,
           influxMeasurement: true,
           influxTagKey: true,
           influxTagValue: true,

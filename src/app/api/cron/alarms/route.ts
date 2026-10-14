@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { Receiver } from "@upstash/qstash";
+import { purgeOldAgentReadings } from "@/server/agent/retention";
 import { evaluateAllTenants } from "@/server/alarms/engine";
 import { env } from "@/server/env";
 
@@ -23,7 +24,15 @@ async function handle(request: NextRequest) {
 
   const startedAt = Date.now();
   const summary = await evaluateAllTenants();
-  return NextResponse.json({ ...summary, durationMs: Date.now() - startedAt }, { headers: { "Cache-Control": "no-store" } });
+  // Carona na mesma chamada periódica: limpeza do histórico antigo do Painel local.
+  const purgedReadings = await purgeOldAgentReadings().catch((error: unknown) => {
+    console.error("[retenção]", error);
+    return 0;
+  });
+  return NextResponse.json(
+    { ...summary, purgedReadings, durationMs: Date.now() - startedAt },
+    { headers: { "Cache-Control": "no-store" } },
+  );
 }
 
 async function isAuthorized(request: NextRequest, body: string): Promise<boolean> {

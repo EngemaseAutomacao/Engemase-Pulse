@@ -27,7 +27,9 @@ export function listMeters(filter: { tenantId?: string; siteId?: string }) {
 export function getMeter(id: string) {
   return db.meter.findUnique({
     where: { id },
-    include: { site: { select: { id: true, name: true, tenant: { select: { id: true, name: true, slug: true } } } } },
+    include: {
+      site: { select: { id: true, name: true, telemetrySource: true, tenant: { select: { id: true, name: true, slug: true } } } },
+    },
   });
 }
 

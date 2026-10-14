@@ -2,6 +2,7 @@
  * Campos (`_field` no InfluxDB) gravados pelo gateway para cada multimedidor.
  * Os nomes seguem o mapeamento Modbus → Influx do fluxo atual do gateway;
  * se o gateway mudar, ajuste aqui e o restante do sistema acompanha.
+ * O Painel local usa outros nomes; a tradução está em `painel-fields.ts`.
  */
 
 export type FieldGroup = "voltage" | "current" | "power" | "quality" | "energy";
@@ -43,6 +44,7 @@ export const METER_FIELDS: readonly MeterField[] = [
   { key: "I2", label: "Corrente L2", unit: "A", group: "current", digits: 1 },
   { key: "I3", label: "Corrente L3", unit: "A", group: "current", digits: 1 },
   { key: "I_AVG", label: "Corrente média", unit: "A", group: "current", digits: 1 },
+  { key: "I_N", label: "Corrente de neutro", unit: "A", group: "current", digits: 1 },
   // Potência ativa
   { key: "kW1", label: "Potência ativa L1", unit: "kW", group: "power", digits: 2 },
   { key: "kW2", label: "Potência ativa L2", unit: "kW", group: "power", digits: 2 },
@@ -58,6 +60,7 @@ export const METER_FIELDS: readonly MeterField[] = [
   { key: "kVAr2", label: "Potência reativa L2", unit: "kVAr", group: "power", digits: 2 },
   { key: "kVAr3", label: "Potência reativa L3", unit: "kVAr", group: "power", digits: 2 },
   { key: "Total_kVAr", label: "Potência reativa total", unit: "kVAr", group: "power", digits: 1 },
+  { key: "Demand_kW", label: "Demanda máxima ativa", unit: "kW", group: "power", digits: 1 },
   // Qualidade
   { key: "PF1", label: "Fator de potência L1", unit: "", group: "quality", digits: 3 },
   { key: "PF2", label: "Fator de potência L2", unit: "", group: "quality", digits: 3 },
@@ -78,6 +81,13 @@ export const METER_FIELDS: readonly MeterField[] = [
     digits: 2,
     normal: { min: 59.5, max: 60.5 },
   },
+  // Distorção harmônica (PRODIST: até 10% de THD de tensão em baixa tensão)
+  { key: "THD_V1", label: "THD de tensão L1", unit: "%", group: "quality", digits: 1, normal: { max: 10 } },
+  { key: "THD_V2", label: "THD de tensão L2", unit: "%", group: "quality", digits: 1, normal: { max: 10 } },
+  { key: "THD_V3", label: "THD de tensão L3", unit: "%", group: "quality", digits: 1, normal: { max: 10 } },
+  { key: "THD_I1", label: "THD de corrente L1", unit: "%", group: "quality", digits: 1 },
+  { key: "THD_I2", label: "THD de corrente L2", unit: "%", group: "quality", digits: 1 },
+  { key: "THD_I3", label: "THD de corrente L3", unit: "%", group: "quality", digits: 1 },
   // Energia (contadores)
   { key: "Total_net_kWh", label: "Energia ativa", unit: "kWh", group: "energy", digits: 0, cumulative: true },
   { key: "Total_kVAh", label: "Energia aparente", unit: "kVAh", group: "energy", digits: 0, cumulative: true },
@@ -126,6 +136,8 @@ export const CHART_PRESETS = [
   { id: "voltage-ll", label: "Tensões L-L", unit: "V", fields: ["V12", "V23", "V31", "VLL_AVG"] },
   { id: "pf", label: "Fator de potência", unit: "", fields: ["PF1", "PF2", "PF3", "PF_AVG"] },
   { id: "frequency", label: "Frequência", unit: "Hz", fields: ["Frequencia"] },
+  { id: "thd-v", label: "THD de tensão", unit: "%", fields: ["THD_V1", "THD_V2", "THD_V3"] },
+  { id: "thd-i", label: "THD de corrente", unit: "%", fields: ["THD_I1", "THD_I2", "THD_I3"] },
 ] as const satisfies readonly {
   id: string;
   label: string;
@@ -143,6 +155,8 @@ export const SERIES_LABEL: Record<string, string> = {
   PF1: "L1", PF2: "L2", PF3: "L3", PF_AVG: "Médio",
   Total_kVA: "Aparente (kVA)", Total_kVAr: "Reativa (kVAr)",
   Frequencia: "Frequência",
+  THD_V1: "L1", THD_V2: "L2", THD_V3: "L3",
+  THD_I1: "L1", THD_I2: "L2", THD_I3: "L3",
 };
 
 export type ChartPresetId = (typeof CHART_PRESETS)[number]["id"];

@@ -24,10 +24,14 @@ const PHASE_ROWS = ["L1", "L2", "L3", "Total / média"] as const;
 
 const HEADLINE_FIELDS = ["Total_kW", "PF_AVG", "Frequencia", "Total_net_kWh", "Total_kVAhr", "Total_kVAh"] as const;
 
+/** Qualidade e demanda: nem todo medidor envia; o bloco só aparece com os que vierem. */
+const QUALITY_FIELDS = ["THD_V1", "THD_V2", "THD_V3", "THD_I1", "THD_I2", "THD_I3", "I_N", "Demand_kW"] as const;
+
 export function MeterLivePanel({ tenantSlug, meterId }: { tenantSlug: string; meterId: string }) {
   const { data, isLoading } = useLive(tenantSlug, { meterId });
   const live = data?.meters[meterId];
   const values = live?.values ?? {};
+  const qualityFields = QUALITY_FIELDS.filter((key) => values[key] !== undefined);
 
   return (
     <section aria-labelledby="live-title" className="space-y-4">
@@ -51,6 +55,17 @@ export function MeterLivePanel({ tenantSlug, meterId }: { tenantSlug: string; me
           </div>
         ))}
       </div>
+
+      {qualityFields.length > 0 && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {qualityFields.map((key) => (
+            <div key={key} className="surface p-3">
+              <p className="truncate text-xs text-muted-foreground">{FIELD_BY_KEY.get(key)?.label}</p>
+              <Value fieldKey={key} value={values[key]} className="mt-1 font-semibold" />
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="surface overflow-x-auto">
         <Table>

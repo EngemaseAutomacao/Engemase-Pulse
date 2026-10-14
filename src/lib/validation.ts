@@ -124,7 +124,8 @@ export const tenantSchema = z.object({
   active: checkbox,
 });
 
-export const TELEMETRY_SOURCES = ["INFLUXDB", "SIMULATED"] as const;
+export const TELEMETRY_SOURCES = ["INFLUXDB", "SIMULATED", "AGENT"] as const;
+export type TelemetrySourceId = (typeof TELEMETRY_SOURCES)[number];
 
 export const siteSchema = z
   .object({

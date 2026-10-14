@@ -50,6 +50,9 @@ export async function listSiteMeasurements(siteId: string): Promise<ConnectionTe
   if (site.telemetrySource === "SIMULATED") {
     return { ok: true, message: "Unidade simulada: qualquer nome de measurement funciona.", measurements: [] };
   }
+  if (site.telemetrySource === "AGENT") {
+    return { ok: true, message: "Os medidores desta unidade são criados pelo Painel local, no primeiro envio.", measurements: [] };
+  }
   try {
     const measurements = await influxSourceFor(site).listMeasurements();
     return { ok: true, message: `${measurements.length} measurement(s) encontrados.`, measurements };

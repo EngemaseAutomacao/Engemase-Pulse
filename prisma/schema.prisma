@@ -1,5 +1,6 @@
 // Banco principal: cadastros (clientes, unidades, medidores), usuários e sessões.
-// As leituras dos multimedidores NÃO ficam aqui — ficam no InfluxDB de cada unidade.
+// Leituras: nas unidades com InfluxDB ficam no InfluxDB de cada unidade; nas
+// unidades com Painel local, o resumo de 5 min e o consumo por hora ficam aqui.
 //
 // Fluxo de alteração:  editar este arquivo  →  npm run db:migrate -- --name <descricao>
 
@@ -25,6 +26,8 @@ enum TelemetrySource {
   INFLUXDB
   /// Dados gerados pelo próprio sistema (demonstração e desenvolvimento).
   SIMULATED
+  /// Painel (supervisório) instalado na loja, que lê o Modbus e envia para POST /api/ingest.
+  AGENT
 }
 
 // ---------------------------------------------------------------------------
@@ -89,14 +92,34 @@ model Site {
   /// Token cifrado com AES-256-GCM (APP_SECRET). Nunca sai do servidor.
   influxTokenEncrypted String?         @map("influx_token_encrypted")
 
+  /// SHA-256 do token do Painel local (fonte AGENT). O token em si só é mostrado ao ser gerado.
+  agentTokenHash  String?   @unique @map("agent_token_hash")
+  /// Último envio aceito do Painel local.
+  agentLastSeenAt DateTime? @map("agent_last_seen_at")
+  /// Versão do Painel e nome da planta informados no último envio.
+  agentInfo       Json?     @map("agent_info")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  meters Meter[]
+  tenant       Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  meters       Meter[]
+  liveSnapshot SiteLiveSnapshot?
 
   @@unique([tenantId, name])
   @@map("sites")
+}
+
+/// Última leitura enviada pelo Painel local. Só é gravada sem Redis; com Redis fica no cache.
+model SiteLiveSnapshot {
+  siteId     String   @id @map("site_id") @db.Uuid
+  receivedAt DateTime @map("received_at")
+  /// Por id do medidor: { time, values } já com os nomes de campo do sistema.
+  readings   Json
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@map("site_live_snapshots")
 }
 
 // ---------------------------------------------------------------------------
@@ -120,23 +143,77 @@ model Meter {
   ctRatio       String? @map("ct_ratio")
   ptRatio       String? @map("pt_ratio")
 
-  /// `_measurement` onde o gateway grava as leituras deste medidor.
+  /// `_measurement` onde o gateway grava as leituras deste medidor (no Painel local, o id do equipamento).
   influxMeasurement String  @map("influx_measurement")
   /// Filtro opcional por tag, quando vários medidores dividem o mesmo measurement.
   influxTagKey      String? @map("influx_tag_key")
   influxTagValue    String? @map("influx_tag_value")
+
+  /// Id do equipamento no Painel local (ex.: "geral"). Medidores do Painel são criados no primeiro envio.
+  externalId  String? @map("external_id")
+  /// Entrada geral da unidade: os demais medidores são os alimentadores dela.
+  isMain      Boolean @default(false) @map("is_main")
+  /// Corrente nominal do disjuntor, em A (escala da carga do circuito).
+  breakerAmps Float?  @map("breaker_amps")
 
   active    Boolean  @default(true)
   sortOrder Int      @default(0) @map("sort_order")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  site       Site        @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  alarmRules AlarmRule[]
-  alarms     Alarm[]
+  site         Site              @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  alarmRules   AlarmRule[]
+  alarms       Alarm[]
+  readings5m   MeterReading5m[]
+  energyHours  MeterEnergyHour[]
 
   @@unique([siteId, tag])
+  @@unique([siteId, externalId])
   @@map("meters")
+}
+
+/// Resumo de 5 min enviado pelo Painel local: { campo: [média, mínimo, máximo] }.
+model MeterReading5m {
+  meterId String   @map("meter_id") @db.Uuid
+  /// Início da janela de 5 min.
+  ts      DateTime
+  values  Json
+
+  meter Meter @relation(fields: [meterId], references: [id], onDelete: Cascade)
+
+  @@id([meterId, ts])
+  @@index([ts])
+  @@map("meter_readings_5m")
+}
+
+enum EnergyQuantity {
+  /// kWh
+  ACTIVE
+  /// kVAh
+  APPARENT
+}
+
+enum EnergySource {
+  /// Diferença do contador de energia do medidor.
+  COUNTER
+  /// Estimado pela potência média (contador indisponível naquela hora).
+  POWER
+}
+
+/// Consumo por hora fechada, calculado pelo Painel local.
+model MeterEnergyHour {
+  meterId  String         @map("meter_id") @db.Uuid
+  quantity EnergyQuantity @default(ACTIVE)
+  /// Início da hora.
+  hour     DateTime
+  /// kWh (ativa) ou kVAh (aparente).
+  value    Float
+  source   EnergySource
+
+  meter Meter @relation(fields: [meterId], references: [id], onDelete: Cascade)
+
+  @@id([meterId, quantity, hour])
+  @@map("meter_energy_hours")
 }
 
 // ---------------------------------------------------------------------------

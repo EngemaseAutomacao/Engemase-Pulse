@@ -11,9 +11,19 @@ import { Button } from "@/components/ui/button";
 import { getSiteForEdit } from "@/server/admin/sites";
 import { tenantOptions } from "@/server/admin/tenants";
 import { requirePlatformAdmin } from "@/server/auth/dal";
-import { removeSite, saveSite, testSiteConnection } from "../actions";
+import { removeSite, rotateAgentToken, saveSite, testSiteConnection } from "../actions";
 
 export const metadata: Metadata = { title: "Unidade" };
+
+function agentStatus(site: { hasAgentToken: boolean; agentLastSeenAt: Date | null; agentInfo: unknown }) {
+  const info = (site.agentInfo ?? {}) as { versao?: unknown; planta?: unknown };
+  return {
+    hasToken: site.hasAgentToken,
+    lastSeenAt: site.agentLastSeenAt?.toISOString() ?? null,
+    version: typeof info.versao === "string" ? info.versao : null,
+    plant: typeof info.planta === "string" ? info.planta : null,
+  };
+}
 
 export default async function SitePage({ params }: PageProps<"/admin/unidades/[id]">) {
   await requirePlatformAdmin();
@@ -41,6 +51,7 @@ export default async function SitePage({ params }: PageProps<"/admin/unidades/[i
         <SiteForm
           action={saveSite.bind(null, site.id)}
           testConnection={testSiteConnection.bind(null, site.id)}
+          rotateAgentToken={rotateAgentToken.bind(null, site.id)}
           tenants={tenants}
           site={{
             tenantId: site.tenantId,
@@ -55,6 +66,7 @@ export default async function SitePage({ params }: PageProps<"/admin/unidades/[i
             influxBucket: site.influxBucket,
             influxRollupBucket: site.influxRollupBucket,
             hasInfluxToken: site.hasInfluxToken,
+            agent: agentStatus(site),
           }}
         />
       </section>
@@ -91,7 +103,10 @@ export default async function SitePage({ params }: PageProps<"/admin/unidades/[i
       <section className="space-y-3 rounded-xl border border-destructive/30 p-5">
         <h2 className="font-semibold text-destructive">Excluir unidade</h2>
         <p className="text-sm text-muted-foreground">
-          Remove a unidade e os {site.meters.length} medidor(es) dela. As leituras no InfluxDB não são apagadas.
+          Remove a unidade e os {site.meters.length} medidor(es) dela.{" "}
+          {site.telemetrySource === "AGENT"
+            ? "O histórico enviado pelo Painel local é apagado junto; o da loja continua no Painel."
+            : "As leituras no InfluxDB não são apagadas."}
         </p>
         <DeleteButton
           action={removeSite.bind(null, site.id)}

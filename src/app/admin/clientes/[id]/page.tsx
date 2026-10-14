@@ -15,6 +15,8 @@ import { ROLE_LABEL } from "@/server/auth/permissions";
 import { tenantLogoUrl } from "@/server/branding";
 import { removeTenant, saveTenant, uploadTenantLogo } from "../actions";
 
+const SOURCE_LABEL = { INFLUXDB: "InfluxDB", SIMULATED: "simulado", AGENT: "Painel local" } as const;
+
 export const metadata: Metadata = { title: "Cliente" };
 
 export default async function TenantPage({ params }: PageProps<"/admin/clientes/[id]">) {
@@ -95,7 +97,7 @@ export default async function TenantPage({ params }: PageProps<"/admin/clientes/
                   <Link href={`/admin/unidades/${s.id}`} className="flex items-center justify-between gap-2 px-3 py-2 text-sm hover:bg-muted/50">
                     <span className="font-medium">{s.name}</span>
                     <span className="text-xs text-muted-foreground">
-                      {s._count.meters} medidor(es) · {s.telemetrySource === "SIMULATED" ? "simulado" : "InfluxDB"}
+                      {s._count.meters} medidor(es) · {SOURCE_LABEL[s.telemetrySource]}
                     </span>
                   </Link>
                 </li>

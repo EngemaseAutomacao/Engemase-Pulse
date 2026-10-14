@@ -12,6 +12,8 @@ export type MeterSummary = {
   siteId: string;
   siteName: string;
   location: string | null;
+  /** Entrada geral: nos totais, substitui a soma dos alimentadores da unidade. */
+  isMain: boolean;
 };
 
 const SECONDARY_FIELDS = [

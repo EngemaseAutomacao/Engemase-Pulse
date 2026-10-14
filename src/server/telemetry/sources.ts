@@ -1,12 +1,14 @@
 import "server-only";
+import type { TelemetrySource as TelemetrySourceKind } from "@/generated/prisma/enums";
 import { decryptSecret } from "@/server/crypto";
+import { AgentSource } from "./agent";
 import { InfluxSource } from "./influx/source";
 import { SimulatedSource } from "./simulated";
 import { TelemetryError, type MeterRef, type TelemetrySource } from "./types";
 
 /** O que é preciso da unidade para consultar suas leituras. */
 export type SiteTelemetryConfig = {
-  telemetrySource: "INFLUXDB" | "SIMULATED";
+  telemetrySource: TelemetrySourceKind;
   influxUrl: string | null;
   influxOrg: string | null;
   influxBucket: string | null;
@@ -30,8 +32,15 @@ export function influxSourceFor(site: SiteTelemetryConfig): InfluxSource {
   });
 }
 
-export function sourceFor(site: SiteTelemetryConfig): TelemetrySource {
-  return site.telemetrySource === "SIMULATED" ? simulated : influxSourceFor(site);
+export function sourceFor(site: SiteTelemetryConfig & { id: string }): TelemetrySource {
+  switch (site.telemetrySource) {
+    case "SIMULATED":
+      return simulated;
+    case "AGENT":
+      return new AgentSource(site.id);
+    case "INFLUXDB":
+      return influxSourceFor(site);
+  }
 }
 
 export function toMeterRef(meter: {

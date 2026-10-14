@@ -50,7 +50,7 @@ export function TenantDashboard({
   const visibleErrors = Object.fromEntries(
     Object.entries(data?.errors ?? {}).filter(([id]) => siteId === ALL_SITES || id === siteId),
   );
-  const totals = summarize(visible.map((m) => data?.meters[m.id]));
+  const totals = summarize(visible, data?.meters);
 
   return (
     <div className="space-y-6">
@@ -92,7 +92,7 @@ export function TenantDashboard({
           value={isLoading ? "…" : formatNumber(totals.kw, 1)}
           unit="kW"
           icon={<ActivityIcon />}
-          detail="Soma dos medidores online"
+          detail={totals.fromMain ? "Entrada geral (alimentadores já inclusos)" : "Soma dos medidores online"}
         />
         <StatTile
           label="Potência aparente"
@@ -178,17 +178,28 @@ function onlineDetail(online: number, total: number, offline: number): string {
   return parts.join(" · ") || "—";
 }
 
-function summarize(readings: (LiveMeter | undefined)[]) {
-  const totals = { kw: 0, kva: 0, kvar: 0, online: 0, offline: 0 };
-  for (const reading of readings) {
-    if (reading?.status !== "online") {
-      if (reading?.status === "offline") totals.offline++;
-      continue;
+/**
+ * Totais das unidades. Com a entrada geral online, ela é o total da unidade: os
+ * alimentadores estão dentro dela e somá-los contaria a mesma energia duas vezes.
+ * Sem entrada geral cadastrada (ou com ela sem comunicação), soma os medidores online.
+ */
+function summarize(meters: MeterSummary[], live: Record<string, LiveMeter> | undefined) {
+  const totals = { kw: 0, kva: 0, kvar: 0, online: 0, offline: 0, fromMain: false };
+  const bySite = new Map<string, MeterSummary[]>();
+  for (const meter of meters) bySite.set(meter.siteId, [...(bySite.get(meter.siteId) ?? []), meter]);
+
+  for (const siteMeters of bySite.values()) {
+    const online = siteMeters.filter((m) => live?.[m.id]?.status === "online");
+    totals.online += online.length;
+    totals.offline += siteMeters.filter((m) => live?.[m.id]?.status === "offline").length;
+    const mains = online.filter((m) => m.isMain);
+    if (mains.length > 0) totals.fromMain = true;
+    for (const meter of mains.length > 0 ? mains : online) {
+      const values = live![meter.id].values;
+      totals.kw += values.Total_kW ?? 0;
+      totals.kva += values.Total_kVA ?? 0;
+      totals.kvar += values.Total_kVAr ?? 0;
     }
-    totals.online++;
-    totals.kw += reading.values.Total_kW ?? 0;
-    totals.kva += reading.values.Total_kVA ?? 0;
-    totals.kvar += reading.values.Total_kVAr ?? 0;
   }
   return totals;
 }

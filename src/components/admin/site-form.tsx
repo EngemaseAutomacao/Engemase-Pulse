@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useRef, useState, useTransition } from "react";
-import { CircleCheckIcon, CircleXIcon, DatabaseIcon, FlaskConicalIcon, Loader2Icon, PlugIcon } from "lucide-react";
+import { CircleCheckIcon, CircleXIcon, DatabaseIcon, FlaskConicalIcon, Loader2Icon, PlugIcon, ServerIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Field, FormMessage, SubmitButton, fieldProps } from "@/components/forms/field";
@@ -9,7 +9,9 @@ import { NativeSelect } from "@/components/forms/native-select";
 import { useActionToast } from "@/components/forms/use-action-toast";
 import { IDLE, type ActionState } from "@/lib/action-state";
 import { cn } from "@/lib/utils";
-import type { ConnectionTestResult } from "@/app/admin/unidades/actions";
+import type { TelemetrySourceId } from "@/lib/validation";
+import type { AgentTokenResult, ConnectionTestResult } from "@/app/admin/unidades/actions";
+import { AgentConnection, type AgentStatus } from "./agent-connection";
 
 const TIME_ZONES = [
   ["America/Sao_Paulo", "Brasília (SP, RJ, MG, Sul, GO, DF…)"],
@@ -31,23 +33,27 @@ type SiteFormValues = {
   city: string | null;
   state: string | null;
   timezone: string;
-  telemetrySource: "INFLUXDB" | "SIMULATED";
+  telemetrySource: TelemetrySourceId;
   influxUrl: string | null;
   influxOrg: string | null;
   influxBucket: string | null;
   influxRollupBucket: string | null;
   hasInfluxToken: boolean;
+  agent: AgentStatus;
 };
 
 export function SiteForm({
   action,
   testConnection,
+  rotateAgentToken,
   site,
   tenants,
   defaultTenantId,
 }: {
   action: (state: ActionState, formData: FormData) => Promise<ActionState>;
   testConnection: (formData: FormData) => Promise<ConnectionTestResult>;
+  /** Só na edição: a unidade precisa existir para ter token. */
+  rotateAgentToken?: () => Promise<AgentTokenResult>;
   site?: SiteFormValues;
   tenants: { id: string; name: string }[];
   defaultTenantId?: string;
@@ -55,7 +61,7 @@ export function SiteForm({
   const [state, formAction] = useActionState(action, IDLE);
   useActionToast(state);
   const formRef = useRef<HTMLFormElement>(null);
-  const [source, setSource] = useState(state.values?.telemetrySource ?? site?.telemetrySource ?? "INFLUXDB");
+  const [source, setSource] = useState<string>(state.values?.telemetrySource ?? site?.telemetrySource ?? "INFLUXDB");
   const [test, setTest] = useState<ConnectionTestResult | null>(null);
   const [testing, startTest] = useTransition();
   const error = (field: string) => state.fieldErrors?.[field];
@@ -110,7 +116,15 @@ export function SiteForm({
 
       <fieldset className="grid gap-4">
         <legend className="mb-2 text-sm font-semibold">Fonte das leituras</legend>
-        <div role="radiogroup" className="grid gap-3 sm:grid-cols-2">
+        <div role="radiogroup" className="grid gap-3 sm:grid-cols-3">
+          <SourceOption
+            value="AGENT"
+            current={source}
+            onSelect={setSource}
+            icon={<ServerIcon />}
+            title="Painel local"
+            description="O Painel instalado na loja lê os medidores e envia as leituras."
+          />
           <SourceOption
             value="INFLUXDB"
             current={source}
@@ -128,6 +142,14 @@ export function SiteForm({
             description="Dados gerados pelo sistema, para demonstração."
           />
         </div>
+
+        {source === "AGENT" && (
+          <AgentConnection
+            status={site?.agent ?? null}
+            rotateToken={rotateAgentToken}
+            savedAsAgent={site?.telemetrySource === "AGENT"}
+          />
+        )}
 
         <div className={cn("grid gap-4", source !== "INFLUXDB" && "hidden")}>
           <Field
@@ -208,9 +230,9 @@ function SourceOption({
   title,
   description,
 }: {
-  value: "INFLUXDB" | "SIMULATED";
+  value: TelemetrySourceId;
   current: string;
-  onSelect: (value: "INFLUXDB" | "SIMULATED") => void;
+  onSelect: (value: TelemetrySourceId) => void;
   icon: React.ReactNode;
   title: string;
   description: string;

@@ -3,8 +3,9 @@ import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/server/db";
 
 export type AuditEntry = {
-  actorId: string;
-  action: "create" | "update" | "delete" | "reset-password";
+  /** null: feito pelo próprio sistema (ex.: medidor criado pelo Painel local). */
+  actorId: string | null;
+  action: "create" | "update" | "delete" | "reset-password" | "rotate-agent-token";
   entityType: "tenant" | "site" | "meter" | "user" | "alarm-rule";
   entityId?: string;
   details?: Prisma.InputJsonValue;

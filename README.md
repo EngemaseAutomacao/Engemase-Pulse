@@ -27,6 +27,8 @@ Multimedidores ──RS485/Modbus──▶ Gateway ──▶ InfluxDB 2.x (por u
 - **PWA**: instalável no Android, iOS e desktop; página offline; aviso de "sem conexão".
 - **Responsivo** do celular ao monitor grande; tema escuro com a identidade Engemase.
 - **Fonte simulada**: unidades em modo "Simulado" geram dados realistas — demonstração sem gateway.
+- **Painel local**: o supervisório instalado na loja lê o Modbus e envia as leituras para a nuvem
+  (sem InfluxDB e sem porta aberta na loja). Ver [Painel local](#painel-local-supervisório-da-loja).
 
 ## Stack
 
@@ -35,7 +37,7 @@ Multimedidores ──RS485/Modbus──▶ Gateway ──▶ InfluxDB 2.x (por u
 | App (SSR, API, Server Actions) | Next.js 16 (App Router, Cache Components) · React 19 · TypeScript estrito |
 | UI | Tailwind CSS 4 · shadcn/ui (Radix) · Recharts · SWR |
 | Banco | PostgreSQL via **Prisma 7** (produção: **Neon**, região São Paulo) |
-| Telemetria | InfluxDB 2.x via HTTP/Flux (sem SDK) |
+| Telemetria | Painel local (envio por HTTPS) ou InfluxDB 2.x via HTTP/Flux (sem SDK) |
 | Autenticação | Própria: scrypt + sessão no banco (cookie `httpOnly`), limite de tentativas |
 | Push | Web Push (VAPID) com `web-push` |
 | Testes / qualidade | Vitest · ESLint · Prettier · GitHub Actions |
@@ -152,6 +154,36 @@ O sistema foi preparado para muitos clientes, unidades e medidores sem gargalo d
   diário/mensal leem médias horárias em vez de milhões de pontos. Configure com a task
   [`docs/influx/rollup-1h.flux`](docs/influx/rollup-1h.flux).
 
+## Painel local (supervisório da loja)
+
+Em vez de um gateway gravando num InfluxDB exposto na internet, a loja roda o **Painel**
+(supervisório Node.js com SQLite, em um mini PC ligado à RS-485). Ele continua sendo a
+referência na loja — leitura Modbus, perfis de equipamento, alarmes, tela local, funciona
+sem internet — e **copia** as leituras para a nuvem:
+
+```
+Multimedidores ──RS485/Modbus──▶ Painel (mini PC, SQLite) ──HTTPS, só de saída──▶ POST /api/ingest
+```
+
+1. Em **Administração → Unidades**, escolha a fonte **Painel local** e clique em **Gerar token**.
+   O token aparece uma única vez (no banco fica só o SHA-256), já com o trecho do `config.json`.
+2. No Painel, instale o módulo de envio: [`integracoes/painel/`](integracoes/painel/LEIAME.md).
+3. No primeiro envio, os **medidores são criados sozinhos** a partir dos equipamentos de energia
+   do Painel (nome, TAG ISA, entrada geral, disjuntor, endereço Modbus).
+
+O que a nuvem guarda de cada unidade com Painel local:
+
+| Dado | Onde | Retenção |
+| --- | --- | --- |
+| Leitura atual (a cada ~10 s) | Upstash Redis (sem Redis: tabela `site_live_snapshots`) | último envio |
+| Resumo de 5 min (média, mín., máx.) | `meter_readings_5m` | 400 dias |
+| Consumo por hora, já calculado pelo Painel (contador ou estimado pela potência) | `meter_energy_hours` | para sempre |
+
+Com o Painel, a energia vem do contador lido corretamente (float32 na ordem CDAB do Siemens
+7KT): o problema de consumo "aos saltos de 1024 kWh" de gateways que leem a ordem errada
+não acontece. O formato do envio está em [`src/lib/agent-payload.ts`](src/lib/agent-payload.ts)
+e a tradução das grandezas em [`src/lib/painel-fields.ts`](src/lib/painel-fields.ts).
+
 ## Como os dados são lidos do InfluxDB
 
 Cada medidor aponta para um `_measurement` (e, opcionalmente, um filtro `tag = valor` quando vários
@@ -195,11 +227,12 @@ src/
     login/              login geral e /login/<slug> com a marca do cliente
     app/[tenant]/       área do cliente: visão geral, medidores, alarmes, conta
     admin/              administração da plataforma
-    api/                leituras (live/history/energy/export), logo, cron de alarmes
+    api/                leituras (live/history/energy/export), logo, cron de alarmes, ingest do Painel
   components/           UI (shell, gráficos, medidores, alarmes, formulários, pwa)
   lib/                  código compartilhado: campos do medidor, validação, períodos, alarmes
   server/               só servidor: auth (DAL), banco, cripto, telemetria (Influx/simulado), push
 public/sw.js            service worker (push + offline)
+integracoes/painel/     módulo de envio para o Painel local (vai no supervisório da loja)
 ```
 
 Princípios: verificação de acesso perto dos dados (DAL em `src/server/auth/dal.ts`), toda entrada

@@ -1,4 +1,5 @@
 import "server-only";
+import { forgetAgentToken, generateAgentToken } from "@/server/agent/token";
 import { audit } from "@/server/audit";
 import { encryptSecret } from "@/server/crypto";
 import { db } from "@/server/db";
@@ -23,7 +24,7 @@ export function listSites(tenantId?: string) {
   });
 }
 
-/** Unidade para edição. O token cifrado nunca sai daqui: só a informação de que existe. */
+/** Unidade para edição. Os tokens nunca saem daqui: só a informação de que existem. */
 export async function getSiteForEdit(id: string) {
   const site = await db.site.findUnique({
     where: { id },
@@ -33,8 +34,8 @@ export async function getSiteForEdit(id: string) {
     },
   });
   if (!site) return null;
-  const { influxTokenEncrypted, ...rest } = site;
-  return { ...rest, hasInfluxToken: Boolean(influxTokenEncrypted) };
+  const { influxTokenEncrypted, agentTokenHash, ...rest } = site;
+  return { ...rest, hasInfluxToken: Boolean(influxTokenEncrypted), hasAgentToken: Boolean(agentTokenHash) };
 }
 
 export function siteOptions() {
@@ -65,6 +66,22 @@ export async function updateSite(actor: AuthUser, id: string, input: SiteInput) 
   const site = await db.site.update({ where: { id }, data: toData(input) });
   await audit({ actorId: actor.id, action: "update", entityType: "site", entityId: id, details: auditDetails(input) });
   return site;
+}
+
+/** Novo token do Painel local; devolve o token (a única vez em que ele aparece). */
+export async function rotateSiteAgentToken(actor: AuthUser, id: string): Promise<string> {
+  const { token, hash } = generateAgentToken();
+  const previous = await db.site.findUniqueOrThrow({ where: { id }, select: { agentTokenHash: true } });
+  await db.site.update({ where: { id }, data: { agentTokenHash: hash } });
+  await forgetAgentToken(previous.agentTokenHash);
+  await audit({
+    actorId: actor.id,
+    action: "rotate-agent-token",
+    entityType: "site",
+    entityId: id,
+    details: { substituiuAnterior: Boolean(previous.agentTokenHash) },
+  });
+  return token;
 }
 
 export async function deleteSite(actor: AuthUser, id: string) {
