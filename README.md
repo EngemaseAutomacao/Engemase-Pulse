@@ -20,14 +20,24 @@ Multimedidores ──RS485/Modbus──▶ Painel local (mini PC na loja, SQLite
 - **Painel do cliente**: potência, FP global, medidores online, cartões ao vivo (atualiza a cada 10 s).
 - **Detalhe do medidor**: tabela por fase (V, A, kW, kVA, kVAr, FP), THD, neutro e demanda, histórico
   com período e grandeza selecionáveis, consumo por hora/dia/mês (no fuso da unidade) e CSV para Excel.
-- **Consumo por setor**: consumo do dia hora a hora, hora de pico, maior setor, participação de cada
-  setor e o **não medido** (entrada geral menos a soma dos alimentadores).
-- **Alarmes**: regras por cliente/medidor (limite de grandeza ou "sem comunicação"), histórico,
-  reconhecimento pelo operador e **notificação push** no celular/computador.
-- **Administração** (equipe da plataforma): clientes com logo/cores e login próprio em `/login/<slug>`,
-  unidades com o token do Painel local, medidores (criados pelo Painel) e usuários com papéis por cliente.
+- **Consumo por setor**: no dia, hora a hora (pico, maior setor, participação); no mês, dia a dia com
+  custo em R$ por setor e comparação com o mês anterior e o mesmo mês do ano anterior. Sempre com o
+  **não medido** (entrada geral menos a soma dos alimentadores). Planilha para Excel.
+- **Fatura estimada**: pela tarifa da unidade (convencional, branca, verde ou azul): energia por posto
+  (ponta só em dias úteis, sem feriados nacionais), demanda faturada contra a contratada, ultrapassagem,
+  excedente de reativo, impostos e projeção do mês. **Relatório mensal** pronto para imprimir/salvar em PDF.
+- **Unifilar** ao vivo: entrada, barramento e setores com disjuntor, potência e **% de carga**.
+- **Comparar** até 3 medidores (da mesma unidade ou de unidades diferentes).
+- **Alarmes**: regras da nuvem (limite de grandeza ou "sem comunicação"), alarmes do **Painel da loja**
+  (abrem, fecham e são reconhecidos dos dois lados), **loja sem comunicação** e **demanda acima da
+  contratada** automáticos, com **notificação push** no celular/computador.
+- **Usuários**: o administrador do cliente convida a equipe dele (papéis), sem depender da Engemase;
+  **esqueci minha senha** por e-mail (opcional).
+- **Administração** (equipe da plataforma): clientes com logo, cores e imagem de fundo no login próprio
+  em `/login/<slug>`, unidades com o token do Painel e a tarifa, medidores (criados pelo Painel), usuários
+  e a tela **Saúde do sistema** (o que falta configurar, lojas sem envio, erros recentes).
 - **PWA**: instalável no Android, iOS e desktop; página offline; aviso de "sem conexão".
-- **Responsivo** do celular ao monitor grande; tema escuro com a identidade Engemase.
+- **Responsivo** do celular ao monitor grande; tema **claro, escuro ou automático** (segue o aparelho).
 - **Painel local**: o supervisório instalado na loja lê o Modbus e envia as leituras para a nuvem,
   sem porta aberta na loja. Ver [Painel local](#painel-local-supervisório-da-loja).
 
@@ -41,15 +51,16 @@ Multimedidores ──RS485/Modbus──▶ Painel local (mini PC na loja, SQLite
 | Telemetria | Painel local (supervisório da loja), envio por HTTPS para `/api/ingest` |
 | Autenticação | Própria: scrypt + sessão no banco (cookie `httpOnly`), limite de tentativas |
 | Push | Web Push (VAPID) com `web-push` |
-| Testes / qualidade | Vitest · ESLint · Prettier · GitHub Actions |
+| E-mail | Resend (opcional), por HTTP |
+| Testes / qualidade | Vitest · Playwright (testes de tela) · ESLint · Prettier · GitHub Actions |
 
 ## Papéis
 
 | Papel | Pode |
 | --- | --- |
-| Visualizador | Ver painéis, medidores e alarmes do cliente |
+| Visualizador | Ver painéis, medidores, consumo, fatura e alarmes do cliente |
 | Operador | + exportar CSV e reconhecer alarmes |
-| Administrador (do cliente) | + criar/editar regras de alarme |
+| Administrador (do cliente) | + criar/editar regras de alarme e gerenciar os usuários do cliente |
 | Equipe da plataforma | Tudo, em todos os clientes, e a área `/admin` |
 
 Notificações push vão para os usuários **vinculados ao cliente** que ativaram o aparelho em
@@ -97,8 +108,13 @@ gere o token e rode o Painel em modo demonstração (`npm run demo` no Painel) a
    É o cache compartilhado das leituras e do estado dos alarmes (cria `KV_REST_API_URL`/`KV_REST_API_TOKEN`).
    Sem ele o sistema funciona, mas cada instância tem seu próprio cache e o banco trabalha mais.
 4. Em **Settings → Environment Variables**, adicione:
-   - `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (`mailto:seu@email`).
-   - `CRON_SECRET` — texto aleatório longo (protege o avaliador de alarmes).
+   - `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (`mailto:seu@email`) —
+     gere com `npx web-push generate-vapid-keys`. **Sem elas ninguém recebe notificação no celular.**
+   - `CRON_SECRET` — texto aleatório longo (protege o agendador, ver abaixo).
+   - `RESEND_API_KEY` e `EMAIL_FROM` (opcionais) — e-mail de "esqueci minha senha" e dos convites.
+     Sem elas, os convites mostram um link para o administrador repassar.
+   - `APP_URL` (opcional) — endereço público, se usar domínio próprio. Sem ele, os links usam o domínio de
+     produção da Vercel. Nunca vem do cabeçalho `Host` (evita links de senha apontando para outro site).
    - `SESSION_TTL_DAYS` (opcional, padrão 7).
    - `SEED_ADMIN_EMAIL` e `SEED_ADMIN_PASSWORD` (mín. 10 caracteres) — o primeiro administrador.
      **Sem elas o banco fica sem nenhum usuário e todo login dá "E-mail ou senha incorretos."**
@@ -114,22 +130,52 @@ gere o token e rode o Painel em modo demonstração (`npm run demo` no Painel) a
    DATABASE_URL="postgres://…" SEED_ADMIN_EMAIL="voce@engemase.com.br" SEED_ADMIN_PASSWORD="…" npm run db:seed
    ```
 
-### Avaliador de alarmes (cron)
+Depois do deploy, abra **Administração → Saúde do sistema**: ela diz o que ainda falta configurar.
 
-As regras são avaliadas pela rota `/api/cron/alarms` (GET ou POST). Ela aceita
-`Authorization: Bearer <CRON_SECRET>` ou a assinatura do Upstash QStash. Escolha **uma** forma de chamá-la:
+### Agendador (alarmes e lojas sem comunicação)
 
-- **Upstash QStash (recomendado em qualquer plano)** — no console do QStash, crie um *Schedule* para
-  `https://SEU_DOMINIO/api/cron/alarms` com `*/5 * * * *`. Copie as chaves `QSTASH_CURRENT_SIGNING_KEY` e
-  `QSTASH_NEXT_SIGNING_KEY` para as variáveis da Vercel. Tem reenvio automático se a chamada falhar.
+As tarefas periódicas — regras de alarme da nuvem, **loja sem comunicação** (Painel sem enviar há 10 min),
+**demanda acima da contratada** e limpeza do histórico — rodam **de carona** no tráfego: cada envio de
+loja e cada tela aberta pedem uma rodada (no máximo uma por minuto). Com pelo menos uma loja enviando,
+funciona sem nada configurado. O agendador cobre o caso em que **nenhuma** loja envia e ninguém está
+olhando (ex.: a única loja caiu de madrugada).
+
+A rota é `/api/cron/alarms` (GET ou POST), com `Authorization: Bearer <CRON_SECRET>` ou a assinatura do
+Upstash QStash. Escolha **uma** forma de chamá-la:
+
+- **Upstash QStash (recomendado em qualquer plano)** — em [console.upstash.com](https://console.upstash.com)
+  → QStash → *Schedules* → *Create*: destino `https://SEU_DOMINIO/api/cron/alarms`, cron `*/5 * * * *`.
+  Em QStash → *Signing keys*, copie `QSTASH_CURRENT_SIGNING_KEY` e `QSTASH_NEXT_SIGNING_KEY` para as
+  variáveis da Vercel e faça um novo deploy. Tem reenvio automático se a chamada falhar.
 - **Vercel Pro** — adicione ao `vercel.json`:
   `"crons": [{ "path": "/api/cron/alarms", "schedule": "*/5 * * * *" }]` (a Vercel envia o `CRON_SECRET`).
   No plano Hobby o cron nativo roda no máximo 1x por dia.
 - **GitHub Actions** — o workflow [`.github/workflows/alarms-cron.yml`](.github/workflows/alarms-cron.yml)
-  chama a rota (secrets `APP_URL` e `CRON_SECRET`). O agendamento do GitHub pode atrasar alguns minutos.
+  chama a rota (secrets `APP_URL` e `CRON_SECRET` em *Settings → Secrets and variables → Actions*). Na
+  prática o GitHub roda agendamentos com horas de atraso: use só como reserva.
 - Na tela **Alarmes**, administradores também têm o botão **Verificar agora**.
 
-A tela inicial da **Administração** mostra a última execução do avaliador e alerta se ele parar de rodar.
+A **Saúde do sistema** mostra a última rodada das tarefas e quando o agendador chamou pela última vez.
+
+### Tarifa de cada unidade
+
+Em **Administração → Unidades → (a unidade) → Tarifa e contrato de energia**, com os valores da fatura
+da distribuidora: modalidade, preços do kWh (ponta, fora ponta, intermediário na branca), bandeira,
+demanda contratada e tarifa de demanda (verde/azul), horário de ponta e impostos (ICMS + PIS/COFINS,
+calculados por dentro; 0 se os preços já têm impostos). Com ela o cliente vê o custo por setor, a
+**Fatura** estimada e o relatório mensal com valores.
+
+## Testes
+
+```bash
+npm test                    # unidade (Vitest)
+npm run build && npm run test:e2e   # telas (Playwright)
+```
+
+Os testes de tela precisam de um Postgres migrado e com o administrador criado (`npm run db:seed`); usam
+`SEED_ADMIN_EMAIL`/`SEED_ADMIN_PASSWORD` (ou `E2E_ADMIN_*`) para entrar. A preparação cria o cliente `e2e`
+com uma loja e manda leituras sintéticas por `/api/ingest`, como o Painel. No GitHub Actions eles rodam em
+todo pull request e em todo push na `main`, com um Postgres próprio.
 
 ## Escalabilidade
 
@@ -228,3 +274,7 @@ No plano gratuito o banco "dorme" após 5 min sem uso e há uma cota mensal de p
 acabar, o Neon suspende o banco até o mês seguinte. **Com o Upstash Redis configurado**, o avaliador de
 alarmes não acorda o banco enquanto nada muda — só o uso real das telas consome a cota. Sem Redis, cada
 execução consulta o banco; nesse caso, agende o avaliador a cada 15 min em vez de 5.
+
+**Com lojas enviando**, o banco recebe o histórico do Painel a cada minuto e praticamente não dorme. Uma
+ou duas lojas costumam caber na cota gratuita por pouco tempo; com lojas em produção, conte com o plano
+pago do Neon (confira o uso em *Neon → Monitoring*).

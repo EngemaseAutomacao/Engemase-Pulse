@@ -96,7 +96,7 @@ export async function getSystemHealth() {
           status: "warn",
           detail:
             "Sem Redis: a leitura ao vivo de cada loja é gravada no banco a cada 10 s e cada servidor tem o próprio cache.",
-          fix: "Na Vercel: Storage → Upstash (Redis) → conectar ao projeto. As variáveis UPSTASH_REDIS_REST_URL e UPSTASH_REDIS_REST_TOKEN entram sozinhas.",
+          fix: "Na Vercel: Storage → Upstash (Redis) → criar e conectar ao projeto; as variáveis (KV_REST_API_URL e KV_REST_API_TOKEN) entram sozinhas. Depois, um novo deploy.",
         },
     schedulerAge !== null && schedulerAge < SCHEDULER_OK_MS
       ? { key: "scheduler", label: "Agendador externo", status: "ok", detail: `Chamou às ${time(schedulerLastRun!)}` }

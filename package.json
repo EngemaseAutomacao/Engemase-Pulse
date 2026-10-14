@@ -18,7 +18,8 @@
     "db:studio": "prisma studio",
     "postinstall": "prisma generate",
     "vercel-build": "prisma generate && prisma migrate deploy && npm run db:seed -- --if-configured && next build",
-    "icons": "node scripts/generate-icons.mjs"
+    "icons": "node scripts/generate-icons.mjs",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",
@@ -42,6 +43,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@playwright/test": "1.56.1",
     "@tailwindcss/turbopack": "^4",
     "@types/node": "^24.19.2",
     "@types/pg": "^8.23.1",
