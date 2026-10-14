@@ -4,8 +4,9 @@
  *
  *   npm run db:seed                       → só o administrador
  *   npm run db:seed -- --demo             → administrador + cliente de demonstração
- *   npm run db:seed -- --if-configured    → idem ao primeiro, mas sem SEED_ADMIN_* só avisa e sai
- *                                           (usado no build da Vercel, ver "vercel-build")
+ *   npm run db:seed -- --if-configured    → idem ao primeiro, mas sem SEED_ADMIN_* (ou com valor
+ *                                           inválido) só avisa e sai sem erro: usado no build da
+ *                                           Vercel ("vercel-build"), onde não pode impedir o deploy
  *
  * Variáveis: DATABASE_URL, SEED_ADMIN_EMAIL, SEED_ADMIN_PASSWORD (e DEMO_USER_PASSWORD para --demo).
  */
@@ -14,20 +15,19 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { hashPassword } from "../src/server/crypto";
 
-const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: required("DATABASE_URL") }) });
+const ifConfigured = process.argv.includes("--if-configured");
+
+let db!: PrismaClient;
 
 function required(name: string): string {
   // Aspas coladas junto no valor (ex.: "a@b.com" no painel da Vercel) viram parte dele; tira.
   const value = process.env[name]?.trim().replace(/^(["'])(.*)\1$/, "$2");
-  if (!value) {
-    console.error(`✖ Defina ${name} (no .env ou na linha de comando).`);
-    process.exit(1);
-  }
+  if (!value) throw new Error(`Defina ${name} (no .env ou na linha de comando).`);
   return value;
 }
 
 async function seedAdmin() {
-  if (process.argv.includes("--if-configured") && !process.env.SEED_ADMIN_EMAIL?.trim()) {
+  if (ifConfigured && !process.env.SEED_ADMIN_EMAIL?.trim()) {
     console.log("• SEED_ADMIN_EMAIL não definida — criação do administrador ignorada.");
     return;
   }
@@ -123,13 +123,20 @@ async function seedDemo() {
 }
 
 async function main() {
+  db = new PrismaClient({ adapter: new PrismaPg({ connectionString: required("DATABASE_URL") }) });
   await seedAdmin();
   if (process.argv.includes("--demo")) await seedDemo();
 }
 
 main()
   .catch((error) => {
-    console.error("✖", error instanceof Error ? error.message : error);
+    const message = error instanceof Error ? error.message : String(error);
+    if (ifConfigured) {
+      // No build da Vercel: o sistema sobe mesmo assim; o aviso fica no log do build.
+      console.warn(`⚠ Administrador não criado: ${message}`);
+      return;
+    }
+    console.error("✖", message);
     process.exitCode = 1;
   })
-  .finally(() => db.$disconnect());
+  .finally(() => db?.$disconnect());
