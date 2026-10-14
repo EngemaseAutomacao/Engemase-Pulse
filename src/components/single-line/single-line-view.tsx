@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { OctagonAlertIcon, RefreshCwIcon, TriangleAlertIcon, UtilityPoleIcon } from "lucide-react";
+import { StaleSitesNotice, staleSites } from "@/components/dashboard/stale-sites";
 import { BreakerLoadBar } from "@/components/meters/breaker-load";
 import { RelativeTime } from "@/components/meters/relative-time";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -94,6 +95,14 @@ export function SingleLineView({ tenantSlug, sites }: { tenantSlug: string; site
           )}
         </p>
       </div>
+
+      <StaleSitesNotice
+        sites={staleSites(
+          site.meters.map((m) => ({ id: m.id, siteId: site.id })),
+          data?.meters,
+        )}
+        siteNames={new Map([[site.id, site.name]])}
+      />
 
       <section aria-label={`Diagrama unifilar — ${site.name}`} className="overflow-hidden surface p-4 sm:p-6">
         {/* Entrada: concessionária → disjuntor geral → medidor da entrada */}

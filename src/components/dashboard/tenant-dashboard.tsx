@@ -14,6 +14,7 @@ import { formatNumber } from "@/lib/format";
 import type { LiveMeter } from "@/lib/telemetry-types";
 import { cn } from "@/lib/utils";
 import { SiteErrors } from "./site-errors";
+import { StaleSitesNotice, staleSites } from "./stale-sites";
 import { StatTile } from "./stat-tile";
 
 const ALL_SITES = "all";
@@ -85,6 +86,7 @@ export function TenantDashboard({
       </div>
 
       <SiteErrors errors={visibleErrors} siteNames={siteNames} />
+      <StaleSitesNotice sites={staleSites(visible, data?.meters)} siteNames={siteNames} />
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatTile

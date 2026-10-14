@@ -1,12 +1,13 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { Receiver } from "@upstash/qstash";
-import { purgeOldAgentReadings } from "@/server/agent/retention";
-import { evaluateAllTenants } from "@/server/alarms/engine";
 import { env } from "@/server/env";
+import { markSchedulerRun, runHousekeeping } from "@/server/housekeeping";
 
 /**
- * Avaliador periódico de alarmes. Aceita dois tipos de chamada autenticada:
+ * Tarefas periódicas (alarmes, lojas sem comunicação, limpeza). Elas também
+ * rodam de carona no tráfego (ver housekeeping.ts); este agendador cobre os
+ * períodos sem envio de nenhuma loja. Aceita dois tipos de chamada autenticada:
  *  - "Authorization: Bearer <CRON_SECRET>" — Cron da Vercel ou GitHub Actions;
  *  - assinatura do Upstash QStash (cabeçalho upstash-signature) — agendador com
  *    reenvio automático, funciona em qualquer plano da Vercel.
@@ -23,14 +24,10 @@ async function handle(request: NextRequest) {
   }
 
   const startedAt = Date.now();
-  const summary = await evaluateAllTenants();
-  // Carona na mesma chamada periódica: limpeza do histórico antigo do Painel local.
-  const purgedReadings = await purgeOldAgentReadings().catch((error: unknown) => {
-    console.error("[retenção]", error);
-    return 0;
-  });
+  const { alarms, heartbeat, purgedReadings } = await runHousekeeping();
+  await markSchedulerRun();
   return NextResponse.json(
-    { ...summary, purgedReadings, durationMs: Date.now() - startedAt },
+    { ...alarms, heartbeat, purgedReadings, durationMs: Date.now() - startedAt },
     { headers: { "Cache-Control": "no-store" } },
   );
 }

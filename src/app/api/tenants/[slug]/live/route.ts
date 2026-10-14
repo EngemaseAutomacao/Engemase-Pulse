@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { liveParams, searchParamsObject } from "@/lib/api-contracts";
+import { scheduleHousekeeping } from "@/server/housekeeping";
 import { authorizeTenantApi, jsonError, NO_STORE_HEADERS } from "@/server/http";
 import { getTenantLive } from "@/server/telemetry/service";
 
@@ -18,5 +19,6 @@ export async function GET(request: NextRequest, ctx: RouteContext<"/api/tenants/
     meterId: meter,
     fields: meter || view === "full" ? "all" : "summary",
   });
+  scheduleHousekeeping();
   return NextResponse.json(snapshot, { headers: NO_STORE_HEADERS });
 }

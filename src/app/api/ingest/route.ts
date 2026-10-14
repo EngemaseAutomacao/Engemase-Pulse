@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { agentPayloadSchema } from "@/lib/agent-payload";
 import { ingestAgentPayload } from "@/server/agent/ingest";
+import { scheduleHousekeeping } from "@/server/housekeeping";
 import { findSiteByAgentToken } from "@/server/agent/token";
 
 /**
@@ -42,5 +43,6 @@ export async function POST(request: NextRequest) {
   }
 
   const result = await ingestAgentPayload(site, parsed.data);
+  scheduleHousekeeping();
   return reply(200, { ok: true, ...result });
 }
