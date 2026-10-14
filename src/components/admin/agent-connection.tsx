@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { CheckIcon, CopyIcon, KeyRoundIcon, Loader2Icon, TriangleAlertIcon } from "lucide-react";
+import { CheckIcon, CopyIcon, KeyRoundIcon, Loader2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { RelativeTime } from "@/components/meters/relative-time";
@@ -21,13 +21,10 @@ export type AgentStatus = {
 export function AgentConnection({
   status,
   rotateToken,
-  savedAsAgent,
 }: {
   status: AgentStatus | null;
   /** Ausente enquanto a unidade não foi criada. */
   rotateToken?: () => Promise<AgentTokenResult>;
-  /** A fonte gravada já é o Painel local (senão os envios são recusados até salvar). */
-  savedAsAgent: boolean;
 }) {
   const [token, setToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -78,12 +75,6 @@ export function AgentConnection({
         </p>
       </div>
 
-      {!savedAsAgent && (
-        <p className="flex items-start gap-2 text-sm text-warning">
-          <TriangleAlertIcon className="mt-0.5 size-4 shrink-0" />
-          Salve a unidade com a fonte “Painel local” para os envios serem aceitos.
-        </p>
-      )}
 
       <div className="flex flex-wrap items-center gap-3">
         <Button type="button" variant="outline" onClick={generate} disabled={pending}>

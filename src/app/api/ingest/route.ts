@@ -8,8 +8,7 @@ import { findSiteByAgentToken } from "@/server/agent/token";
  * Autenticação: "Authorization: Bearer <token da unidade>", gerado em
  * Administração → Unidades. Formato do corpo: `src/lib/agent-payload.ts`.
  *
- * Respostas: 200 aceito · 400 corpo inválido · 401 token inválido ·
- * 409 a unidade não está configurada como Painel local · 413 corpo grande demais.
+ * Respostas: 200 aceito · 400 corpo inválido · 401 token inválido · 413 corpo grande demais.
  * O Painel só avança o que já enviou depois de um 200.
  */
 export const maxDuration = 30;
@@ -25,9 +24,6 @@ export async function POST(request: NextRequest) {
   const token = /^Bearer\s+(\S+)$/i.exec(request.headers.get("authorization") ?? "")?.[1];
   const site = token ? await findSiteByAgentToken(token) : null;
   if (!site) return reply(401, { erro: "Token inválido ou revogado" });
-  if (site.telemetrySource !== "AGENT") {
-    return reply(409, { erro: "A unidade não está configurada para receber leituras do Painel local" });
-  }
 
   if (Number(request.headers.get("content-length") ?? 0) > MAX_BODY_BYTES) {
     return reply(413, { erro: "Envio grande demais: mande o histórico em partes menores" });

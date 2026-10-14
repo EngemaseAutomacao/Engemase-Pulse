@@ -35,7 +35,7 @@ describe("evaluateRule — sem comunicação", () => {
     expect(evaluateRule(offline, online({}, 60), undefined, NOW)).toEqual({ state: "normal" });
   });
 
-  it("dispara sem leitura nenhuma ou com o InfluxDB fora do ar", () => {
+  it("dispara sem leitura nenhuma ou com falha ao ler a unidade", () => {
     expect(evaluateRule(offline, undefined, undefined, NOW)).toMatchObject({ state: "triggered" });
     expect(evaluateRule(offline, undefined, "timeout", NOW)).toMatchObject({
       state: "triggered",

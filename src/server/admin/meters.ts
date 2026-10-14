@@ -16,9 +16,9 @@ export function listMeters(filter: { tenantId?: string; siteId?: string }) {
       tag: true,
       name: true,
       active: true,
-      influxMeasurement: true,
-      influxTagKey: true,
-      influxTagValue: true,
+      externalId: true,
+      isMain: true,
+      breakerAmps: true,
       site: { select: { id: true, name: true, tenant: { select: { id: true, name: true, slug: true } } } },
     },
   });
@@ -28,15 +28,9 @@ export function getMeter(id: string) {
   return db.meter.findUnique({
     where: { id },
     include: {
-      site: { select: { id: true, name: true, telemetrySource: true, tenant: { select: { id: true, name: true, slug: true } } } },
+      site: { select: { id: true, name: true, tenant: { select: { id: true, name: true, slug: true } } } },
     },
   });
-}
-
-export async function createMeter(actor: AuthUser, input: MeterInput) {
-  const meter = await db.meter.create({ data: input });
-  await audit({ actorId: actor.id, action: "create", entityType: "meter", entityId: meter.id, details: input });
-  return meter;
 }
 
 export async function updateMeter(actor: AuthUser, id: string, input: MeterInput) {

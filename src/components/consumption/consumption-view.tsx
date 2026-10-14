@@ -86,7 +86,7 @@ export function ConsumptionView({ tenantSlug, sites }: { tenantSlug: string; sit
           aria-label="Dia"
           className="w-40"
         />
-        <span className="text-sm text-muted-foreground capitalize">{longDate(day)}</span>
+        <span className="text-sm text-muted-foreground first-letter:uppercase">{longDate(day)}</span>
       </div>
 
       {failure && (
@@ -289,7 +289,7 @@ function HourByHour({
                     estimated={s.estimated}
                     timeZone={timeZone}
                     height={130}
-                    yMax={sameScale ? sectorMax : undefined}
+                    yMax={sameScale ? niceCeil(sectorMax) : undefined}
                     compact
                   />
                 </div>
@@ -478,6 +478,14 @@ function Share({ data }: { data: ConsumptionResponse }) {
 /** Setores: os alimentadores, quando há entrada geral; senão, todos os medidores. */
 function feedersOf(data: ConsumptionResponse) {
   return data.entrance.fromMain ? data.sectors.filter((s) => !s.isMain) : data.sectors;
+}
+
+/** Arredonda para cima até um número "redondo" (1, 2, 2,5 ou 5 × 10ⁿ), para o topo do eixo. */
+function niceCeil(value: number): number {
+  if (value <= 0) return 0;
+  const power = 10 ** Math.floor(Math.log10(value));
+  const step = [1, 2, 2.5, 5, 10].find((m) => m * power >= value) ?? 10;
+  return step * power;
 }
 
 function peakIndex(values: (number | null)[]): number | null {

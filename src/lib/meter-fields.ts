@@ -1,8 +1,6 @@
 /**
- * Campos (`_field` no InfluxDB) gravados pelo gateway para cada multimedidor.
- * Os nomes seguem o mapeamento Modbus → Influx do fluxo atual do gateway;
- * se o gateway mudar, ajuste aqui e o restante do sistema acompanha.
- * O Painel local usa outros nomes; a tradução está em `painel-fields.ts`.
+ * Grandezas de cada multimedidor, com os nomes usados em todo o sistema.
+ * O Painel local envia com os nomes dele; a tradução está em `painel-fields.ts`.
  */
 
 export type FieldGroup = "voltage" | "current" | "power" | "quality" | "energy";

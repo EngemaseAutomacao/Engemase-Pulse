@@ -1,14 +1,11 @@
 import "server-only";
 import {
-  createCipheriv,
-  createDecipheriv,
   createHash,
   randomBytes,
   scrypt as scryptCallback,
   timingSafeEqual,
   type ScryptOptions,
 } from "node:crypto";
-import { env } from "./env";
 
 // ---------------------------------------------------------------------------
 // Senhas — scrypt com salt aleatório.
@@ -62,28 +59,4 @@ export function generateSessionToken(): string {
 
 export function hashSessionToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
-}
-
-// ---------------------------------------------------------------------------
-// Segredos (token do InfluxDB) — AES-256-GCM com APP_SECRET.
-// Formato: iv.tag.ciphertext (base64)
-// ---------------------------------------------------------------------------
-
-function secretKey(): Buffer {
-  return Buffer.from(env().APP_SECRET, "base64");
-}
-
-export function encryptSecret(plaintext: string): string {
-  const iv = randomBytes(12);
-  const cipher = createCipheriv("aes-256-gcm", secretKey(), iv);
-  const ciphertext = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
-  return [iv, cipher.getAuthTag(), ciphertext].map((b) => b.toString("base64")).join(".");
-}
-
-export function decryptSecret(payload: string): string {
-  const [iv, tag, ciphertext] = payload.split(".").map((part) => Buffer.from(part, "base64"));
-  if (!iv || !tag || !ciphertext) throw new Error("Segredo cifrado em formato inválido");
-  const decipher = createDecipheriv("aes-256-gcm", secretKey(), iv);
-  decipher.setAuthTag(tag);
-  return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString("utf8");
 }

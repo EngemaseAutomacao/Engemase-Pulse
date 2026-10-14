@@ -4,7 +4,7 @@ import { SiteForm } from "@/components/admin/site-form";
 import { PageContainer, PageHeader } from "@/components/shell/page";
 import { tenantOptions } from "@/server/admin/tenants";
 import { requirePlatformAdmin } from "@/server/auth/dal";
-import { saveSite, testSiteConnection } from "../actions";
+import { saveSite } from "../actions";
 
 export const metadata: Metadata = { title: "Nova unidade" };
 
@@ -19,7 +19,6 @@ export default async function NewSitePage({ searchParams }: PageProps<"/admin/un
       <div className="surface p-5">
         <SiteForm
           action={saveSite.bind(null, null)}
-          testConnection={testSiteConnection.bind(null, null)}
           tenants={tenants}
           defaultTenantId={z.uuid().safeParse(cliente).data}
         />

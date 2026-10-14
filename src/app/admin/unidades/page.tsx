@@ -3,8 +3,8 @@ import Link from "next/link";
 import { MapPinIcon, PlusIcon } from "lucide-react";
 import { z } from "zod";
 import { FilterForm } from "@/components/admin/filter-form";
+import { RelativeTime } from "@/components/meters/relative-time";
 import { EmptyState, PageContainer, PageHeader } from "@/components/shell/page";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { listSites } from "@/server/admin/sites";
@@ -23,7 +23,7 @@ export default async function SitesPage({ searchParams }: PageProps<"/admin/unid
     <PageContainer>
       <PageHeader
         title="Unidades"
-        description="Locais de cada cliente. Cada unidade tem sua própria conexão com o InfluxDB."
+        description="Locais de cada cliente. Cada unidade recebe as leituras do Painel local instalado nela."
         actions={
           <Button asChild>
             <Link href={`/admin/unidades/novo${tenantId ? `?cliente=${tenantId}` : ""}`}>
@@ -54,7 +54,7 @@ export default async function SitesPage({ searchParams }: PageProps<"/admin/unid
                 <TableHead>Unidade</TableHead>
                 <TableHead className="hidden sm:table-cell">Cliente</TableHead>
                 <TableHead className="hidden md:table-cell">Cidade</TableHead>
-                <TableHead>Fonte de dados</TableHead>
+                <TableHead>Painel local</TableHead>
                 <TableHead className="text-right">Medidores</TableHead>
               </TableRow>
             </TableHeader>
@@ -70,15 +70,11 @@ export default async function SitesPage({ searchParams }: PageProps<"/admin/unid
                   <TableCell className="hidden text-muted-foreground md:table-cell">
                     {[s.city, s.state].filter(Boolean).join(" / ") || "—"}
                   </TableCell>
-                  <TableCell>
-                    {s.telemetrySource === "SIMULATED" ? (
-                      <Badge variant="outline">Simulado</Badge>
-                    ) : s.telemetrySource === "AGENT" ? (
-                      <span className="text-sm">Painel local</span>
+                  <TableCell className="text-sm">
+                    {s.agentLastSeenAt ? (
+                      <RelativeTime value={s.agentLastSeenAt.toISOString()} />
                     ) : (
-                      <span className="text-sm">
-                        InfluxDB <span className="font-mono text-xs text-muted-foreground">{s.influxBucket ?? "—"}</span>
-                      </span>
+                      <span className="text-muted-foreground">{s.agentTokenHash ? "Aguardando o 1º envio" : "Sem token"}</span>
                     )}
                   </TableCell>
                   <TableCell className="tabular text-right">{s._count.meters}</TableCell>

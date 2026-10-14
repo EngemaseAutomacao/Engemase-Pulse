@@ -13,7 +13,6 @@ export default defineConfig({
     environment: "node",
     include: ["src/**/*.test.ts"],
     env: {
-      APP_SECRET: "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=",
       DATABASE_URL: "postgres://test@localhost:5432/test",
       TZ: "UTC",
     },

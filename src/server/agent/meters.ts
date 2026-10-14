@@ -108,7 +108,6 @@ async function syncMeters(site: AgentSite, energy: AgentEquipment[]): Promise<Me
       create: {
         siteId: site.id,
         externalId: e.id,
-        influxMeasurement: e.id,
         tag,
         model: e.perfil ?? null,
         sortOrder: position,

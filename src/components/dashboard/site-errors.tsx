@@ -1,6 +1,6 @@
 import { TriangleAlertIcon } from "lucide-react";
 
-/** Aviso das unidades cuja consulta ao InfluxDB falhou. */
+/** Aviso das unidades cuja leitura falhou. */
 export function SiteErrors({ errors, siteNames }: { errors: Record<string, string>; siteNames: Map<string, string> }) {
   const entries = Object.entries(errors);
   if (entries.length === 0) return null;

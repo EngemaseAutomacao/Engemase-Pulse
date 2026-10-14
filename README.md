@@ -1,34 +1,35 @@
 # Monitor de Energia
 
 Plataforma multi-cliente para monitorar **multimedidores de energia** em tempo real.
-Cada cliente tem seu login, sua marca (logo e cores) e suas unidades; cada unidade lê os
-dados do seu próprio InfluxDB, alimentado pelo gateway RS485.
+Cada cliente tem seu login, sua marca (logo e cores) e suas unidades; cada unidade recebe as
+leituras do **Painel local**, o supervisório instalado na loja.
 
 > O nome é provisório: troque em [`src/config/app.ts`](src/config/app.ts).
 
 ```
-Multimedidores ──RS485/Modbus──▶ Gateway ──▶ InfluxDB 2.x (por unidade)
-                                                 │  consultas Flux (HTTPS, token só leitura)
-                                                 ▼
-                Next.js na Vercel (São Paulo) ◀──▶ Neon Postgres (cadastros, usuários, alarmes)
-                                 │
+Multimedidores ──RS485/Modbus──▶ Painel local (mini PC na loja, SQLite)
+                                        │  HTTPS, só de saída (POST /api/ingest)
+                                        ▼
+                Next.js na Vercel (São Paulo) ◀──▶ Neon Postgres (cadastros, histórico, alarmes)
+                                 │                  Upstash Redis (leitura atual, cache)
                  Navegador / app instalado (PWA) · notificações push
 ```
 
 ## O que tem
 
 - **Painel do cliente**: potência, FP global, medidores online, cartões ao vivo (atualiza a cada 10 s).
-- **Detalhe do medidor**: tabela por fase (V, A, kW, kVA, kVAr, FP), histórico com período e grandeza
-  selecionáveis, consumo por hora/dia/mês (no fuso da unidade) e exportação CSV para Excel.
+- **Detalhe do medidor**: tabela por fase (V, A, kW, kVA, kVAr, FP), THD, neutro e demanda, histórico
+  com período e grandeza selecionáveis, consumo por hora/dia/mês (no fuso da unidade) e CSV para Excel.
+- **Consumo por setor**: consumo do dia hora a hora, hora de pico, maior setor, participação de cada
+  setor e o **não medido** (entrada geral menos a soma dos alimentadores).
 - **Alarmes**: regras por cliente/medidor (limite de grandeza ou "sem comunicação"), histórico,
   reconhecimento pelo operador e **notificação push** no celular/computador.
 - **Administração** (equipe da plataforma): clientes com logo/cores e login próprio em `/login/<slug>`,
-  unidades com conexão InfluxDB (com "Testar conexão"), medidores e usuários com papéis por cliente.
+  unidades com o token do Painel local, medidores (criados pelo Painel) e usuários com papéis por cliente.
 - **PWA**: instalável no Android, iOS e desktop; página offline; aviso de "sem conexão".
 - **Responsivo** do celular ao monitor grande; tema escuro com a identidade Engemase.
-- **Fonte simulada**: unidades em modo "Simulado" geram dados realistas — demonstração sem gateway.
-- **Painel local**: o supervisório instalado na loja lê o Modbus e envia as leituras para a nuvem
-  (sem InfluxDB e sem porta aberta na loja). Ver [Painel local](#painel-local-supervisório-da-loja).
+- **Painel local**: o supervisório instalado na loja lê o Modbus e envia as leituras para a nuvem,
+  sem porta aberta na loja. Ver [Painel local](#painel-local-supervisório-da-loja).
 
 ## Stack
 
@@ -37,7 +38,7 @@ Multimedidores ──RS485/Modbus──▶ Gateway ──▶ InfluxDB 2.x (por u
 | App (SSR, API, Server Actions) | Next.js 16 (App Router, Cache Components) · React 19 · TypeScript estrito |
 | UI | Tailwind CSS 4 · shadcn/ui (Radix) · Recharts · SWR |
 | Banco | PostgreSQL via **Prisma 7** (produção: **Neon**, região São Paulo) |
-| Telemetria | Painel local (envio por HTTPS) ou InfluxDB 2.x via HTTP/Flux (sem SDK) |
+| Telemetria | Painel local (supervisório da loja), envio por HTTPS para `/api/ingest` |
 | Autenticação | Própria: scrypt + sessão no banco (cookie `httpOnly`), limite de tentativas |
 | Push | Web Push (VAPID) com `web-push` |
 | Testes / qualidade | Vitest · ESLint · Prettier · GitHub Actions |
@@ -65,22 +66,23 @@ npm run db:local            # sobe um Postgres local (prisma dev) — deixe roda
 ```
 
 Copie a URL `postgres://…` exibida para `DATABASE_URL` no `.env` (e a porta seguinte em
-`SHADOW_DATABASE_URL`). Gere os segredos:
+`SHADOW_DATABASE_URL`). Gere as chaves das notificações push:
 
 ```bash
-node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"   # APP_SECRET
-npx web-push generate-vapid-keys                                                # chaves VAPID
+npx web-push generate-vapid-keys
 ```
 
 Depois:
 
 ```bash
 npm run db:migrate          # cria as tabelas
-npm run db:seed -- --demo   # administrador + "Cliente Demonstração" com dados simulados
+npm run db:seed             # primeiro administrador (SEED_ADMIN_* do .env)
 npm run dev                 # http://localhost:3000
 ```
 
-Entre com `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` do `.env`. O cliente demo fica em `/app/demo`.
+Entre com `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` do `.env`. Para ver leituras, crie uma unidade,
+gere o token e rode o Painel em modo demonstração (`npm run demo` no Painel) apontando para
+`http://localhost:3000`.
 
 ## Deploy na Vercel
 
@@ -95,7 +97,6 @@ Entre com `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` do `.env`. O cliente demo f
    É o cache compartilhado das leituras e do estado dos alarmes (cria `KV_REST_API_URL`/`KV_REST_API_TOKEN`).
    Sem ele o sistema funciona, mas cada instância tem seu próprio cache e o banco trabalha mais.
 4. Em **Settings → Environment Variables**, adicione:
-   - `APP_SECRET` — 32 bytes em base64. **Guarde bem**: sem ela os tokens do InfluxDB salvos não podem ser lidos.
    - `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (`mailto:seu@email`).
    - `CRON_SECRET` — texto aleatório longo (protege o avaliador de alarmes).
    - `SESSION_TTL_DAYS` (opcional, padrão 7).
@@ -130,19 +131,12 @@ As regras são avaliadas pela rota `/api/cron/alarms` (GET ou POST). Ela aceita
 
 A tela inicial da **Administração** mostra a última execução do avaliador e alerta se ele parar de rodar.
 
-### InfluxDB precisa estar acessível pela internet
-
-As funções da Vercel rodam na nuvem: o InfluxDB de cada unidade precisa de endereço público com
-HTTPS (ex.: `https://influx.cliente.com.br`, via proxy reverso ou Cloudflare Tunnel) ou ser um
-InfluxDB Cloud. Use um **token somente leitura** do bucket — ele é guardado cifrado (AES-256-GCM).
-
 ## Escalabilidade
 
 O sistema foi preparado para muitos clientes, unidades e medidores sem gargalo de dados:
 
-- **Leituras ao vivo em cache compartilhado** (Upstash Redis): cada unidade é consultada no InfluxDB no
-  máximo uma vez a cada ~5 s, não importa quantas telas estejam abertas. Requisições simultâneas
-  esperam a mesma consulta, e erros também ficam em cache, então um InfluxDB fora do ar não é martelado.
+- **Leituras ao vivo em cache compartilhado** (Upstash Redis): o envio do Painel vai para o cache, e as
+  telas leem de lá no máximo uma vez a cada ~5 s por unidade, não importa quantas estejam abertas.
 - **Cadastro em cache**: unidades e medidores são lidos do cache e invalidados na hora quando a
   administração altera algo. As atualizações das telas quase não usam o Postgres.
 - **Respostas enxutas**: painel e tabela recebem só os campos de resumo; o detalhe recebe um medidor.
@@ -151,14 +145,12 @@ O sistema foi preparado para muitos clientes, unidades e medidores sem gargalo d
   do mesmo cache das telas. O Postgres só é usado quando um alarme abre ou normaliza. Vários clientes
   são avaliados em paralelo, com limite de tempo e rodízio. A coluna única `open_key` impede alarmes
   duplicados, mesmo com execuções simultâneas.
-- **Bucket agregado por hora no InfluxDB** (opcional, por unidade): históricos longos e consumo
-  diário/mensal leem médias horárias em vez de milhões de pontos. Configure com a task
-  [`docs/influx/rollup-1h.flux`](docs/influx/rollup-1h.flux).
+- **Histórico resumido**: a nuvem guarda médias de 5 min (não cada leitura) e o consumo por hora já
+  calculado pelo Painel; gráficos longos agregam isso no Postgres.
 
 ## Painel local (supervisório da loja)
 
-Em vez de um gateway gravando num InfluxDB exposto na internet, a loja roda o **Painel**
-(supervisório Node.js com SQLite, em um mini PC ligado à RS-485). Ele continua sendo a
+Cada loja roda o **Painel** (supervisório Node.js com SQLite, em um mini PC ligado à RS-485). Ele continua sendo a
 referência na loja — leitura Modbus, perfis de equipamento, alarmes, tela local, funciona
 sem internet — e **copia** as leituras para a nuvem:
 
@@ -166,7 +158,7 @@ sem internet — e **copia** as leituras para a nuvem:
 Multimedidores ──RS485/Modbus──▶ Painel (mini PC, SQLite) ──HTTPS, só de saída──▶ POST /api/ingest
 ```
 
-1. Em **Administração → Unidades**, escolha a fonte **Painel local** e clique em **Gerar token**.
+1. Em **Administração → Unidades**, crie a unidade e clique em **Gerar token**.
    O token aparece uma única vez (no banco fica só o SHA-256), já com o trecho do `config.json`.
 2. No Painel, instale o módulo de envio: [`integracoes/painel/`](integracoes/painel/LEIAME.md).
 3. No primeiro envio, os **medidores são criados sozinhos** a partir dos equipamentos de energia
@@ -180,22 +172,9 @@ O que a nuvem guarda de cada unidade com Painel local:
 | Resumo de 5 min (média, mín., máx.) | `meter_readings_5m` | 400 dias |
 | Consumo por hora, já calculado pelo Painel (contador ou estimado pela potência) | `meter_energy_hours` | para sempre |
 
-Com o Painel, a energia vem do contador lido corretamente (float32 na ordem CDAB do Siemens
-7KT): o problema de consumo "aos saltos de 1024 kWh" de gateways que leem a ordem errada
-não acontece. O formato do envio está em [`src/lib/agent-payload.ts`](src/lib/agent-payload.ts)
+A energia vem do contador lido corretamente pelo Painel (float32 na ordem CDAB do Siemens 7KT),
+sem os saltos de 1024 kWh de gateways que leem a ordem errada. O formato do envio está em [`src/lib/agent-payload.ts`](src/lib/agent-payload.ts)
 e a tradução das grandezas em [`src/lib/painel-fields.ts`](src/lib/painel-fields.ts).
-
-## Como os dados são lidos do InfluxDB
-
-Cada medidor aponta para um `_measurement` (e, opcionalmente, um filtro `tag = valor` quando vários
-medidores dividem o mesmo measurement). Os `_field` esperados estão em
-[`src/lib/meter-fields.ts`](src/lib/meter-fields.ts) e seguem o mapeamento atual do gateway:
-
-`V1N V2N V3N VN_AVG · V12 V23 V31 VLL_AVG · I1 I2 I3 I_AVG · kW1-3 Total_kW · kVA1-3 Total_kVA ·
-kVAr1-3 Total_kVAr · PF1-3 PF_AVG · Frequencia · Total_net_kWh Total_kVAh Total_kVAhr`
-
-O consumo é calculado pela diferença do contador `Total_net_kWh` entre janelas (hora/dia/mês) no fuso
-da unidade. Se o gateway gravar com outros nomes, ajuste só esse arquivo.
 
 ## Notificações push e instalação (PWA)
 
@@ -215,7 +194,7 @@ da unidade. Se o gateway gravar com outros nomes, ajuste só esse arquivo.
 | `npm run db:local` | Postgres local (`prisma dev`) |
 | `npm run db:migrate` | Cria/aplica migrations no desenvolvimento |
 | `npm run db:deploy` | Aplica migrations em produção |
-| `npm run db:seed [-- --demo]` | Primeiro administrador (+ demonstração) |
+| `npm run db:seed` | Primeiro administrador |
 | `npm run db:studio` | Navegar no banco |
 | `npm run icons` | Regera os ícones do PWA a partir do logo |
 
@@ -226,18 +205,18 @@ prisma/                 schema, migrations e seed
 src/
   app/                  rotas (App Router)
     login/              login geral e /login/<slug> com a marca do cliente
-    app/[tenant]/       área do cliente: visão geral, medidores, alarmes, conta
+    app/[tenant]/       área do cliente: visão geral, medidores, consumo, alarmes, conta
     admin/              administração da plataforma
-    api/                leituras (live/history/energy/export), logo, cron de alarmes, ingest do Painel
+    api/                leituras (live/history/energy/consumption/export), logo, cron, ingest do Painel
   components/           UI (shell, gráficos, medidores, alarmes, formulários, pwa)
   lib/                  código compartilhado: campos do medidor, validação, períodos, alarmes
-  server/               só servidor: auth (DAL), banco, cripto, telemetria (Influx/simulado), push
+  server/               só servidor: auth (DAL), banco, cripto, Painel local (agent), telemetria, push
 public/sw.js            service worker (push + offline)
 integracoes/painel/     módulo de envio para o Painel local (vai no supervisório da loja)
 ```
 
 Princípios: verificação de acesso perto dos dados (DAL em `src/server/auth/dal.ts`), toda entrada
-validada com zod, consultas Flux só com valores escapados, segredos nunca enviados ao navegador,
+validada com zod, tokens só como hash no banco, segredos nunca enviados ao navegador,
 alterações administrativas registradas em auditoria.
 
 ## Banco: Neon gratuito → pago

@@ -29,23 +29,10 @@ describe("tenantSchema", () => {
 describe("siteSchema", () => {
   const base = { tenantId: TENANT, name: "Matriz", timezone: "America/Sao_Paulo" };
 
-  it("exige URL, organização e bucket só para InfluxDB", () => {
-    const influx = siteSchema.safeParse({ ...base, telemetrySource: "INFLUXDB" });
-    expect(influx.success).toBe(false);
-    expect(influx.error?.issues.map((i) => i.path[0])).toEqual(["influxUrl", "influxOrg", "influxBucket"]);
-    expect(siteSchema.safeParse({ ...base, telemetrySource: "SIMULATED" }).success).toBe(true);
-  });
-
-  it("remove barra final da URL e rejeita fuso inexistente", () => {
-    const parsed = siteSchema.parse({
-      ...base,
-      telemetrySource: "INFLUXDB",
-      influxUrl: "https://influx.cliente.com.br/",
-      influxOrg: "org",
-      influxBucket: "b",
-    });
-    expect(parsed.influxUrl).toBe("https://influx.cliente.com.br");
-    expect(siteSchema.safeParse({ ...base, telemetrySource: "SIMULATED", timezone: "Lua/Base" }).success).toBe(false);
+  it("normaliza a UF e rejeita fuso inexistente", () => {
+    expect(siteSchema.parse({ ...base, state: "sc" }).state).toBe("SC");
+    expect(siteSchema.safeParse({ ...base, timezone: "Lua/Base" }).success).toBe(false);
+    expect(siteSchema.safeParse({ ...base, state: "Santa Catarina" }).success).toBe(false);
   });
 });
 

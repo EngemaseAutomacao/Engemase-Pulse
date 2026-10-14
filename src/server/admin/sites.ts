@@ -1,7 +1,6 @@
 import "server-only";
 import { forgetAgentToken, generateAgentToken } from "@/server/agent/token";
 import { audit } from "@/server/audit";
-import { encryptSecret } from "@/server/crypto";
 import { db } from "@/server/db";
 import type { AuthUser } from "@/server/auth/permissions";
 import type { SiteInput } from "@/lib/validation";
@@ -15,9 +14,8 @@ export function listSites(tenantId?: string) {
       name: true,
       city: true,
       state: true,
-      telemetrySource: true,
-      influxUrl: true,
-      influxBucket: true,
+      agentLastSeenAt: true,
+      agentTokenHash: true,
       tenant: { select: { id: true, name: true } },
       _count: { select: { meters: true } },
     },
@@ -34,8 +32,8 @@ export async function getSiteForEdit(id: string) {
     },
   });
   if (!site) return null;
-  const { influxTokenEncrypted, agentTokenHash, ...rest } = site;
-  return { ...rest, hasInfluxToken: Boolean(influxTokenEncrypted), hasAgentToken: Boolean(agentTokenHash) };
+  const { agentTokenHash, ...rest } = site;
+  return { ...rest, hasAgentToken: Boolean(agentTokenHash) };
 }
 
 export function siteOptions() {
@@ -45,26 +43,15 @@ export function siteOptions() {
   });
 }
 
-function toData(input: SiteInput) {
-  const { influxToken, ...rest } = input;
-  return { ...rest, ...(influxToken ? { influxTokenEncrypted: encryptSecret(influxToken) } : {}) };
-}
-
-/** Dados da auditoria sem o token. */
-function auditDetails(input: SiteInput) {
-  const { influxToken, ...rest } = input;
-  return { ...rest, influxToken: influxToken ? "(alterado)" : undefined };
-}
-
 export async function createSite(actor: AuthUser, input: SiteInput) {
-  const site = await db.site.create({ data: toData(input) });
-  await audit({ actorId: actor.id, action: "create", entityType: "site", entityId: site.id, details: auditDetails(input) });
+  const site = await db.site.create({ data: input });
+  await audit({ actorId: actor.id, action: "create", entityType: "site", entityId: site.id, details: input });
   return site;
 }
 
 export async function updateSite(actor: AuthUser, id: string, input: SiteInput) {
-  const site = await db.site.update({ where: { id }, data: toData(input) });
-  await audit({ actorId: actor.id, action: "update", entityType: "site", entityId: id, details: auditDetails(input) });
+  const site = await db.site.update({ where: { id }, data: input });
+  await audit({ actorId: actor.id, action: "update", entityType: "site", entityId: id, details: input });
   return site;
 }
 

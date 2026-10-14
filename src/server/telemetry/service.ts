@@ -9,7 +9,7 @@ import { sourceFor, toMeterRef } from "./sources";
 import { getTenantTopology } from "./topology";
 import { TelemetryError, type EnergyBucket, type Series } from "./types";
 
-export { influxSourceFor, sourceFor, toMeterRef } from "./sources";
+export { sourceFor, toMeterRef } from "./sources";
 
 function errorMessage(error: unknown): string {
   if (error instanceof TelemetryError) return error.message;
@@ -37,8 +37,8 @@ export type LiveOptions = {
 
 /**
  * Última leitura dos medidores ativos do cliente. Topologia e leituras vêm do
- * cache (uma consulta ao InfluxDB por unidade a cada poucos segundos, não
- * importa quantas telas estejam abertas).
+ * cache (uma leitura por unidade a cada poucos segundos, não importa quantas
+ * telas estejam abertas).
  */
 export async function getTenantLive(tenantId: string, options: LiveOptions = {}): Promise<LiveSnapshot> {
   const topology = await getTenantTopology(tenantId);

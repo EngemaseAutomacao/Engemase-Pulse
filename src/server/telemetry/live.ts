@@ -7,7 +7,7 @@ import { sourceFor, toMeterRef } from "./sources";
 /**
  * Última leitura de todos os medidores de uma unidade, em cache por alguns
  * segundos. Com muitas pessoas olhando o mesmo cliente (e o avaliador de
- * alarmes), o InfluxDB recebe uma única consulta por unidade por intervalo.
+ * alarmes), a última leitura do Painel é buscada uma vez por unidade por intervalo.
  */
 export const LIVE_CACHE_TTL_MS = 5_000;
 
@@ -29,7 +29,7 @@ export function getSiteLive(site: SiteTopology): Promise<SiteLive> {
       const readings = await sourceFor(site).latest(site.meters.map(toMeterRef));
       return { readings: Object.fromEntries(readings), error: null, fetchedAt };
     } catch (error) {
-      // Erros também ficam em cache: um InfluxDB fora do ar não é martelado por todas as telas.
+      // Erros também ficam em cache: uma falha não é repetida por todas as telas ao mesmo tempo.
       if (!(error instanceof TelemetryError)) console.error("[telemetria]", error);
       const message = error instanceof TelemetryError ? error.message : "Falha inesperada ao consultar as leituras";
       return { readings: {}, error: message, fetchedAt };

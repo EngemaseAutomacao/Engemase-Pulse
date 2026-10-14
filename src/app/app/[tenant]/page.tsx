@@ -31,11 +31,11 @@ export default async function TenantOverviewPage({ params }: PageProps<"/app/[te
         <EmptyState
           icon={<GaugeIcon />}
           title="Nenhum medidor cadastrado"
-          description="Assim que os multimedidores forem cadastrados, as leituras aparecem aqui em tempo real."
+          description="Os medidores aparecem sozinhos quando o Painel local da loja envia as primeiras leituras."
           action={
             user.isPlatformAdmin ? (
               <Button asChild>
-                <Link href={`/admin/medidores/novo?cliente=${tenant.id}`}>Cadastrar medidor</Link>
+                <Link href={`/admin/unidades?cliente=${tenant.id}`}>Ver unidades e tokens</Link>
               </Button>
             ) : undefined
           }

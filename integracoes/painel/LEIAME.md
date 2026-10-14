@@ -44,8 +44,7 @@ Painel ── HTTPS, só de saída, a cada 10 s ──▶   POST /api/ingest
    "nuvem": { "url": "https://ENDERECO-DA-NUVEM", "token": "pnl_…" }
    ```
 
-   O token é gerado na nuvem em **Administração → Unidades → (a unidade) → Fonte
-   das leituras: Painel local → Gerar token**. Ele aparece uma única vez; a própria
+   O token é gerado na nuvem em **Administração → Unidades → (a unidade) → Gerar token**. Ele aparece uma única vez; a própria
    tela mostra o trecho pronto para colar. Sem a seção `nuvem`, o módulo não faz nada.
 
    Opcionais: `"intervalo_s": 10` (envio ao vivo) e `"historico_inicial_dias": 7`
@@ -78,7 +77,6 @@ estado muda:
 | Mensagem | Causa |
 | --- | --- |
 | `[nuvem] HTTP 401: Token inválido ou revogado` | token errado ou gerado de novo na nuvem |
-| `[nuvem] HTTP 409: A unidade não está configurada…` | na nuvem, a unidade não está salva com a fonte "Painel local" |
 | `[nuvem] sem conexão com a nuvem (…)` | internet da loja, DNS ou firewall bloqueando a saída HTTPS |
 | `[nuvem] lote recusado e pulado (HTTP 400 …)` | dado fora do formato; o lote é pulado para não travar a fila |
 | `[nuvem] envio restabelecido` | voltou ao normal |

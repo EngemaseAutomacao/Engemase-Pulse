@@ -8,9 +8,8 @@ import { MeterForm } from "@/components/admin/meter-form";
 import { PageContainer, PageHeader } from "@/components/shell/page";
 import { Button } from "@/components/ui/button";
 import { getMeter } from "@/server/admin/meters";
-import { siteOptions } from "@/server/admin/sites";
 import { requirePlatformAdmin } from "@/server/auth/dal";
-import { listSiteMeasurements, removeMeter, saveMeter } from "../actions";
+import { removeMeter, saveMeter } from "../actions";
 
 export const metadata: Metadata = { title: "Medidor" };
 
@@ -18,7 +17,7 @@ export default async function AdminMeterPage({ params }: PageProps<"/admin/medid
   await requirePlatformAdmin();
   const { id } = await params;
   if (!z.uuid().safeParse(id).success) notFound();
-  const [meter, sites] = await Promise.all([getMeter(id), siteOptions()]);
+  const meter = await getMeter(id);
   if (!meter) notFound();
 
   return (
@@ -45,10 +44,7 @@ export default async function AdminMeterPage({ params }: PageProps<"/admin/medid
       <section className="surface p-5">
         <MeterForm
           action={saveMeter.bind(null, meter.id)}
-          findMeasurements={listSiteMeasurements}
-          sites={sites.map((s) => ({ id: s.id, name: s.name, tenantName: s.tenant.name }))}
           meter={{
-            siteId: meter.siteId,
             tag: meter.tag,
             name: meter.name,
             location: meter.location,
@@ -58,9 +54,6 @@ export default async function AdminMeterPage({ params }: PageProps<"/admin/medid
             modbusAddress: meter.modbusAddress,
             ctRatio: meter.ctRatio,
             ptRatio: meter.ptRatio,
-            influxMeasurement: meter.influxMeasurement,
-            influxTagKey: meter.influxTagKey,
-            influxTagValue: meter.influxTagValue,
             sortOrder: meter.sortOrder,
             active: meter.active,
           }}
@@ -70,9 +63,8 @@ export default async function AdminMeterPage({ params }: PageProps<"/admin/medid
       <section className="space-y-3 rounded-xl border border-destructive/30 p-5">
         <h2 className="font-semibold text-destructive">Excluir medidor</h2>
         <p className="text-sm text-muted-foreground">
-          {meter.site.telemetrySource === "AGENT"
-            ? "Remove o cadastro e o histórico dele na nuvem. O Painel local cria o medidor de novo quando o cadastro da loja mudar. Para só esconder do painel, desative o medidor."
-            : "Remove o cadastro. As leituras no InfluxDB não são apagadas. Para só esconder do painel, desative o medidor."}
+          Remove o cadastro e o histórico dele na nuvem. O Painel local cria o medidor de novo quando o cadastro da
+          loja mudar. Para só esconder do painel, desative o medidor.
         </p>
         <DeleteButton
           action={removeMeter.bind(null, meter.id)}

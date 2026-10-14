@@ -6,6 +6,7 @@ import { ExternalLinkIcon, LogInIcon, PlusIcon } from "lucide-react";
 import { DeleteButton } from "@/components/admin/delete-button";
 import { LogoForm } from "@/components/admin/logo-form";
 import { TenantForm } from "@/components/admin/tenant-form";
+import { RelativeTime } from "@/components/meters/relative-time";
 import { PageContainer, PageHeader } from "@/components/shell/page";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,8 +15,6 @@ import { requirePlatformAdmin } from "@/server/auth/dal";
 import { ROLE_LABEL } from "@/server/auth/permissions";
 import { tenantLogoUrl } from "@/server/branding";
 import { removeTenant, saveTenant, uploadTenantLogo } from "../actions";
-
-const SOURCE_LABEL = { INFLUXDB: "InfluxDB", SIMULATED: "simulado", AGENT: "Painel local" } as const;
 
 export const metadata: Metadata = { title: "Cliente" };
 
@@ -97,7 +96,8 @@ export default async function TenantPage({ params }: PageProps<"/admin/clientes/
                   <Link href={`/admin/unidades/${s.id}`} className="flex items-center justify-between gap-2 px-3 py-2 text-sm hover:bg-muted/50">
                     <span className="font-medium">{s.name}</span>
                     <span className="text-xs text-muted-foreground">
-                      {s._count.meters} medidor(es) · {SOURCE_LABEL[s.telemetrySource]}
+                      {s._count.meters} medidor(es) ·{" "}
+                      {s.agentLastSeenAt ? <>último envio <RelativeTime value={s.agentLastSeenAt.toISOString()} /></> : "sem envio do Painel"}
                     </span>
                   </Link>
                 </li>
@@ -139,7 +139,7 @@ export default async function TenantPage({ params }: PageProps<"/admin/clientes/
       <section className="space-y-3 rounded-xl border border-destructive/30 p-5">
         <h2 className="font-semibold text-destructive">Excluir cliente</h2>
         <p className="text-sm text-muted-foreground">
-          Remove o cliente, todas as unidades e medidores cadastrados. As leituras no InfluxDB não são apagadas.
+          Remove o cliente, todas as unidades e medidores cadastrados, com o histórico guardado na nuvem.
           Para só bloquear o acesso, desative o cliente.
         </p>
         <DeleteButton

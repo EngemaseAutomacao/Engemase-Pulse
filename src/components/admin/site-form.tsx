@@ -1,16 +1,12 @@
 "use client";
 
-import { useActionState, useRef, useState, useTransition } from "react";
-import { CircleCheckIcon, CircleXIcon, DatabaseIcon, FlaskConicalIcon, Loader2Icon, PlugIcon, ServerIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useActionState } from "react";
 import { Input } from "@/components/ui/input";
 import { Field, FormMessage, SubmitButton, fieldProps } from "@/components/forms/field";
 import { NativeSelect } from "@/components/forms/native-select";
 import { useActionToast } from "@/components/forms/use-action-toast";
 import { IDLE, type ActionState } from "@/lib/action-state";
-import { cn } from "@/lib/utils";
-import type { TelemetrySourceId } from "@/lib/validation";
-import type { AgentTokenResult, ConnectionTestResult } from "@/app/admin/unidades/actions";
+import type { AgentTokenResult } from "@/app/admin/unidades/actions";
 import { AgentConnection, type AgentStatus } from "./agent-connection";
 
 const TIME_ZONES = [
@@ -33,25 +29,17 @@ type SiteFormValues = {
   city: string | null;
   state: string | null;
   timezone: string;
-  telemetrySource: TelemetrySourceId;
-  influxUrl: string | null;
-  influxOrg: string | null;
-  influxBucket: string | null;
-  influxRollupBucket: string | null;
-  hasInfluxToken: boolean;
   agent: AgentStatus;
 };
 
 export function SiteForm({
   action,
-  testConnection,
   rotateAgentToken,
   site,
   tenants,
   defaultTenantId,
 }: {
   action: (state: ActionState, formData: FormData) => Promise<ActionState>;
-  testConnection: (formData: FormData) => Promise<ConnectionTestResult>;
   /** Só na edição: a unidade precisa existir para ter token. */
   rotateAgentToken?: () => Promise<AgentTokenResult>;
   site?: SiteFormValues;
@@ -60,14 +48,10 @@ export function SiteForm({
 }) {
   const [state, formAction] = useActionState(action, IDLE);
   useActionToast(state);
-  const formRef = useRef<HTMLFormElement>(null);
-  const [source, setSource] = useState<string>(state.values?.telemetrySource ?? site?.telemetrySource ?? "INFLUXDB");
-  const [test, setTest] = useState<ConnectionTestResult | null>(null);
-  const [testing, startTest] = useTransition();
   const error = (field: string) => state.fieldErrors?.[field];
 
   return (
-    <form ref={formRef} action={formAction} className="grid gap-6">
+    <form action={formAction} className="grid gap-6">
       <fieldset className="grid gap-4">
         <legend className="mb-2 text-sm font-semibold">Dados da unidade</legend>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -114,169 +98,16 @@ export function SiteForm({
         </div>
       </fieldset>
 
-      <fieldset className="grid gap-4">
-        <legend className="mb-2 text-sm font-semibold">Fonte das leituras</legend>
-        <div role="radiogroup" className="grid gap-3 sm:grid-cols-3">
-          <SourceOption
-            value="AGENT"
-            current={source}
-            onSelect={setSource}
-            icon={<ServerIcon />}
-            title="Painel local"
-            description="O Painel instalado na loja lê os medidores e envia as leituras."
-          />
-          <SourceOption
-            value="INFLUXDB"
-            current={source}
-            onSelect={setSource}
-            icon={<DatabaseIcon />}
-            title="InfluxDB"
-            description="Leituras reais gravadas pelo gateway RS485."
-          />
-          <SourceOption
-            value="SIMULATED"
-            current={source}
-            onSelect={setSource}
-            icon={<FlaskConicalIcon />}
-            title="Simulado"
-            description="Dados gerados pelo sistema, para demonstração."
-          />
-        </div>
-
-        {source === "AGENT" && (
-          <AgentConnection
-            status={site?.agent ?? null}
-            rotateToken={rotateAgentToken}
-            savedAsAgent={site?.telemetrySource === "AGENT"}
-          />
-        )}
-
-        <div className={cn("grid gap-4", source !== "INFLUXDB" && "hidden")}>
-          <Field
-            label="URL do InfluxDB"
-            htmlFor="influxUrl"
-            error={error("influxUrl")}
-            hint="Precisa ser acessível pela internet (ex.: https://influx.cliente.com.br)."
-          >
-            <Input {...fieldProps(state, "influxUrl", site?.influxUrl)} placeholder="https://" inputMode="url" />
-          </Field>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Organização" htmlFor="influxOrg" error={error("influxOrg")}>
-              <Input {...fieldProps(state, "influxOrg", site?.influxOrg)} />
-            </Field>
-            <Field label="Bucket" htmlFor="influxBucket" error={error("influxBucket")}>
-              <Input {...fieldProps(state, "influxBucket", site?.influxBucket)} />
-            </Field>
-          </div>
-          <Field
-            label="Bucket agregado por hora (opcional)"
-            htmlFor="influxRollupBucket"
-            error={error("influxRollupBucket")}
-            hint="Recomendado com muitos dados: históricos longos e consumo diário/mensal ficam bem mais rápidos. Veja docs/influx no projeto."
-          >
-            <Input {...fieldProps(state, "influxRollupBucket", site?.influxRollupBucket)} placeholder="ex.: medicoes_1h" />
-          </Field>
-          <Field
-            label="Token de leitura"
-            htmlFor="influxToken"
-            error={error("influxToken")}
-            hint={
-              site?.hasInfluxToken
-                ? "Já existe um token salvo. Deixe em branco para mantê-lo."
-                : "Use um token somente leitura deste bucket. Fica cifrado no banco."
-            }
-          >
-            <Input
-              id="influxToken"
-              name="influxToken"
-              type="password"
-              autoComplete="off"
-              placeholder={site?.hasInfluxToken ? "•••••••• (mantido)" : ""}
-              aria-invalid={error("influxToken") ? true : undefined}
-            />
-          </Field>
-
-          <div className="flex flex-wrap items-start gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={testing}
-              onClick={() =>
-                startTest(async () => {
-                  setTest(await testConnection(new FormData(formRef.current!)));
-                })
-              }
-            >
-              {testing ? <Loader2Icon className="animate-spin" /> : <PlugIcon />}
-              Testar conexão
-            </Button>
-            {test && <TestResult result={test} />}
-          </div>
-        </div>
+      <fieldset className="grid gap-3">
+        <legend className="mb-2 text-sm font-semibold">Painel local (loja)</legend>
+        <p className="text-sm text-muted-foreground">
+          As leituras chegam do Painel instalado na loja, que lê os multimedidores pela RS-485 e envia para cá.
+        </p>
+        <AgentConnection status={site?.agent ?? null} rotateToken={rotateAgentToken} />
       </fieldset>
 
-      <input type="hidden" name="telemetrySource" value={source} />
       <FormMessage state={state} />
       <SubmitButton className="w-fit">{site ? "Salvar alterações" : "Criar unidade"}</SubmitButton>
     </form>
-  );
-}
-
-function SourceOption({
-  value,
-  current,
-  onSelect,
-  icon,
-  title,
-  description,
-}: {
-  value: TelemetrySourceId;
-  current: string;
-  onSelect: (value: TelemetrySourceId) => void;
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-}) {
-  const selected = current === value;
-  return (
-    <button
-      type="button"
-      role="radio"
-      aria-checked={selected}
-      onClick={() => onSelect(value)}
-      className={cn(
-        "flex items-start gap-3 rounded-xl border p-3 text-left transition-colors hover:border-primary/40",
-        selected && "border-primary bg-accent",
-      )}
-    >
-      <span className={cn("mt-0.5 text-muted-foreground [&_svg]:size-5", selected && "text-primary")}>{icon}</span>
-      <span>
-        <span className="block text-sm font-medium">{title}</span>
-        <span className="block text-xs text-muted-foreground">{description}</span>
-      </span>
-    </button>
-  );
-}
-
-function TestResult({ result }: { result: ConnectionTestResult }) {
-  return (
-    <div
-      role="status"
-      className={cn(
-        "min-w-0 flex-1 rounded-lg border px-3 py-2 text-sm",
-        result.ok ? "border-success/30 bg-success/10" : "border-destructive/30 bg-destructive/10",
-      )}
-    >
-      <p className={cn("flex items-center gap-2 font-medium", result.ok ? "text-success" : "text-destructive")}>
-        {result.ok ? <CircleCheckIcon className="size-4" /> : <CircleXIcon className="size-4" />}
-        {result.message}
-      </p>
-      {result.measurements && result.measurements.length > 0 && (
-        <p className="mt-1 text-xs break-words text-muted-foreground">
-          Measurements: {result.measurements.slice(0, 30).join(", ")}
-          {result.measurements.length > 30 ? "…" : ""}
-        </p>
-      )}
-    </div>
   );
 }

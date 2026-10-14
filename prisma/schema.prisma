@@ -1,6 +1,6 @@
 // Banco principal: cadastros (clientes, unidades, medidores), usuários e sessões.
-// Leituras: nas unidades com InfluxDB ficam no InfluxDB de cada unidade; nas
-// unidades com Painel local, o resumo de 5 min e o consumo por hora ficam aqui.
+// Leituras: chegam do Painel local (supervisório instalado em cada loja); aqui
+// ficam o resumo de 5 min e o consumo por hora de cada medidor.
 //
 // Fluxo de alteração:  editar este arquivo  →  npm run db:migrate -- --name <descricao>
 
@@ -18,16 +18,6 @@ enum Role {
   ADMIN
   OPERATOR
   VIEWER
-}
-
-/// De onde vêm as leituras dos medidores de uma unidade.
-enum TelemetrySource {
-  /// InfluxDB 2.x alimentado pelo gateway RS485.
-  INFLUXDB
-  /// Dados gerados pelo próprio sistema (demonstração e desenvolvimento).
-  SIMULATED
-  /// Painel (supervisório) instalado na loja, que lê o Modbus e envia para POST /api/ingest.
-  AGENT
 }
 
 // ---------------------------------------------------------------------------
@@ -70,7 +60,7 @@ model TenantLogo {
 }
 
 // ---------------------------------------------------------------------------
-// Unidades (cada uma com sua fonte de telemetria)
+// Unidades (cada uma com o seu Painel local)
 // ---------------------------------------------------------------------------
 
 model Site {
@@ -83,16 +73,7 @@ model Site {
   /// Fuso usado para agrupar consumo por hora/dia.
   timezone String  @default("America/Sao_Paulo")
 
-  telemetrySource      TelemetrySource @default(INFLUXDB) @map("telemetry_source")
-  influxUrl            String?         @map("influx_url")
-  influxOrg            String?         @map("influx_org")
-  influxBucket         String?         @map("influx_bucket")
-  /// Bucket com médias horárias (opcional). Usado em históricos longos e consumo diário/mensal.
-  influxRollupBucket   String?         @map("influx_rollup_bucket")
-  /// Token cifrado com AES-256-GCM (APP_SECRET). Nunca sai do servidor.
-  influxTokenEncrypted String?         @map("influx_token_encrypted")
-
-  /// SHA-256 do token do Painel local (fonte AGENT). O token em si só é mostrado ao ser gerado.
+  /// SHA-256 do token do Painel local. O token em si só é mostrado ao ser gerado.
   agentTokenHash  String?   @unique @map("agent_token_hash")
   /// Último envio aceito do Painel local.
   agentLastSeenAt DateTime? @map("agent_last_seen_at")
@@ -143,13 +124,7 @@ model Meter {
   ctRatio       String? @map("ct_ratio")
   ptRatio       String? @map("pt_ratio")
 
-  /// `_measurement` onde o gateway grava as leituras deste medidor (no Painel local, o id do equipamento).
-  influxMeasurement String  @map("influx_measurement")
-  /// Filtro opcional por tag, quando vários medidores dividem o mesmo measurement.
-  influxTagKey      String? @map("influx_tag_key")
-  influxTagValue    String? @map("influx_tag_value")
-
-  /// Id do equipamento no Painel local (ex.: "geral"). Medidores do Painel são criados no primeiro envio.
+  /// Id do equipamento no Painel local (ex.: "geral"). Os medidores são criados pelo primeiro envio do Painel.
   externalId  String? @map("external_id")
   /// Entrada geral da unidade: os demais medidores são os alimentadores dela.
   isMain      Boolean @default(false) @map("is_main")

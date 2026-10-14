@@ -51,7 +51,7 @@ vi.mock("@/server/telemetry/topology", () => ({
     {
       id: "s1",
       name: "Matriz",
-      meters: [{ id: "m1", tag: "MM-01", name: "Entrada", siteId: "s1", influxMeasurement: "m1", influxTagKey: null, influxTagValue: null }],
+      meters: [{ id: "m1", tag: "MM-01", name: "Entrada", siteId: "s1", isMain: true }],
     },
   ],
 }));

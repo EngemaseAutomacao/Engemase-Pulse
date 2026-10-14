@@ -1,12 +1,7 @@
 import type { EnergyWindow } from "@/lib/time-range";
 
 /** O que a camada de telemetria precisa saber de um medidor. */
-export type MeterRef = {
-  id: string;
-  measurement: string;
-  tagKey: string | null;
-  tagValue: string | null;
-};
+export type MeterRef = { id: string };
 
 /** Última leitura de cada campo. `time` é o ponto mais recente (ISO) ou null. */
 export type Reading = { time: string | null; values: Record<string, number> };
@@ -22,10 +17,7 @@ export type HistoryQuery = { fields: string[]; start: Date; stop: Date; every: s
  */
 export type EnergyBucket = { start: number; kwh: number; estimated?: boolean };
 
-/**
- * Fonte de leituras de uma unidade. Implementações: InfluxDB (produção)
- * e simulada (demonstração e desenvolvimento sem gateway).
- */
+/** Fonte de leituras de uma unidade (hoje, o Painel local: `agent.ts`). */
 export interface TelemetrySource {
   latest(meters: MeterRef[]): Promise<Map<string, Reading>>;
   history(meter: MeterRef, query: HistoryQuery): Promise<Series>;

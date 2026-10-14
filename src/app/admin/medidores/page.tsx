@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { GaugeIcon, PlusIcon } from "lucide-react";
+import { GaugeIcon } from "lucide-react";
 import { z } from "zod";
 import { FilterForm } from "@/components/admin/filter-form";
 import { EmptyState, PageContainer, PageHeader } from "@/components/shell/page";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { listMeters } from "@/server/admin/meters";
 import { siteOptions } from "@/server/admin/sites";
@@ -21,21 +20,11 @@ export default async function AdminMetersPage({ searchParams }: PageProps<"/admi
   const siteId = z.uuid().safeParse(unidade).data;
   const [meters, tenants, sites] = await Promise.all([listMeters({ tenantId, siteId }), tenantOptions(), siteOptions()]);
 
-  const newHref = siteId ? `/admin/medidores/novo?unidade=${siteId}` : "/admin/medidores/novo";
-
   return (
     <PageContainer>
       <PageHeader
         title="Medidores"
-        description="Multimedidores ligados ao gateway, com o measurement de cada um no InfluxDB."
-        actions={
-          <Button asChild>
-            <Link href={newHref}>
-              <PlusIcon />
-              Novo medidor
-            </Link>
-          </Button>
-        }
+        description="Criados pelo Painel local de cada loja, a partir dos equipamentos de energia dele."
       />
       <FilterForm
         filters={[
@@ -66,7 +55,7 @@ export default async function AdminMetersPage({ searchParams }: PageProps<"/admi
               <TableRow>
                 <TableHead>Medidor</TableHead>
                 <TableHead>Cliente / unidade</TableHead>
-                <TableHead className="hidden md:table-cell">InfluxDB</TableHead>
+                <TableHead className="hidden md:table-cell">No Painel</TableHead>
                 <TableHead>Situação</TableHead>
               </TableRow>
             </TableHeader>
@@ -83,11 +72,11 @@ export default async function AdminMetersPage({ searchParams }: PageProps<"/admi
                     <span className="block">{m.site.tenant.name}</span>
                     <span className="block text-xs text-muted-foreground">{m.site.name}</span>
                   </TableCell>
-                  <TableCell className="hidden font-mono text-xs md:table-cell">
-                    {m.influxMeasurement}
-                    {m.influxTagKey && (
+                  <TableCell className="hidden text-xs md:table-cell">
+                    <span className="font-mono">{m.externalId ?? "—"}</span>
+                    {(m.isMain || m.breakerAmps) && (
                       <span className="block text-muted-foreground">
-                        {m.influxTagKey} = {m.influxTagValue}
+                        {[m.isMain && "entrada geral", m.breakerAmps && `disjuntor ${m.breakerAmps} A`].filter(Boolean).join(" · ")}
                       </span>
                     )}
                   </TableCell>

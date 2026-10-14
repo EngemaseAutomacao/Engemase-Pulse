@@ -1,5 +1,4 @@
 import "server-only";
-import type { TelemetrySource } from "@/generated/prisma/enums";
 import { cached, getCache } from "@/server/cache";
 import { generateSessionToken, hashSessionToken } from "@/server/crypto";
 import { db } from "@/server/db";
@@ -17,7 +16,6 @@ export type AgentSite = {
   id: string;
   tenantId: string;
   timezone: string;
-  telemetrySource: TelemetrySource;
 };
 
 export function generateAgentToken(): { token: string; hash: string } {
@@ -38,7 +36,7 @@ export async function findSiteByAgentToken(token: string): Promise<AgentSite | n
   const entry = await cached(siteKey(hash), SITE_CACHE_TTL_MS, async () => ({
     site: await db.site.findUnique({
       where: { agentTokenHash: hash },
-      select: { id: true, tenantId: true, timezone: true, telemetrySource: true },
+      select: { id: true, tenantId: true, timezone: true },
     }),
   }));
   return entry.site;

@@ -7,24 +7,11 @@ import { siteSchema } from "@/lib/validation";
 import { isNotFound, isUniqueViolation, requireAdminForAction } from "@/server/admin/guard";
 import { invalidateSites } from "@/server/admin/invalidate";
 import { createSite, deleteSite, rotateSiteAgentToken, updateSite } from "@/server/admin/sites";
-import { db } from "@/server/db";
-import { influxSourceFor } from "@/server/telemetry/service";
-import { TelemetryError } from "@/server/telemetry/types";
-import { encryptSecret } from "@/server/crypto";
 
 export async function saveSite(siteId: string | null, _previous: ActionState, formData: FormData): Promise<ActionState> {
   const actor = await requireAdminForAction();
   const parsed = siteSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return validationError(parsed.error, formData);
-
-  if (parsed.data.telemetrySource === "INFLUXDB" && !parsed.data.influxToken) {
-    const hasToken = siteId
-      ? Boolean((await db.site.findUnique({ where: { id: siteId }, select: { influxTokenEncrypted: true } }))?.influxTokenEncrypted)
-      : false;
-    if (!hasToken) {
-      return { ...errorState("Revise os campos destacados.", formData), fieldErrors: { influxToken: "Informe o token de leitura" } };
-    }
-  }
 
   let createdId: string;
   try {
@@ -55,50 +42,6 @@ export async function removeSite(siteId: string): Promise<void> {
   redirect("/admin/unidades");
 }
 
-export type ConnectionTestResult = { ok: boolean; message: string; measurements?: string[] };
-
-/**
- * Testa a conexão com os valores que estão no formulário (ainda não salvos).
- * Token em branco na edição = usa o token já gravado da unidade.
- */
-export async function testSiteConnection(siteId: string | null, formData: FormData): Promise<ConnectionTestResult> {
-  await requireAdminForAction();
-  const url = String(formData.get("influxUrl") ?? "").trim().replace(/\/+$/, "");
-  const org = String(formData.get("influxOrg") ?? "").trim();
-  const bucket = String(formData.get("influxBucket") ?? "").trim();
-  const typedToken = String(formData.get("influxToken") ?? "").trim();
-  if (!/^https?:\/\//i.test(url) || !org || !bucket) {
-    return { ok: false, message: "Preencha URL, organização e bucket antes de testar." };
-  }
-
-  let tokenEncrypted = typedToken ? encryptSecret(typedToken) : null;
-  if (!tokenEncrypted && siteId) {
-    tokenEncrypted = (await db.site.findUnique({ where: { id: siteId }, select: { influxTokenEncrypted: true } }))
-      ?.influxTokenEncrypted ?? null;
-  }
-  if (!tokenEncrypted) return { ok: false, message: "Informe o token para testar." };
-
-  try {
-    const source = influxSourceFor({
-      telemetrySource: "INFLUXDB",
-      influxUrl: url,
-      influxOrg: org,
-      influxBucket: bucket,
-      influxTokenEncrypted: tokenEncrypted,
-    });
-    const measurements = await source.listMeasurements();
-    return {
-      ok: true,
-      message:
-        measurements.length > 0
-          ? `Conexão OK. ${measurements.length} measurement(s) com dados nos últimos 30 dias.`
-          : "Conexão OK, mas o bucket não tem dados nos últimos 30 dias.",
-      measurements,
-    };
-  } catch (error) {
-    return { ok: false, message: error instanceof TelemetryError ? error.message : "Falha inesperada no teste." };
-  }
-}
 
 export type AgentTokenResult = { ok: true; token: string } | { ok: false; message: string };
 

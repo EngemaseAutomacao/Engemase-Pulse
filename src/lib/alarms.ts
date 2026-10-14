@@ -47,7 +47,7 @@ export type Evaluation =
 
 /**
  * Avalia uma regra contra a última leitura de um medidor.
- * @param siteError erro da consulta da unidade (InfluxDB fora do ar etc.)
+ * @param siteError erro ao ler a unidade (banco ou cache indisponível etc.)
  */
 export function evaluateRule(
   rule: RuleDefinition,

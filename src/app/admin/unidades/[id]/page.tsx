@@ -2,16 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { z } from "zod";
-import { PlusIcon } from "lucide-react";
 import { DeleteButton } from "@/components/admin/delete-button";
 import { SiteForm } from "@/components/admin/site-form";
 import { PageContainer, PageHeader } from "@/components/shell/page";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { getSiteForEdit } from "@/server/admin/sites";
 import { tenantOptions } from "@/server/admin/tenants";
 import { requirePlatformAdmin } from "@/server/auth/dal";
-import { removeSite, rotateAgentToken, saveSite, testSiteConnection } from "../actions";
+import { removeSite, rotateAgentToken, saveSite } from "../actions";
 
 export const metadata: Metadata = { title: "Unidade" };
 
@@ -50,7 +48,6 @@ export default async function SitePage({ params }: PageProps<"/admin/unidades/[i
       <section className="surface p-5">
         <SiteForm
           action={saveSite.bind(null, site.id)}
-          testConnection={testSiteConnection.bind(null, site.id)}
           rotateAgentToken={rotateAgentToken.bind(null, site.id)}
           tenants={tenants}
           site={{
@@ -60,29 +57,18 @@ export default async function SitePage({ params }: PageProps<"/admin/unidades/[i
             city: site.city,
             state: site.state,
             timezone: site.timezone,
-            telemetrySource: site.telemetrySource,
-            influxUrl: site.influxUrl,
-            influxOrg: site.influxOrg,
-            influxBucket: site.influxBucket,
-            influxRollupBucket: site.influxRollupBucket,
-            hasInfluxToken: site.hasInfluxToken,
             agent: agentStatus(site),
           }}
         />
       </section>
 
       <section className="surface space-y-3 p-5">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="font-semibold">Medidores desta unidade</h2>
-          <Button asChild size="sm" variant="outline">
-            <Link href={`/admin/medidores/novo?unidade=${site.id}`}>
-              <PlusIcon />
-              Novo medidor
-            </Link>
-          </Button>
-        </div>
+        <h2 className="font-semibold">Medidores desta unidade</h2>
         {site.meters.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhum medidor cadastrado.</p>
+          <p className="text-sm text-muted-foreground">
+            Nenhum medidor ainda. Eles aparecem sozinhos no primeiro envio do Painel local, a partir dos equipamentos
+            de energia cadastrados nele.
+          </p>
         ) : (
           <ul className="divide-y rounded-lg border">
             {site.meters.map((m) => (
@@ -103,10 +89,8 @@ export default async function SitePage({ params }: PageProps<"/admin/unidades/[i
       <section className="space-y-3 rounded-xl border border-destructive/30 p-5">
         <h2 className="font-semibold text-destructive">Excluir unidade</h2>
         <p className="text-sm text-muted-foreground">
-          Remove a unidade e os {site.meters.length} medidor(es) dela.{" "}
-          {site.telemetrySource === "AGENT"
-            ? "O histórico enviado pelo Painel local é apagado junto; o da loja continua no Painel."
-            : "As leituras no InfluxDB não são apagadas."}
+          Remove a unidade e os {site.meters.length} medidor(es) dela, com o histórico guardado na nuvem. O histórico
+          da loja continua no Painel local.
         </p>
         <DeleteButton
           action={removeSite.bind(null, site.id)}

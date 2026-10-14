@@ -124,71 +124,40 @@ export const tenantSchema = z.object({
   active: checkbox,
 });
 
-export const TELEMETRY_SOURCES = ["INFLUXDB", "SIMULATED", "AGENT"] as const;
-export type TelemetrySourceId = (typeof TELEMETRY_SOURCES)[number];
+export const siteSchema = z.object({
+  tenantId: uuid,
+  name: requiredText("Nome"),
+  address: optionalText(200),
+  city: optionalText(100),
+  state: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .nullish()
+    .transform((v) => v || null)
+    .refine((v) => v === null || /^[A-Z]{2}$/.test(v), "UF com 2 letras"),
+  timezone: z.string().trim().refine(isValidTimeZone, "Fuso horário inválido"),
+});
 
-export const siteSchema = z
-  .object({
-    tenantId: uuid,
-    name: requiredText("Nome"),
-    address: optionalText(200),
-    city: optionalText(100),
-    state: z
-      .string()
-      .trim()
-      .toUpperCase()
-      .nullish()
-      .transform((v) => v || null)
-      .refine((v) => v === null || /^[A-Z]{2}$/.test(v), "UF com 2 letras"),
-    timezone: z.string().trim().refine(isValidTimeZone, "Fuso horário inválido"),
-    telemetrySource: z.enum(TELEMETRY_SOURCES, { error: "Selecione a fonte de dados" }),
-    influxUrl: z
-      .string()
-      .trim()
-      .nullish()
-      .transform((v) => (v ? v.replace(/\/+$/, "") : null))
-      .refine((v) => v === null || /^https?:\/\/[^\s]+$/i.test(v), "URL deve começar com http:// ou https://"),
-    influxOrg: optionalText(120),
-    influxBucket: optionalText(120),
-    /** Bucket com médias horárias, alimentado por uma task do InfluxDB (opcional). */
-    influxRollupBucket: optionalText(120),
-    /** Vazio na edição = manter o token atual. */
-    influxToken: optionalText(500),
-  })
-  .superRefine((site, ctx) => {
-    if (site.telemetrySource !== "INFLUXDB") return;
-    for (const key of ["influxUrl", "influxOrg", "influxBucket"] as const) {
-      if (!site[key]) ctx.addIssue({ code: "custom", path: [key], message: "Obrigatório para InfluxDB" });
-    }
-  });
-
-export const meterSchema = z
-  .object({
-    siteId: uuid,
-    tag: requiredText("TAG", 40),
-    name: requiredText("Nome"),
-    location: optionalText(160),
-    manufacturer: optionalText(80),
-    model: optionalText(80),
-    serialNumber: optionalText(80),
-    modbusAddress: z
-      .string()
-      .trim()
-      .nullish()
-      .transform((v) => (v ? Number(v) : null))
-      .refine((v) => v === null || (Number.isInteger(v) && v >= 1 && v <= 247), "Endereço Modbus entre 1 e 247"),
-    ctRatio: optionalText(20),
-    ptRatio: optionalText(20),
-    influxMeasurement: requiredText("Measurement", 200),
-    influxTagKey: optionalText(100),
-    influxTagValue: optionalText(200),
-    sortOrder: z.coerce.number().int().min(0).max(9999).default(0),
-    active: checkbox,
-  })
-  .refine((m) => !m.influxTagKey || m.influxTagValue, {
-    message: "Informe o valor da tag",
-    path: ["influxTagValue"],
-  });
+/** Edição de um medidor (eles são criados pelo Painel local; a unidade não muda). */
+export const meterSchema = z.object({
+  tag: requiredText("TAG", 40),
+  name: requiredText("Nome"),
+  location: optionalText(160),
+  manufacturer: optionalText(80),
+  model: optionalText(80),
+  serialNumber: optionalText(80),
+  modbusAddress: z
+    .string()
+    .trim()
+    .nullish()
+    .transform((v) => (v ? Number(v) : null))
+    .refine((v) => v === null || (Number.isInteger(v) && v >= 1 && v <= 247), "Endereço Modbus entre 1 e 247"),
+  ctRatio: optionalText(20),
+  ptRatio: optionalText(20),
+  sortOrder: z.coerce.number().int().min(0).max(9999).default(0),
+  active: checkbox,
+});
 
 export const ROLES = ["ADMIN", "OPERATOR", "VIEWER"] as const;
 

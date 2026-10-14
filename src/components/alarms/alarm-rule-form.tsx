@@ -91,7 +91,7 @@ export function AlarmRuleForm({
           label="Minutos sem leitura"
           htmlFor="threshold"
           error={error("threshold")}
-          hint="Dispara quando o medidor fica esse tempo sem enviar dados (ou o InfluxDB não responde)."
+          hint="Dispara quando o medidor fica esse tempo sem leitura nova (medidor sem comunicação ou o Painel da loja parado)."
         >
           <Input
             {...fieldProps(state, "threshold", rule?.kind === "OFFLINE" ? rule.threshold : 10)}

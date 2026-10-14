@@ -1,14 +1,12 @@
 /**
- * Cria o primeiro administrador da plataforma e, com --demo, um cliente de
- * demonstração com unidades simuladas (não precisa de gateway nem InfluxDB).
+ * Cria o primeiro administrador da plataforma.
  *
- *   npm run db:seed                       → só o administrador
- *   npm run db:seed -- --demo             → administrador + cliente de demonstração
- *   npm run db:seed -- --if-configured    → idem ao primeiro, mas sem SEED_ADMIN_* (ou com valor
+ *   npm run db:seed                       → cria o administrador (erro se faltar algo)
+ *   npm run db:seed -- --if-configured    → idem, mas sem SEED_ADMIN_* (ou com valor
  *                                           inválido) só avisa e sai sem erro: usado no build da
  *                                           Vercel ("vercel-build"), onde não pode impedir o deploy
  *
- * Variáveis: DATABASE_URL, SEED_ADMIN_EMAIL, SEED_ADMIN_PASSWORD (e DEMO_USER_PASSWORD para --demo).
+ * Variáveis: DATABASE_URL, SEED_ADMIN_EMAIL, SEED_ADMIN_PASSWORD.
  */
 import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
@@ -49,83 +47,9 @@ async function seedAdmin() {
   console.log(`✔ Administrador criado: ${email}`);
 }
 
-const DEMO_SITES = [
-  {
-    name: "Fábrica Campinas",
-    city: "Campinas",
-    state: "SP",
-    meters: [
-      { tag: "MM-01", name: "Entrada geral (QGBT)", location: "Subestação principal" },
-      { tag: "MM-02", name: "Compressores", location: "Casa de máquinas" },
-      { tag: "MM-03", name: "Linha de produção 1", location: "Galpão A" },
-      { tag: "MM-04", name: "Iluminação e tomadas", location: "Administrativo" },
-    ],
-  },
-  {
-    name: "Centro de Distribuição",
-    city: "Jundiaí",
-    state: "SP",
-    meters: [
-      { tag: "MM-01", name: "Entrada geral", location: "Cabine primária" },
-      { tag: "MM-02", name: "Câmaras frias", location: "Doca 3" },
-    ],
-  },
-];
-
-async function seedDemo() {
-  const slug = "demo";
-  const existing = await db.tenant.findUnique({ where: { slug } });
-  if (existing) {
-    console.log("• Cliente de demonstração já existe — mantido.");
-    return;
-  }
-
-  const tenant = await db.tenant.create({
-    data: {
-      slug,
-      name: "Cliente Demonstração",
-      loginTagline: "Painel de demonstração com dados simulados.",
-      sites: {
-        create: DEMO_SITES.map((site, siteIndex) => ({
-          name: site.name,
-          city: site.city,
-          state: site.state,
-          telemetrySource: "SIMULATED",
-          meters: {
-            create: site.meters.map((meter, i) => ({
-              ...meter,
-              influxMeasurement: `medidor_${siteIndex + 1}_${String(i + 1).padStart(2, "0")}`,
-              manufacturer: "Schneider Electric",
-              model: "PM5560",
-              modbusAddress: i + 1,
-              ctRatio: i === 0 ? "1000/5" : "200/5",
-              sortOrder: i,
-            })),
-          },
-        })),
-      },
-    },
-  });
-  console.log(`✔ Cliente de demonstração criado: /app/${tenant.slug} (login em /login/${tenant.slug})`);
-
-  const demoPassword = process.env.DEMO_USER_PASSWORD?.trim();
-  if (demoPassword && demoPassword.length >= 10) {
-    await db.user.create({
-      data: {
-        email: "demo@cliente.com.br",
-        name: "Usuário Demonstração",
-        passwordHash: await hashPassword(demoPassword),
-        memberships: { create: { tenantId: tenant.id, role: "OPERATOR" } },
-      },
-    });
-    console.log("✔ Usuário de demonstração criado: demo@cliente.com.br (senha de DEMO_USER_PASSWORD)");
-  }
-}
-
 async function main() {
   db = new PrismaClient({ adapter: new PrismaPg({ connectionString: required("DATABASE_URL") }) });
   await seedAdmin();
-  if (process.argv.includes("--demo")) await seedDemo();
 }
 
 main()

@@ -7,11 +7,6 @@ import { z } from "zod";
  */
 const schema = z.object({
   DATABASE_URL: z.string().min(1, "DATABASE_URL não configurada"),
-  /** 32 bytes em base64. Cifra os tokens do InfluxDB gravados no banco. */
-  APP_SECRET: z
-    .string()
-    .min(1, "APP_SECRET não configurada")
-    .refine((v) => Buffer.from(v, "base64").length === 32, "APP_SECRET deve ter 32 bytes em base64"),
   SESSION_TTL_DAYS: z.coerce.number().int().positive().default(7),
   /** Web Push (opcional: sem as chaves, as notificações ficam desativadas). */
   NEXT_PUBLIC_VAPID_PUBLIC_KEY: z.string().optional(),
