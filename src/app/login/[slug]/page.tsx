@@ -26,6 +26,7 @@ async function TenantLogin({ params }: { params: PageProps<"/login/[slug]">["par
       brand={{
         name: branding.name,
         logoUrl: branding.logoUrl,
+        backgroundUrl: branding.loginBackgroundUrl,
         tagline: branding.loginTagline ?? DEFAULT_LOGIN_BRAND.tagline,
         primaryColor: branding.primaryColor,
         accentColor: branding.accentColor,

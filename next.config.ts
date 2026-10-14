@@ -11,6 +11,10 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   poweredByHeader: false,
+  experimental: {
+    // Imagem de fundo do login (até 1,5 MB, já reduzida no navegador) + folga do multipart.
+    serverActions: { bodySizeLimit: "2mb" },
+  },
   turbopack: {
     rules: {
       "*.css": {

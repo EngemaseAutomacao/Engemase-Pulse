@@ -6,11 +6,14 @@ import { errorState, validationError, type ActionState } from "@/lib/action-stat
 import { tenantSchema } from "@/lib/validation";
 import { isNotFound, isUniqueViolation, requireAdminForAction } from "@/server/admin/guard";
 import {
+  LOGIN_BACKGROUND_MAX_BYTES,
   LOGO_MAX_BYTES,
   createTenant,
   deleteTenant,
   detectImageType,
+  removeTenantLoginBackground,
   removeTenantLogo,
+  setTenantLoginBackground,
   setTenantLogo,
   updateTenant,
 } from "@/server/admin/tenants";
@@ -78,4 +81,31 @@ export async function uploadTenantLogo(tenantId: string, _previous: ActionState,
   revalidatePath("/admin", "layout");
   revalidatePath(`/app/${tenant.slug}`, "layout");
   return { status: "success", message: formData.get("remove") === "1" ? "Logo removido." : "Logo atualizado." };
+}
+
+export async function uploadTenantLoginBackground(
+  tenantId: string,
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const actor = await requireAdminForAction();
+  const tenant = await db.tenant.findUnique({ where: { id: tenantId }, select: { slug: true } });
+  if (!tenant) return errorState("Este cliente não existe mais.");
+
+  const remove = formData.get("remove") === "1";
+  if (remove) {
+    await removeTenantLoginBackground(actor, tenantId);
+  } else {
+    const file = formData.get("background");
+    if (!(file instanceof File) || file.size === 0) return errorState("Escolha uma imagem.");
+    if (file.size > LOGIN_BACKGROUND_MAX_BYTES) return errorState("A imagem deve ter no máximo 1,5 MB.");
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const mimeType = detectImageType(bytes);
+    if (!mimeType) return errorState("Formato não aceito. Use PNG, JPG ou WEBP.");
+    await setTenantLoginBackground(actor, tenantId, bytes, mimeType);
+  }
+
+  updateTag(brandingTag(tenant.slug));
+  revalidatePath(`/admin/clientes/${tenantId}`);
+  return { status: "success", message: remove ? "Imagem de fundo removida." : "Imagem de fundo atualizada." };
 }

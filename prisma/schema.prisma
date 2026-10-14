@@ -38,11 +38,12 @@ model Tenant {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  logo        TenantLogo?
-  sites       Site[]
-  memberships Membership[]
-  alarmRules  AlarmRule[]
-  alarms      Alarm[]
+  logo            TenantLogo?
+  loginBackground TenantLoginBackground?
+  sites           Site[]
+  memberships     Membership[]
+  alarmRules      AlarmRule[]
+  alarms          Alarm[]
 
   @@map("tenants")
 }
@@ -57,6 +58,18 @@ model TenantLogo {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("tenant_logos")
+}
+
+/// Imagem de fundo do lado esquerdo da tela de login do cliente.
+model TenantLoginBackground {
+  tenantId  String   @id @map("tenant_id") @db.Uuid
+  data      Bytes
+  mimeType  String   @map("mime_type")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("tenant_login_backgrounds")
 }
 
 // ---------------------------------------------------------------------------

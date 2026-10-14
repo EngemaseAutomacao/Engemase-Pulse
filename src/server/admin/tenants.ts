@@ -29,6 +29,7 @@ export function getTenant(id: string) {
     where: { id },
     include: {
       logo: { select: { updatedAt: true } },
+      loginBackground: { select: { updatedAt: true } },
       sites: { orderBy: { name: "asc" }, include: { _count: { select: { meters: true } } } },
       memberships: { include: { user: { select: { id: true, name: true, email: true, active: true } } } },
     },
@@ -92,4 +93,42 @@ export async function setTenantLogo(actor: AuthUser, tenantId: string, bytes: Ui
 export async function removeTenantLogo(actor: AuthUser, tenantId: string) {
   await db.tenantLogo.deleteMany({ where: { tenantId } });
   await audit({ actorId: actor.id, action: "update", entityType: "tenant", entityId: tenantId, details: { logo: null } });
+}
+
+// ---------------------------------------------------------------------------
+// Imagem de fundo do login
+// ---------------------------------------------------------------------------
+
+/** O navegador já reduz a foto antes de enviar (ver LoginBackgroundForm); isto é o teto. */
+export const LOGIN_BACKGROUND_MAX_BYTES = 1536 * 1024;
+
+export async function setTenantLoginBackground(
+  actor: AuthUser,
+  tenantId: string,
+  bytes: Uint8Array<ArrayBuffer>,
+  mimeType: string,
+) {
+  await db.tenantLoginBackground.upsert({
+    where: { tenantId },
+    create: { tenantId, data: bytes, mimeType },
+    update: { data: bytes, mimeType },
+  });
+  await audit({
+    actorId: actor.id,
+    action: "update",
+    entityType: "tenant",
+    entityId: tenantId,
+    details: { loginBackground: mimeType },
+  });
+}
+
+export async function removeTenantLoginBackground(actor: AuthUser, tenantId: string) {
+  await db.tenantLoginBackground.deleteMany({ where: { tenantId } });
+  await audit({
+    actorId: actor.id,
+    action: "update",
+    entityType: "tenant",
+    entityId: tenantId,
+    details: { loginBackground: null },
+  });
 }

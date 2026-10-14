@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { z } from "zod";
 import { ExternalLinkIcon, LogInIcon, PlusIcon } from "lucide-react";
 import { DeleteButton } from "@/components/admin/delete-button";
+import { LoginBackgroundForm } from "@/components/admin/login-background-form";
 import { LogoForm } from "@/components/admin/logo-form";
 import { TenantForm } from "@/components/admin/tenant-form";
 import { RelativeTime } from "@/components/meters/relative-time";
@@ -13,8 +14,8 @@ import { Button } from "@/components/ui/button";
 import { getTenant } from "@/server/admin/tenants";
 import { requirePlatformAdmin } from "@/server/auth/dal";
 import { ROLE_LABEL } from "@/server/auth/permissions";
-import { tenantLogoUrl } from "@/server/branding";
-import { removeTenant, saveTenant, uploadTenantLogo } from "../actions";
+import { tenantLoginBackgroundUrl, tenantLogoUrl } from "@/server/branding";
+import { removeTenant, saveTenant, uploadTenantLoginBackground, uploadTenantLogo } from "../actions";
 
 export const metadata: Metadata = { title: "Cliente" };
 
@@ -67,14 +68,27 @@ export default async function TenantPage({ params }: PageProps<"/admin/clientes/
         />
       </section>
 
-      <section className="surface space-y-4 p-5">
-        <h2 className="font-semibold">Logo</h2>
-        <LogoForm
-          action={uploadTenantLogo.bind(null, tenant.id)}
-          logoUrl={tenantLogoUrl(tenant.slug, tenant.logo?.updatedAt.getTime() ?? null)}
-          hasLogo={tenant.logo !== null}
-        />
-      </section>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <section className="surface space-y-4 p-5">
+          <h2 className="font-semibold">Logo</h2>
+          <LogoForm
+            action={uploadTenantLogo.bind(null, tenant.id)}
+            logoUrl={tenantLogoUrl(tenant.slug, tenant.logo?.updatedAt.getTime() ?? null)}
+            hasLogo={tenant.logo !== null}
+          />
+        </section>
+
+        <section className="surface space-y-4 p-5">
+          <div>
+            <h2 className="font-semibold">Imagem de fundo do login</h2>
+            <p className="text-sm text-muted-foreground">Lado esquerdo da página de login do cliente.</p>
+          </div>
+          <LoginBackgroundForm
+            action={uploadTenantLoginBackground.bind(null, tenant.id)}
+            imageUrl={tenantLoginBackgroundUrl(tenant.slug, tenant.loginBackground?.updatedAt.getTime() ?? null)}
+          />
+        </section>
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="surface space-y-3 p-5">

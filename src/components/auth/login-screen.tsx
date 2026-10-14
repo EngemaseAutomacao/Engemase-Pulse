@@ -6,6 +6,8 @@ import { brandThemeStyle } from "@/lib/color";
 export type LoginBrand = {
   name: string;
   logoUrl: string;
+  /** Foto do lado esquerdo; sem ela fica o fundo padrão com a marca d'água. */
+  backgroundUrl?: string | null;
   tagline: string;
   primaryColor: string;
   accentColor: string;
@@ -33,6 +35,37 @@ export function LoginScreen({ brand, children }: { brand: LoginBrand; children: 
       style={brandThemeStyle(brand.primaryColor, brand.accentColor)}
     >
       <section className="relative hidden overflow-hidden bg-sidebar p-12 lg:flex lg:flex-col lg:justify-between">
+        {brand.backgroundUrl ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element -- imagem do cliente vem do banco */}
+            <img
+              src={brand.backgroundUrl}
+              alt=""
+              aria-hidden
+              fetchPriority="high"
+              className="pointer-events-none absolute inset-0 size-full object-cover"
+            />
+            {/* Escurece mais embaixo, onde fica o texto, e deixa a foto aparecer em cima. */}
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0"
+              style={{
+                background:
+                  "linear-gradient(to top, var(--sidebar) 0%, color-mix(in oklab, var(--sidebar) 90%, transparent) 50%, color-mix(in oklab, var(--sidebar) 78%, transparent) 75%, color-mix(in oklab, var(--sidebar) 50%, transparent) 100%)",
+              }}
+            />
+          </>
+        ) : (
+          <Image
+            src={BRAND.watermark}
+            alt=""
+            width={373}
+            height={252}
+            loading="eager"
+            aria-hidden
+            className="pointer-events-none absolute -right-24 bottom-10 w-[34rem] max-w-none opacity-[0.07]"
+          />
+        )}
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 opacity-60"
@@ -40,15 +73,6 @@ export function LoginScreen({ brand, children }: { brand: LoginBrand; children: 
             background:
               "radial-gradient(60% 50% at 20% 10%, color-mix(in oklab, var(--primary) 28%, transparent), transparent 70%), radial-gradient(50% 45% at 90% 90%, color-mix(in oklab, var(--brand-accent) 22%, transparent), transparent 70%)",
           }}
-        />
-        <Image
-          src={BRAND.watermark}
-          alt=""
-          width={373}
-          height={252}
-          loading="eager"
-          aria-hidden
-          className="pointer-events-none absolute -right-24 bottom-10 w-[34rem] max-w-none opacity-[0.07]"
         />
 
         <div className="relative flex items-center gap-3">

@@ -10,10 +10,16 @@ export function tenantLogoUrl(slug: string, version: number | null): string {
   return version ? `/api/tenants/${slug}/logo?v=${version}` : BRAND.logo;
 }
 
+export function tenantLoginBackgroundUrl(slug: string, version: number | null): string | null {
+  return version ? `/api/tenants/${slug}/login-background?v=${version}` : null;
+}
+
 export type TenantBranding = {
   slug: string;
   name: string;
   logoUrl: string;
+  /** Foto do lado esquerdo da tela de login; null = fundo padrão. */
+  loginBackgroundUrl: string | null;
   primaryColor: string;
   accentColor: string;
   loginTagline: string | null;
@@ -38,6 +44,7 @@ export async function getTenantBranding(slug: string): Promise<TenantBranding | 
       accentColor: true,
       loginTagline: true,
       logo: { select: { updatedAt: true } },
+      loginBackground: { select: { updatedAt: true } },
     },
   });
   if (!tenant?.active) return null;
@@ -46,6 +53,7 @@ export async function getTenantBranding(slug: string): Promise<TenantBranding | 
     slug: tenant.slug,
     name: tenant.name,
     logoUrl: tenantLogoUrl(tenant.slug, tenant.logo?.updatedAt.getTime() ?? null),
+    loginBackgroundUrl: tenantLoginBackgroundUrl(tenant.slug, tenant.loginBackground?.updatedAt.getTime() ?? null),
     primaryColor: tenant.primaryColor,
     accentColor: tenant.accentColor,
     loginTagline: tenant.loginTagline,
