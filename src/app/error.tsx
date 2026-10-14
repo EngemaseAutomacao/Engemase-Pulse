@@ -3,11 +3,13 @@
 import { useEffect } from "react";
 import { RotateCwIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { reportClientError } from "@/lib/report-client-error";
 
 /** Erro inesperado numa página: mostra mensagem amigável e permite tentar de novo. */
 export default function ErrorPage({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
     console.error(error);
+    reportClientError(error);
   }, [error]);
 
   return (

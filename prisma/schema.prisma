@@ -395,3 +395,28 @@ model PushSubscription {
   @@index([userId])
   @@map("push_subscriptions")
 }
+
+// ---------------------------------------------------------------------------
+// Erros (tela "Saúde do sistema")
+// ---------------------------------------------------------------------------
+
+/// Erros do servidor, das telas e das tarefas periódicas, agrupados: mesma origem,
+/// mensagem e rota viram uma linha só, com a contagem e a última ocorrência.
+model ErrorLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  fingerprint String   @unique
+  /// servidor, navegador ou tarefa.
+  source      String
+  message     String
+  /// Rota (com ids trocados por ":id").
+  path        String?
+  digest      String?
+  /// Começo da pilha de chamadas, para o suporte.
+  detail      String?
+  count       Int      @default(1)
+  firstSeenAt DateTime @default(now()) @map("first_seen_at")
+  lastSeenAt  DateTime @default(now()) @map("last_seen_at")
+
+  @@index([lastSeenAt])
+  @@map("error_logs")
+}

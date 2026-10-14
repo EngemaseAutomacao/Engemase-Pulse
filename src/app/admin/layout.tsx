@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import {
   Building2Icon,
   GaugeIcon,
+  HeartPulseIcon,
   LayoutDashboardIcon,
   MapPinIcon,
   MonitorIcon,
@@ -21,6 +22,7 @@ const SECTIONS: NavSection[] = [
       { label: "Unidades", href: "/admin/unidades", icon: <MapPinIcon /> },
       { label: "Medidores", href: "/admin/medidores", icon: <GaugeIcon /> },
       { label: "Usuários", href: "/admin/usuarios", icon: <UsersIcon /> },
+      { label: "Saúde do sistema", href: "/admin/saude", icon: <HeartPulseIcon /> },
     ],
   },
   {

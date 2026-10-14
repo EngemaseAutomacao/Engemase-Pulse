@@ -1,14 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BellRingIcon, Building2Icon, GaugeIcon, MapPinIcon, TriangleAlertIcon, UsersIcon } from "lucide-react";
+import { Building2Icon, ChevronRightIcon, GaugeIcon, HeartPulseIcon, MapPinIcon, TriangleAlertIcon, UsersIcon } from "lucide-react";
 import { StatTile } from "@/components/dashboard/stat-tile";
 import { PageContainer, PageHeader } from "@/components/shell/page";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatDateTime, formatNumber } from "@/lib/format";
-import { getEvaluatorHealth, type EvaluatorStatus } from "@/server/alarms/engine";
+import { formatDateTime } from "@/lib/format";
 import { requirePlatformAdmin } from "@/server/auth/dal";
-import { getCache } from "@/server/cache";
 import { db } from "@/server/db";
+import { getSystemHealth } from "@/server/health";
 
 export const metadata: Metadata = { title: "Administração" };
 
@@ -28,15 +27,14 @@ const ENTITY_LABEL: Record<string, string> = {
 
 export default async function AdminHomePage() {
   await requirePlatformAdmin();
-  const [tenants, sites, meters, users, recent, evaluator] = await Promise.all([
+  const [tenants, sites, meters, users, recent, health] = await Promise.all([
     db.tenant.count(),
     db.site.count(),
     db.meter.count({ where: { active: true } }),
     db.user.count({ where: { active: true } }),
     db.auditLog.findMany({ orderBy: { createdAt: "desc" }, take: 12 }),
-    getEvaluatorHealth(),
+    getSystemHealth(),
   ]);
-  const rulesExist = (await db.alarmRule.count({ where: { enabled: true } })) > 0;
   const actorIds = [...new Set(recent.map((r) => r.actorId).filter((id): id is string => Boolean(id)))];
   const actors = new Map(
     (await db.user.findMany({ where: { id: { in: actorIds } }, select: { id: true, name: true } })).map((u) => [u.id, u.name]),
@@ -60,7 +58,7 @@ export default async function AdminHomePage() {
         </Link>
       </div>
 
-      <EvaluatorCard status={evaluator.status} stale={evaluator.stale} rulesExist={rulesExist} sharedCache={getCache().shared} />
+      <HealthSummary problems={health.problems} />
 
       <section className="surface overflow-hidden">
         <h2 className="border-b px-4 py-3 font-semibold">Alterações recentes</h2>
@@ -101,45 +99,31 @@ function describe(details: unknown): string {
   return typeof label === "string" ? `“${label}”` : "";
 }
 
-/** "Vigia do vigia": mostra se o avaliador de alarmes está rodando. */
-function EvaluatorCard({
-  status,
-  stale,
-  rulesExist,
-  sharedCache,
-}: {
-  status: EvaluatorStatus | null;
-  stale: boolean;
-  rulesExist: boolean;
-  sharedCache: boolean;
-}) {
-  const warn = rulesExist && stale;
+/** Atalho para a "Saúde do sistema", em destaque quando há algo a resolver. */
+function HealthSummary({ problems }: { problems: number }) {
   return (
-    <section className={warn ? "surface space-y-2 border-warning/40 p-4" : "surface space-y-2 p-4"}>
-      <h2 className="flex items-center gap-2 font-semibold">
-        {warn ? <TriangleAlertIcon className="size-4 text-warning" /> : <BellRingIcon className="size-4 text-primary" />}
-        Avaliador de alarmes
-      </h2>
-      {status ? (
-        <p className="text-sm text-muted-foreground">
-          Última execução: {formatDateTime(status.at)} · {status.evaluated} de {status.tenants} cliente(s) em{" "}
-          {formatNumber(status.durationMs / 1000, 1)} s · {status.opened} aberto(s), {status.cleared} normalizado(s)
-          {status.deferred > 0 && ` · ${status.deferred} ficaram para a próxima execução`}
-        </p>
+    <Link
+      href="/admin/saude"
+      className={
+        problems > 0
+          ? "surface flex items-center gap-3 border-warning/40 p-4 hover:border-warning"
+          : "surface flex items-center gap-3 p-4 hover:border-primary/40"
+      }
+    >
+      {problems > 0 ? (
+        <TriangleAlertIcon className="size-5 shrink-0 text-warning" aria-hidden />
       ) : (
-        <p className="text-sm text-muted-foreground">Ainda não executou{sharedCache ? "" : " nesta instância"}.</p>
+        <HeartPulseIcon className="size-5 shrink-0 text-primary" aria-hidden />
       )}
-      {warn && (
-        <p className="text-sm text-warning">
-          Há regras ativas, mas o avaliador não roda há mais de 20 min. Confira o agendamento (Cron da Vercel, QStash ou
-          GitHub Actions) — veja o README.
-        </p>
-      )}
-      {!sharedCache && (
-        <p className="text-xs text-muted-foreground">
-          Sem Redis configurado: o cache fica na memória de cada instância. Em produção, conecte o Upstash Redis.
-        </p>
-      )}
-    </section>
+      <span className="min-w-0 flex-1">
+        <span className="block font-semibold">Saúde do sistema</span>
+        <span className="block text-sm text-muted-foreground">
+          {problems > 0
+            ? `${problems} ponto(s) de atenção: configuração, lojas sem comunicação ou erros.`
+            : "Tudo configurado e funcionando."}
+        </span>
+      </span>
+      <ChevronRightIcon className="size-4 text-muted-foreground" aria-hidden />
+    </Link>
   );
 }

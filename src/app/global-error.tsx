@@ -1,7 +1,11 @@
 "use client";
 
+import { useEffect } from "react";
+import { reportClientError } from "@/lib/report-client-error";
+
 /** Último recurso: erro no layout raiz (sem CSS do app garantido, por isso estilos inline). */
-export default function GlobalError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
+export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  useEffect(() => reportClientError(error), [error]);
   return (
     <html lang="pt-BR">
       <body

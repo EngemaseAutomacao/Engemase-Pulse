@@ -4,6 +4,7 @@ import { purgeOldAgentReadings } from "@/server/agent/retention";
 import { evaluateAllTenants, type EvaluationSummary } from "@/server/alarms/engine";
 import { checkSiteHeartbeats, type HeartbeatResult } from "@/server/alarms/heartbeat";
 import { getCache } from "@/server/cache";
+import { purgeOldErrors, reportCaught } from "@/server/errors";
 
 /**
  * Tarefas periódicas: regras de alarme da nuvem, lojas sem comunicação e
@@ -31,9 +32,10 @@ const PIGGYBACK_BUDGET_MS = 20_000;
 export async function runHousekeeping(budgetMs?: number): Promise<HousekeepingResult> {
   const [alarms, heartbeat] = await Promise.all([evaluateAllTenants(budgetMs), checkSiteHeartbeats()]);
   const purgedReadings = await purgeOldAgentReadings().catch((error: unknown) => {
-    console.error("[retenção]", error);
+    reportCaught("tarefa", "limpeza do histórico", error);
     return 0;
   });
+  await purgeOldErrors().catch((error: unknown) => reportCaught("tarefa", "limpeza dos erros", error));
   return { alarms, heartbeat, purgedReadings };
 }
 
@@ -54,7 +56,7 @@ export function scheduleHousekeeping(): void {
     try {
       await runHousekeeping(PIGGYBACK_BUDGET_MS);
     } catch (error) {
-      console.error("[tarefas periódicas]", error);
+      reportCaught("tarefa", "tarefas periódicas", error);
     }
   });
 }

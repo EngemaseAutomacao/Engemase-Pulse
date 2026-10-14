@@ -4,6 +4,7 @@ import type { AgentPayload } from "@/lib/agent-payload";
 import { mapPainelSummary, mapPainelValues } from "@/lib/painel-fields";
 import { getCache } from "@/server/cache";
 import { db } from "@/server/db";
+import { reportCaught } from "@/server/errors";
 import type { Reading } from "@/server/telemetry/types";
 import { syncPainelAlarms, type AlarmSyncResult } from "./alarms";
 import { writeAgentLive } from "./live-store";
@@ -72,7 +73,7 @@ export async function ingestAgentPayload(site: AgentSite, payload: AgentPayload)
     try {
       result.alarmes = await syncPainelAlarms(site, payload.alarmes, payload.equipamentos, index, receivedAt - payload.ts);
     } catch (error) {
-      console.error("[ingest] alarmes do Painel", error);
+      reportCaught("servidor", "alarmes do Painel", error);
       result.alarmes = { erro: "Falha ao registrar os alarmes; tenta de novo no próximo envio" };
     }
   }

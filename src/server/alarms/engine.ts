@@ -1,6 +1,7 @@
 import "server-only";
 import { describeRule, evaluateRule, type Severity } from "@/lib/alarms";
 import { getCache } from "@/server/cache";
+import { reportCaught } from "@/server/errors";
 import { db } from "@/server/db";
 import { getSiteLive } from "@/server/telemetry/live";
 import { statusOf } from "@/server/telemetry/service";
@@ -58,7 +59,7 @@ export async function evaluateAllTenants(budgetMs = DEFAULT_BUDGET_MS): Promise<
           summary.cleared += result.cleared;
           summary.notified += result.notified;
         } catch (error) {
-          console.error("[alarmes] falha ao avaliar cliente", tenantId, error);
+          reportCaught("tarefa", "avaliação de alarmes", error);
         }
         summary.evaluated++;
       }
