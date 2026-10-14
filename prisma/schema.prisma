@@ -370,6 +370,8 @@ model Alarm {
   siteId           String?       @map("site_id") @db.Uuid
   ruleId           String?       @map("rule_id") @db.Uuid
   source           AlarmSource   @default(CLOUD)
+  /// Id do alarme no banco do Painel (alarmes do Painel); fica depois de fechado.
+  externalId       String?       @map("external_id")
   severity         AlarmSeverity
   title            String
   message          String
@@ -393,6 +395,7 @@ model Alarm {
   @@index([tenantId, clearedAt])
   @@index([tenantId, startedAt])
   @@index([ruleId, meterId, clearedAt])
+  @@unique([siteId, externalId])
   @@index([siteId, source, clearedAt])
   @@map("alarms")
 }

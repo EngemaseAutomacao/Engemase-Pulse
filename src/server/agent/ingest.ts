@@ -6,7 +6,7 @@ import { getCache } from "@/server/cache";
 import { db } from "@/server/db";
 import { reportCaught } from "@/server/errors";
 import type { Reading } from "@/server/telemetry/types";
-import { syncPainelAlarms, type AlarmSyncResult } from "./alarms";
+import { syncClosedPainelAlarms, syncPainelAlarms, type AlarmSyncResult } from "./alarms";
 import { writeAgentLive } from "./live-store";
 import { ensureAgentMeters, isEnergyEquipment, loadAgentMeterIndex, type MeterIndex } from "./meters";
 import type { AgentSite } from "./token";
@@ -20,6 +20,7 @@ export type IngestResult = {
   ignorados: number;
   /** Só quando o envio traz a lista de alarmes. */
   alarmes?: AlarmSyncResult | { erro: string };
+  alarmes_encerrados?: { registrados: number; atualizados: number } | { erro: string };
 };
 
 /** O "visto por último" vai para o banco no máximo uma vez por minuto. */
@@ -71,10 +72,31 @@ export async function ingestAgentPayload(site: AgentSite, payload: AgentPayload)
   if (payload.alarmes) {
     // Falha nos alarmes não pode derrubar o envio das leituras (o Painel recuaria e atrasaria tudo).
     try {
-      result.alarmes = await syncPainelAlarms(site, payload.alarmes, payload.equipamentos, index, receivedAt - payload.ts);
+      result.alarmes = await syncPainelAlarms(
+        site,
+        payload.alarmes,
+        payload.equipamentos,
+        index,
+        receivedAt - payload.ts,
+      );
     } catch (error) {
       reportCaught("servidor", "alarmes do Painel", error);
       result.alarmes = { erro: "Falha ao registrar os alarmes; tenta de novo no próximo envio" };
+    }
+  }
+
+  if (payload.alarmes_encerrados?.length) {
+    try {
+      result.alarmes_encerrados = await syncClosedPainelAlarms(
+        site,
+        payload.alarmes_encerrados,
+        index,
+        receivedAt - payload.ts,
+      );
+    } catch (error) {
+      reportCaught("servidor", "alarmes encerrados do Painel", error);
+      // Erro de verdade: o Painel repete o lote (a marca dele só avança com 200).
+      throw error;
     }
   }
 

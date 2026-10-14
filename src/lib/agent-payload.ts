@@ -87,8 +87,18 @@ export const agentPayloadSchema = z.object({
    * alarmes (Painel com módulo antigo).
    */
   alarmes: z.array(agentAlarmSchema).max(500).optional(),
+  /**
+   * Alarmes já encerrados no Painel, com o horário do fim, em ordem (vão junto
+   * do histórico). Dá o fim exato e recupera os que abriram e fecharam com a
+   * internet fora.
+   */
+  alarmes_encerrados: z
+    .array(agentAlarmSchema.extend({ fim: epochMs }))
+    .max(500)
+    .optional(),
 });
 
 export type AgentPayload = z.infer<typeof agentPayloadSchema>;
 export type AgentEquipment = z.infer<typeof agentEquipmentSchema>;
 export type AgentAlarm = z.infer<typeof agentAlarmSchema>;
+export type AgentClosedAlarm = AgentAlarm & { fim: number };

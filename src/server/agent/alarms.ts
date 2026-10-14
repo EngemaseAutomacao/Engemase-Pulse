@@ -1,6 +1,6 @@
 import "server-only";
 import type { Severity } from "@/lib/alarms";
-import type { AgentAlarm, AgentEquipment } from "@/lib/agent-payload";
+import type { AgentAlarm, AgentClosedAlarm, AgentEquipment } from "@/lib/agent-payload";
 import { getCache } from "@/server/cache";
 import { db } from "@/server/db";
 import { RENOTIFY_AFTER_MS, pushAlarms } from "@/server/alarms/notify";
@@ -32,7 +32,18 @@ const signatureKey = (siteId: string) => `agent:alarms:v1:${siteId}`;
 /** Mesmo sem mudança, a cada 10 min confere com o banco (corrige qualquer divergência). */
 const SIGNATURE_TTL_MS = 10 * 60_000;
 
-export type AlarmSyncResult = { ativos: number; abertos: number; normalizados: number };
+export type AlarmSyncResult = {
+  ativos: number;
+  abertos: number;
+  normalizados: number;
+  /** Ids (do Painel) reconhecidos na nuvem: o Painel reconhece também. */
+  reconhecer: number[];
+};
+
+/** Reconhecimento na nuvem: a próxima lista refaz a comparação e devolve o "reconhecer" ao Painel. */
+export async function forgetPainelAlarmSignature(...siteIds: string[]): Promise<void> {
+  if (siteIds.length > 0) await getCache().del(...siteIds.map(signatureKey));
+}
 
 export async function syncPainelAlarms(
   site: AgentSite,
@@ -48,14 +59,14 @@ export async function syncPainelAlarms(
     .sort()
     .join(",");
   if ((await cache.get<string>(signatureKey(site.id))) === signature) {
-    return { ativos: alarms.length, abertos: 0, normalizados: 0 };
+    return { ativos: alarms.length, abertos: 0, normalizados: 0, reconhecer: [] };
   }
 
   const now = new Date();
   const wanted = new Map(alarms.map((a) => [painelAlarmKey(site.id, a.id), a]));
   const open = await db.alarm.findMany({
     where: { siteId: site.id, source: "PAINEL", clearedAt: null },
-    select: { id: true, openKey: true, acknowledgedAt: true },
+    select: { id: true, openKey: true, acknowledgedAt: true, acknowledgedById: true },
   });
 
   // Normalizados na loja: não vieram na lista.
@@ -74,6 +85,12 @@ export async function syncPainelAlarms(
   if (toAcknowledge.length > 0) {
     await db.alarm.updateMany({ where: { id: { in: toAcknowledge } }, data: { acknowledgedAt: now } });
   }
+
+  // Reconhecidos por alguém na nuvem e ainda não no Painel.
+  const reconhecer = open.flatMap((a) => {
+    const painel = a.openKey ? wanted.get(a.openKey) : undefined;
+    return painel && a.acknowledgedAt && a.acknowledgedById && !painel.reconhecido ? [painel.id] : [];
+  });
 
   const known = new Set(open.map((a) => a.openKey));
   const toOpen = alarms.filter((a) => !known.has(painelAlarmKey(site.id, a.id)));
@@ -101,6 +118,7 @@ export async function syncPainelAlarms(
           startedAt: new Date(Math.min(a.inicio + skewMs, now.getTime())),
           acknowledgedAt: a.reconhecido ? now : null,
           openKey: painelAlarmKey(site.id, a.id),
+          externalId: String(a.id),
         };
       }),
       // Outro envio já abriu (a chave é única): esse não volta e não notifica de novo.
@@ -112,7 +130,82 @@ export async function syncPainelAlarms(
   }
 
   await cache.set(signatureKey(site.id), signature, SIGNATURE_TTL_MS);
-  return { ativos: alarms.length, abertos: opened, normalizados: toClear.length };
+  return { ativos: alarms.length, abertos: opened, normalizados: toClear.length, reconhecer };
+}
+
+/**
+ * Alarmes encerrados no Painel (com o horário do fim). Acerta o fim dos que a
+ * nuvem fechou pela lista (ela só sabe "sumiu da lista") e registra, sem
+ * notificar, os que abriram e fecharam enquanto a loja estava sem internet.
+ */
+export async function syncClosedPainelAlarms(
+  site: AgentSite,
+  closed: AgentClosedAlarm[],
+  index: MeterIndex,
+  skewMs: number,
+): Promise<{ registrados: number; atualizados: number }> {
+  const now = Date.now();
+  const latest = new Map(closed.map((a) => [String(a.id), a]));
+  const existing = await db.alarm.findMany({
+    where: { siteId: site.id, externalId: { in: [...latest.keys()] } },
+    select: { id: true, externalId: true, startedAt: true, clearedAt: true, acknowledgedAt: true },
+  });
+  const endOf = (a: AgentClosedAlarm, startedAt: number) =>
+    new Date(Math.max(startedAt, Math.min(a.fim + skewMs, now)));
+
+  let updated = 0;
+  for (const row of existing) {
+    const a = latest.get(row.externalId!)!;
+    const clearedAt = endOf(a, row.startedAt.getTime());
+    const fixEnd = !row.clearedAt || Math.abs(row.clearedAt.getTime() - clearedAt.getTime()) > 60_000;
+    const acknowledge = a.reconhecido && !row.acknowledgedAt;
+    if (!fixEnd && !acknowledge) continue;
+    await db.alarm.update({
+      where: { id: row.id },
+      data: {
+        ...(fixEnd ? { clearedAt, openKey: null } : {}),
+        ...(acknowledge ? { acknowledgedAt: clearedAt } : {}),
+      },
+    });
+    updated += 1;
+  }
+
+  const known = new Set(existing.map((r) => r.externalId));
+  const missing = closed.filter((a) => !known.has(String(a.id)));
+  if (missing.length === 0) return { registrados: 0, atualizados: updated };
+
+  const [info, meters] = await Promise.all([
+    db.site.findUniqueOrThrow({ where: { id: site.id }, select: { name: true } }),
+    db.meter.findMany({
+      where: { siteId: site.id, externalId: { not: null } },
+      select: { externalId: true, tag: true, name: true },
+    }),
+  ]);
+  const meterBy = new Map(meters.map((m) => [m.externalId!, m]));
+  const { count } = await db.alarm.createMany({
+    data: missing.map((a) => {
+      const equipmentId = a.tag.split(".")[0];
+      const meter = meterBy.get(equipmentId);
+      const startedAt = Math.min(a.inicio + skewMs, now);
+      const clearedAt = endOf(a, startedAt);
+      return {
+        tenantId: site.tenantId,
+        siteId: site.id,
+        meterId: index[equipmentId] ?? null,
+        source: "PAINEL" as const,
+        severity: SEVERITY_BY_PRIORITY[a.prioridade?.toLowerCase() ?? ""] ?? "WARNING",
+        title: `${meter?.tag ?? equipmentId} — ${a.mensagem}`,
+        message: describe(a, meter?.name ?? equipmentId, info.name),
+        value: a.valor ?? null,
+        startedAt: new Date(startedAt),
+        clearedAt,
+        acknowledgedAt: a.reconhecido ? clearedAt : null,
+        externalId: String(a.id),
+      };
+    }),
+    skipDuplicates: true,
+  });
+  return { registrados: count, atualizados: updated };
 }
 
 function describe(alarm: AgentAlarm, equipmentName: string, siteName: string): string {

@@ -6,8 +6,11 @@
  * COPIA para a nuvem, por HTTPS e sempre saindo da loja (nenhuma porta aberta):
  *
  *  - a cada `intervalo_s` (padrão 10 s): a última varredura, com os valores atuais,
- *    e a lista dos alarmes ativos (a nuvem abre, fecha e notifica no celular);
- *  - a cada minuto: o que falta enviar do resumo de 5 min e do consumo por hora.
+ *    e a lista dos alarmes ativos (a nuvem abre, fecha e notifica no celular; o
+ *    que for reconhecido na nuvem volta na resposta e é reconhecido aqui);
+ *  - a cada minuto: o que falta enviar do resumo de 5 min, do consumo por hora e
+ *    dos alarmes encerrados (fim exato, inclusive os que abriram e fecharam com
+ *    a internet fora).
  *
  * O próprio banco da loja é a fila. Duas marcas dizem até onde a nuvem já
  * confirmou (só avançam depois de um HTTP 200):
@@ -15,7 +18,9 @@
  *    janelas antes de `resumo_ate` não mudam mais, então nada se perde);
  *  - `nuvem_consumo_rowid`: linhas de consumo_horario até este rowid já foram
  *    (o consolidar só INSERE horas novas, então o rowid só cresce — inclusive
- *    quando uma hora antiga é consolidada depois de o servidor ficar parado).
+ *    quando uma hora antiga é consolidada depois de o servidor ficar parado);
+ *  - `nuvem_alarmes_fim` / `nuvem_alarmes_id`: alarmes encerrados até este fim
+ *    (e id, para empates) já foram.
  * Internet caiu: quando voltar, o atraso vai em lotes, sem intervenção.
  *
  * Configuração (config.json da loja):
@@ -31,6 +36,7 @@ const J = 300000;                 // janela do resumo (5 min)
 const FATIA_RESUMO_MS = 6 * 3600000; // resumo enviado em fatias de 6 h
 const LOTE_CONSUMO = 2000;
 const MAX_LOTES_POR_RODADA = 30;  // em atraso, até 30 lotes seguidos por minuto
+const LOTE_ALARMES = 200;
 
 export class Nuvem {
   /**
@@ -93,6 +99,7 @@ export class Nuvem {
     this.enviar(parte)
       .then((resposta) => {
         this.equipamentosAceitos = true;
+        this.reconhecerPelaNuvem(resposta?.alarmes?.reconhecer);
         const erroAlarmes = resposta?.alarmes?.erro || null;
         if (erroAlarmes && erroAlarmes !== this.ultimoErroAlarmes) console.error(`[nuvem] alarmes: ${erroAlarmes}`);
         this.ultimoErroAlarmes = erroAlarmes;
@@ -133,16 +140,58 @@ export class Nuvem {
     return ultimo.alarmes
       .filter((a) => Number.isInteger(a.id) && Number.isFinite(a.inicio))
       .slice(0, 500)
-      .map((a) => ({
-        id: a.id,
-        tag: String(a.tag).slice(0, 200),
-        mensagem: String(a.mensagem || a.tag).slice(0, 300),
-        prioridade: a.prioridade || 'media',
-        valor: Number.isFinite(a.valor) ? a.valor : null,
-        limite: a.limite ? String(a.limite).slice(0, 120) : null,
-        inicio: a.inicio,
-        reconhecido: Boolean(a.reconhecido),
-      }));
+      .map((a) => this.alarme(a));
+  }
+
+  /** Linha da tabela `alarmes` no formato da nuvem. */
+  alarme(a) {
+    return {
+      id: a.id,
+      tag: String(a.tag).slice(0, 200),
+      mensagem: String(a.mensagem || a.tag).slice(0, 300),
+      prioridade: a.prioridade || 'media',
+      valor: Number.isFinite(a.valor) ? a.valor : null,
+      limite: a.limite ? String(a.limite).slice(0, 120) : null,
+      inicio: a.inicio,
+      reconhecido: Boolean(a.reconhecido),
+    };
+  }
+
+  /** Alarmes reconhecidos por alguém na nuvem: reconhece aqui também (fica na auditoria). */
+  reconhecerPelaNuvem(ids) {
+    if (!Array.isArray(ids)) return;
+    const validos = ids.filter((id) => Number.isInteger(id) && id > 0);
+    for (const id of validos) {
+      this.banco.reconhecerAlarme(id, Date.now());
+      this.banco.registrar?.('alarme_reconhecido', `id ${id} (pela nuvem)`, 'nuvem', 'nuvem');
+    }
+    if (validos.length) console.log(`[nuvem] ${validos.length} alarme(s) reconhecido(s) pela nuvem`);
+  }
+
+  /** Próximo lote de alarmes encerrados, pela ordem do fim. */
+  lerEncerrados() {
+    const vazio = { linhas: [], marca: null, falta: false };
+    let fim = this.banco.marca('nuvem_alarmes_fim');
+    let id = this.banco.marca('nuvem_alarmes_id') ?? 0;
+    if (fim === null) {
+      fim = Date.now() - (this.conf.historico_inicial_dias ?? 7) * 86400000;
+      id = 0;
+    }
+    let linhas;
+    try {
+      linhas = this.banco.db
+        .prepare('SELECT * FROM alarmes WHERE fim IS NOT NULL AND (fim > ? OR (fim = ? AND id > ?)) ORDER BY fim, id LIMIT ?')
+        .all(fim, fim, id, LOTE_ALARMES);
+    } catch {
+      return vazio; // banco sem a tabela de alarmes
+    }
+    if (!linhas.length) return vazio;
+    const ultimo = linhas[linhas.length - 1];
+    return {
+      linhas: linhas.filter((a) => Number.isFinite(a.inicio)).map((a) => ({ ...this.alarme(a), fim: a.fim })),
+      marca: { fim: ultimo.fim, id: ultimo.id },
+      falta: linhas.length === LOTE_ALARMES,
+    };
   }
 
   /** Envia o atraso em lotes até ficar em dia (ou até o limite da rodada). */
@@ -153,11 +202,14 @@ export class Nuvem {
       for (let i = 0; i < MAX_LOTES_POR_RODADA; i++) {
         const resumo = this.lerResumo();
         const consumo = this.lerConsumo();
-        if (resumo.ate === null && consumo.rowid === null) break;
+        const encerrados = this.lerEncerrados();
+        if (resumo.ate === null && consumo.rowid === null && encerrados.marca === null) break;
         try {
           // fatia sem dado nenhum (Painel parado naquele período): só avança a marca
-          if (resumo.janelas.length || consumo.linhas.length) {
-            const r = await this.enviar({ resumo_5min: resumo.janelas, consumo_horario: consumo.linhas });
+          if (resumo.janelas.length || consumo.linhas.length || encerrados.linhas.length) {
+            const parte = { resumo_5min: resumo.janelas, consumo_horario: consumo.linhas };
+            if (encerrados.linhas.length) parte.alarmes_encerrados = encerrados.linhas;
+            const r = await this.enviar(parte);
             if (r.ignorados) console.warn(`[nuvem] ${r.ignorados} linha(s) de equipamento que a nuvem não tem como medidor`);
           }
         } catch (e) {
@@ -168,7 +220,11 @@ export class Nuvem {
         }
         if (resumo.ate !== null) this.banco.gravarMarca('nuvem_resumo_ate', resumo.ate);
         if (consumo.rowid !== null) this.banco.gravarMarca('nuvem_consumo_rowid', consumo.rowid);
-        if (!resumo.falta && !consumo.falta) break;
+        if (encerrados.marca) {
+          this.banco.gravarMarca('nuvem_alarmes_fim', encerrados.marca.fim);
+          this.banco.gravarMarca('nuvem_alarmes_id', encerrados.marca.id);
+        }
+        if (!resumo.falta && !consumo.falta && !encerrados.falta) break;
       }
     } catch {
       // enviar() já registrou; tenta de novo no próximo minuto

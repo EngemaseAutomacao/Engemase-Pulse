@@ -59,6 +59,7 @@ Painel ── HTTPS, só de saída, a cada 10 s ──▶   POST /api/ingest
 | --- | --- | --- |
 | `equipamentos` | a cada 10 s | a última varredura (`ultimo.equipamentos`) + `principal`, `limites.corrente_a.max` e `conexao.unit_id` do config |
 | `alarmes` | a cada 10 s, junto | os alarmes ativos (`ultimo.alarmes`, a lista inteira) |
+| `alarmes_encerrados` | a cada minuto, o que falta | tabela `alarmes`, os já encerrados, pela ordem do `fim` |
 | `resumo_5min` | a cada minuto, o que falta | tabela `resumo_5min`, só janelas antes de `resumo_ate` (fechadas) |
 | `consumo_horario` | a cada minuto, o que falta | tabela `consumo_horario`, pela ordem do `rowid` |
 
@@ -83,12 +84,14 @@ inteira dos ativos, e a nuvem só espelha:
 | alarme novo na lista | abre o alarme (marcado "Painel da loja") e notifica no celular se a prioridade for `media` ou `alta` |
 | some da lista | fecha (normalizado) |
 | `reconhecido` | marca como reconhecido na loja |
+| encerrado (com `fim`) | acerta o horário do fim; se a nuvem nunca soube dele (abriu e fechou com a internet fora), entra no histórico, sem notificar |
+| reconhecido **na nuvem** | volta na resposta do envio e o Painel reconhece também (auditoria da loja: “pela nuvem”) |
 
 Prioridade: `alta` → Crítico, `media` → Atenção, `baixa` → Informativo. Alarme de
 equipamento que não é medidor (gerador, CLP…) também aparece, sem link para medidor.
 Como vai a lista inteira, uma queda de internet se acerta no primeiro envio
-seguinte. Limitações: alarme que abriu e fechou inteiro com a internet fora não
-chega à nuvem, e reconhecer na nuvem não reconhece no Painel.
+seguinte. A marca `nuvem_alarmes_fim` / `nuvem_alarmes_id` diz até onde os
+encerrados já foram; no primeiro envio sobem os dos últimos `historico_inicial_dias`.
 
 ## Quando algo não chega
 

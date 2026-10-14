@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { errorState, validationError, type ActionState } from "@/lib/action-state";
 import { alarmRuleSchema } from "@/lib/validation";
 import { evaluateTenant } from "@/server/alarms/engine";
+import { forgetPainelAlarmSignature } from "@/server/agent/alarms";
 import { invalidateAlarmState } from "@/server/alarms/state";
 import { audit } from "@/server/audit";
 import { getTenantAccess } from "@/server/auth/dal";
@@ -28,15 +29,24 @@ export async function acknowledgeAlarm(slug: string, alarmId: string): Promise<{
     data: { acknowledgedAt: new Date(), acknowledgedById: user.id },
   });
   if (count === 0) return { error: "Alarme não encontrado ou já reconhecido." };
+  // Alarme do Painel: o próximo envio da loja recebe o "reconhecer".
+  const alarm = await db.alarm.findUnique({ where: { id: alarmId }, select: { source: true, siteId: true } });
+  if (alarm?.source === "PAINEL" && alarm.siteId) await forgetPainelAlarmSignature(alarm.siteId);
   revalidatePath(`/app/${slug}`, "layout");
 }
 
 export async function acknowledgeAll(slug: string): Promise<void> {
   const { tenant, user } = await access(slug, "OPERATOR");
+  const painelSites = await db.alarm.findMany({
+    where: { tenantId: tenant.id, clearedAt: null, acknowledgedAt: null, source: "PAINEL", siteId: { not: null } },
+    select: { siteId: true },
+    distinct: ["siteId"],
+  });
   await db.alarm.updateMany({
     where: { tenantId: tenant.id, clearedAt: null, acknowledgedAt: null },
     data: { acknowledgedAt: new Date(), acknowledgedById: user.id },
   });
+  await forgetPainelAlarmSignature(...painelSites.map((a) => a.siteId!));
   revalidatePath(`/app/${slug}`, "layout");
 }
 
@@ -62,8 +72,12 @@ export async function saveAlarmRule(
   const data = parsed.data;
 
   if (data.meterId) {
-    const meter = await db.meter.findFirst({ where: { id: data.meterId, site: { tenantId: tenant.id } }, select: { id: true } });
-    if (!meter) return { ...errorState("Revise os campos destacados.", formData), fieldErrors: { meterId: "Medidor inválido" } };
+    const meter = await db.meter.findFirst({
+      where: { id: data.meterId, site: { tenantId: tenant.id } },
+      select: { id: true },
+    });
+    if (!meter)
+      return { ...errorState("Revise os campos destacados.", formData), fieldErrors: { meterId: "Medidor inválido" } };
   }
 
   if (ruleId) {
@@ -90,7 +104,13 @@ export async function deleteAlarmRule(slug: string, ruleId: string): Promise<voi
   });
   await db.alarmRule.deleteMany({ where: { id: ruleId, tenantId: tenant.id } });
   await invalidateAlarmState(tenant.id);
-  await audit({ actorId: user.id, action: "delete", entityType: "alarm-rule", entityId: ruleId, details: { tenantId: tenant.id } });
+  await audit({
+    actorId: user.id,
+    action: "delete",
+    entityType: "alarm-rule",
+    entityId: ruleId,
+    details: { tenantId: tenant.id },
+  });
   revalidatePath(`/app/${slug}`, "layout");
   redirect(`/app/${slug}/alarmes/regras`);
 }
