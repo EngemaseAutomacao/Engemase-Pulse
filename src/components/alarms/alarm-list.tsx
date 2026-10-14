@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BellOffIcon, CheckIcon } from "lucide-react";
+import { BellOffIcon, CheckIcon, StoreIcon } from "lucide-react";
 import { formatDateTime } from "@/lib/format";
 import type { AlarmRow } from "@/server/queries/alarms";
 import { cn } from "@/lib/utils";
@@ -46,18 +46,33 @@ export function AlarmList({
               ) : (
                 <span className="text-xs font-medium text-foreground">Ativo</span>
               )}
+              {alarm.source === "PAINEL" && (
+                <span
+                  className="inline-flex items-center gap-1 text-xs text-muted-foreground"
+                  title="Alarme configurado e detectado no Painel da loja"
+                >
+                  <StoreIcon className="size-3.5" aria-hidden />
+                  Painel da loja
+                </span>
+              )}
             </div>
             <p className="font-medium">
-              <Link href={`/app/${tenantSlug}/medidores/${alarm.meter.id}`} className="hover:text-primary">
-                {alarm.title}
-              </Link>
+              {alarm.meter ? (
+                <Link href={`/app/${tenantSlug}/medidores/${alarm.meter.id}`} className="hover:text-primary">
+                  {alarm.title}
+                </Link>
+              ) : (
+                alarm.title
+              )}
             </p>
             <p className="text-sm text-muted-foreground">{alarm.message}</p>
             <p className="text-xs text-muted-foreground">
               Início: {formatDateTime(alarm.startedAt)}
               {alarm.clearedAt && ` · Fim: ${formatDateTime(alarm.clearedAt)}`}
               {alarm.acknowledgedAt &&
-                ` · Reconhecido por ${alarm.acknowledgedBy?.name ?? "—"} em ${formatDateTime(alarm.acknowledgedAt)}`}
+                ` · Reconhecido ${
+                  alarm.acknowledgedBy ? `por ${alarm.acknowledgedBy.name}` : alarm.source === "PAINEL" ? "na loja" : "por —"
+                } em ${formatDateTime(alarm.acknowledgedAt)}`}
             </p>
           </div>
           {!alarm.acknowledgedAt && !alarm.clearedAt && acknowledge ? (

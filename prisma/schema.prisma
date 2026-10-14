@@ -99,6 +99,7 @@ model Site {
   tenant       Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   meters       Meter[]
   liveSnapshot SiteLiveSnapshot?
+  alarms       Alarm[]
 
   @@unique([tenantId, name])
   @@map("sites")
@@ -296,6 +297,12 @@ enum AlarmSeverity {
   CRITICAL
 }
 
+/// Quem abriu o alarme: as regras da nuvem ou o Painel local da loja.
+enum AlarmSource {
+  CLOUD
+  PAINEL
+}
+
 enum AlarmRuleKind {
   /// Um campo passou de um limite (ex.: Total_kW acima de 500).
   THRESHOLD
@@ -337,8 +344,12 @@ model AlarmRule {
 model Alarm {
   id               String        @id @default(uuid()) @db.Uuid
   tenantId         String        @map("tenant_id") @db.Uuid
-  meterId          String        @map("meter_id") @db.Uuid
+  /// Vazio em alarme do Painel sobre equipamento que não é medidor (gerador, CLP…).
+  meterId          String?       @map("meter_id") @db.Uuid
+  /// Unidade do alarme (preenchida nos alarmes do Painel).
+  siteId           String?       @map("site_id") @db.Uuid
   ruleId           String?       @map("rule_id") @db.Uuid
+  source           AlarmSource   @default(CLOUD)
   severity         AlarmSeverity
   title            String
   message          String
@@ -348,18 +359,21 @@ model Alarm {
   clearedAt        DateTime?     @map("cleared_at")
   acknowledgedAt   DateTime?     @map("acknowledged_at")
   acknowledgedById String?       @map("acknowledged_by_id") @db.Uuid
-  /// "regra:medidor" enquanto o alarme está aberto; null ao normalizar. A unicidade
-  /// garante no máximo um alarme aberto por regra e medidor, mesmo com avaliações simultâneas.
+  /// "regra:medidor" (ou "painel:unidade:id" nos do Painel) enquanto o alarme está
+  /// aberto; null ao normalizar. A unicidade garante no máximo um alarme aberto por
+  /// chave, mesmo com avaliações simultâneas.
   openKey          String?       @unique @map("open_key")
 
   tenant         Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  meter          Meter      @relation(fields: [meterId], references: [id], onDelete: Cascade)
+  meter          Meter?     @relation(fields: [meterId], references: [id], onDelete: Cascade)
+  site           Site?      @relation(fields: [siteId], references: [id], onDelete: Cascade)
   rule           AlarmRule? @relation(fields: [ruleId], references: [id], onDelete: SetNull)
   acknowledgedBy User?      @relation(fields: [acknowledgedById], references: [id], onDelete: SetNull)
 
   @@index([tenantId, clearedAt])
   @@index([tenantId, startedAt])
   @@index([ruleId, meterId, clearedAt])
+  @@index([siteId, source, clearedAt])
   @@map("alarms")
 }
 

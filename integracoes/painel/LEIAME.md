@@ -15,6 +15,8 @@ Painel ── HTTPS, só de saída, a cada 10 s ──▶   POST /api/ingest
 - **Internet caiu:** a loja segue normal; quando a conexão volta, o atraso sobe em lotes.
 - **Os medidores nascem sozinhos na nuvem**, a partir dos equipamentos do grupo `energia`
   (nome, TAG ISA, entrada geral, disjuntor e endereço vêm do `config.json` da loja).
+- **Os alarmes do Painel aparecem na nuvem** e avisam no celular de quem tem acesso
+  ao cliente (prioridade média e alta).
 
 ## Instalar (no código do Painel)
 
@@ -56,6 +58,7 @@ Painel ── HTTPS, só de saída, a cada 10 s ──▶   POST /api/ingest
 | Parte | Quando | De onde |
 | --- | --- | --- |
 | `equipamentos` | a cada 10 s | a última varredura (`ultimo.equipamentos`) + `principal`, `limites.corrente_a.max` e `conexao.unit_id` do config |
+| `alarmes` | a cada 10 s, junto | os alarmes ativos (`ultimo.alarmes`, a lista inteira) |
 | `resumo_5min` | a cada minuto, o que falta | tabela `resumo_5min`, só janelas antes de `resumo_ate` (fechadas) |
 | `consumo_horario` | a cada minuto, o que falta | tabela `consumo_horario`, pela ordem do `rowid` |
 
@@ -69,6 +72,24 @@ tradução dos nomes das grandezas em `src/lib/painel-fields.ts`
 (`tensao_an → V1N`, `corrente_a → I1`, `potencia_ativa → Total_kW`, `thd_corrente → THD_I1`…).
 Grandeza nova num perfil: acrescente nessa tabela para ela aparecer na nuvem.
 
+## Alarmes
+
+Os alarmes continuam sendo configurados e detectados no Painel (limites, atraso
+de confirmação e banda morta são os dele). A cada envio ao vivo vai a lista
+inteira dos ativos, e a nuvem só espelha:
+
+| No Painel | Na nuvem |
+| --- | --- |
+| alarme novo na lista | abre o alarme (marcado "Painel da loja") e notifica no celular se a prioridade for `media` ou `alta` |
+| some da lista | fecha (normalizado) |
+| `reconhecido` | marca como reconhecido na loja |
+
+Prioridade: `alta` → Crítico, `media` → Atenção, `baixa` → Informativo. Alarme de
+equipamento que não é medidor (gerador, CLP…) também aparece, sem link para medidor.
+Como vai a lista inteira, uma queda de internet se acerta no primeiro envio
+seguinte. Limitações: alarme que abriu e fechou inteiro com a internet fora não
+chega à nuvem, e reconhecer na nuvem não reconhece no Painel.
+
 ## Quando algo não chega
 
 O módulo escreve no log do serviço (`journalctl -u supervisorio`) só quando o
@@ -79,6 +100,7 @@ estado muda:
 | `[nuvem] HTTP 401: Token inválido ou revogado` | token errado ou gerado de novo na nuvem |
 | `[nuvem] sem conexão com a nuvem (…)` | internet da loja, DNS ou firewall bloqueando a saída HTTPS |
 | `[nuvem] lote recusado e pulado (HTTP 400 …)` | dado fora do formato; o lote é pulado para não travar a fila |
+| `[nuvem] alarmes: …` | a nuvem recebeu as leituras mas não conseguiu registrar os alarmes (tenta de novo a cada envio) |
 | `[nuvem] envio restabelecido` | voltou ao normal |
 
 Depois de uma falha, o módulo espera 10 s, 20 s, 40 s… até 5 min antes de tentar

@@ -1,15 +1,12 @@
 import "server-only";
-import { PUSH_MIN_SEVERITY, SEVERITY_LABEL, SEVERITY_RANK, describeRule, evaluateRule, type Severity } from "@/lib/alarms";
+import { describeRule, evaluateRule, type Severity } from "@/lib/alarms";
 import { getCache } from "@/server/cache";
 import { db } from "@/server/db";
-import { sendPushToUsers } from "@/server/push";
 import { getSiteLive } from "@/server/telemetry/live";
 import { statusOf } from "@/server/telemetry/service";
 import { getTenantTopology } from "@/server/telemetry/topology";
+import { RENOTIFY_AFTER_MS, pushAlarms } from "./notify";
 import { getAlarmState, listTenantsWithRules, openKeyOf, saveAlarmState } from "./state";
-
-/** Se o mesmo alarme fechou há menos que isso, reabrir não notifica de novo (evita "pisca-pisca"). */
-const RENOTIFY_AFTER_MS = 15 * 60_000;
 /** Quantos clientes avaliar ao mesmo tempo. */
 const CONCURRENCY = 6;
 /** Tempo máximo de uma execução; o que sobrar fica para a próxima (em rodízio). */
@@ -185,36 +182,20 @@ export async function evaluateTenant(tenantId: string): Promise<TenantResult> {
 
 async function notifyNewAlarms(
   tenant: { id: string; slug: string; name: string },
-  alarms: { ruleId: string | null; meterId: string; severity: Severity; title: string; message: string }[],
+  alarms: { ruleId: string | null; meterId: string | null; severity: Severity; title: string; message: string }[],
   now: number,
 ): Promise<number> {
-  const relevant = alarms.filter((a) => SEVERITY_RANK[a.severity] >= SEVERITY_RANK[PUSH_MIN_SEVERITY]);
-  if (relevant.length === 0) return 0;
-
-  const [recentlyCleared, recipients] = await Promise.all([
-    db.alarm.findMany({
-      where: { tenantId: tenant.id, clearedAt: { gte: new Date(now - RENOTIFY_AFTER_MS) } },
-      select: { ruleId: true, meterId: true },
-    }),
-    db.membership.findMany({ where: { tenantId: tenant.id, user: { active: true } }, select: { userId: true } }),
-  ]);
+  const recentlyCleared = await db.alarm.findMany({
+    where: { tenantId: tenant.id, ruleId: { not: null }, clearedAt: { gte: new Date(now - RENOTIFY_AFTER_MS) } },
+    select: { ruleId: true, meterId: true },
+  });
   const quiet = new Set(recentlyCleared.map((a) => `${a.ruleId}:${a.meterId}`));
-  const userIds = recipients.map((r) => r.userId);
-
-  const results = await Promise.all(
-    relevant
+  return pushAlarms(
+    tenant,
+    alarms
       .filter((alarm) => !quiet.has(`${alarm.ruleId}:${alarm.meterId}`))
-      .map((alarm) =>
-        sendPushToUsers(userIds, {
-          title: `${SEVERITY_LABEL[alarm.severity]}: ${alarm.title}`,
-          body: `${alarm.message} (${tenant.name})`,
-          url: `/app/${tenant.slug}/alarmes`,
-          tag: `alarm-${alarm.ruleId}-${alarm.meterId}`,
-          severity: alarm.severity,
-        }),
-      ),
+      .map((alarm) => ({ ...alarm, tag: `alarm-${alarm.ruleId}-${alarm.meterId}` })),
   );
-  return results.reduce((sum, r) => sum + r.sent, 0);
 }
 
 /** Faxina de sessões vencidas, no máximo a cada 6 h (não acorda o banco a cada execução). */

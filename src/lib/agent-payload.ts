@@ -5,10 +5,11 @@ import { z } from "zod";
  * envia para a nuvem. Os nomes seguem os do Painel; a tradução para os campos
  * do sistema fica em `painel-fields.ts`. Versão 1.
  *
- * Um envio pode trazer qualquer combinação das três partes:
+ * Um envio pode trazer qualquer combinação destas partes:
  *  - `equipamentos`: leitura atual de cada equipamento (a cada ~10 s);
  *  - `resumo_5min`: janelas de 5 min já fechadas (média, mínimo e máximo);
- *  - `consumo_horario`: consumo de cada hora fechada, com a origem do cálculo.
+ *  - `consumo_horario`: consumo de cada hora fechada, com a origem do cálculo;
+ *  - `alarmes`: os alarmes ativos no Painel (junto do envio ao vivo).
  */
 
 /** 2000-01-01 a 2100-01-01, em ms: barra relógio errado e segundos no lugar de ms. */
@@ -33,6 +34,21 @@ export const agentEquipmentSchema = z.object({
   /** Última leitura bem-sucedida do equipamento. */
   lido_em: epochMs.nullish(),
   valores: z.record(tagName, z.number().nullable()).default({}),
+});
+
+export const agentAlarmSchema = z.object({
+  /** Id do alarme no banco da loja. */
+  id: z.number().int().nonnegative(),
+  /** "equipamento.grandeza" (ou só o equipamento, nos de comunicação). */
+  tag: z.string().trim().min(1).max(200),
+  mensagem: z.string().trim().min(1).max(300),
+  /** alta, media ou baixa. */
+  prioridade: z.string().trim().max(20).nullish(),
+  valor: z.number().nullish(),
+  /** Texto do limite, como o Painel mostra ("mín 0.92 · máx 1"). */
+  limite: z.string().trim().max(120).nullish(),
+  inicio: epochMs,
+  reconhecido: z.boolean().nullish(),
 });
 
 export const agentPayloadSchema = z.object({
@@ -65,7 +81,14 @@ export const agentPayloadSchema = z.object({
     )
     .max(5_000)
     .optional(),
+  /**
+   * Alarmes ativos no Painel agora, a lista inteira: o que estava aberto na
+   * nuvem e não veio é dado como normalizado. Sem a chave, a nuvem não mexe nos
+   * alarmes (Painel com módulo antigo).
+   */
+  alarmes: z.array(agentAlarmSchema).max(500).optional(),
 });
 
 export type AgentPayload = z.infer<typeof agentPayloadSchema>;
 export type AgentEquipment = z.infer<typeof agentEquipmentSchema>;
+export type AgentAlarm = z.infer<typeof agentAlarmSchema>;

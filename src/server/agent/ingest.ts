@@ -5,6 +5,7 @@ import { mapPainelSummary, mapPainelValues } from "@/lib/painel-fields";
 import { getCache } from "@/server/cache";
 import { db } from "@/server/db";
 import type { Reading } from "@/server/telemetry/types";
+import { syncPainelAlarms, type AlarmSyncResult } from "./alarms";
 import { writeAgentLive } from "./live-store";
 import { ensureAgentMeters, isEnergyEquipment, loadAgentMeterIndex, type MeterIndex } from "./meters";
 import type { AgentSite } from "./token";
@@ -16,6 +17,8 @@ export type IngestResult = {
   consumo_horario: number;
   /** Linhas de equipamentos que não são medidores de energia (ou desconhecidos). */
   ignorados: number;
+  /** Só quando o envio traz a lista de alarmes. */
+  alarmes?: AlarmSyncResult | { erro: string };
 };
 
 /** O "visto por último" vai para o banco no máximo uma vez por minuto. */
@@ -62,6 +65,16 @@ export async function ingestAgentPayload(site: AgentSite, payload: AgentPayload)
     });
     result.ignorados += payload.consumo_horario.length - rows.length;
     result.consumo_horario = await upsertEnergyHours(rows);
+  }
+
+  if (payload.alarmes) {
+    // Falha nos alarmes não pode derrubar o envio das leituras (o Painel recuaria e atrasaria tudo).
+    try {
+      result.alarmes = await syncPainelAlarms(site, payload.alarmes, payload.equipamentos, index, receivedAt - payload.ts);
+    } catch (error) {
+      console.error("[ingest] alarmes do Painel", error);
+      result.alarmes = { erro: "Falha ao registrar os alarmes; tenta de novo no próximo envio" };
+    }
   }
 
   if (await getCache().acquire(`agent:seen:${site.id}`, SEEN_THROTTLE_MS)) {

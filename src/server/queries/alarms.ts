@@ -8,6 +8,7 @@ export function countActiveAlarms(tenantId: string) {
 const alarmSelect = {
   id: true,
   severity: true,
+  source: true,
   title: true,
   message: true,
   value: true,

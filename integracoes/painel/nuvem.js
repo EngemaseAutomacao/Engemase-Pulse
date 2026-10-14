@@ -5,7 +5,8 @@
  * histórico, calcula alarmes e consumo, e funciona sem internet. Este módulo só
  * COPIA para a nuvem, por HTTPS e sempre saindo da loja (nenhuma porta aberta):
  *
- *  - a cada `intervalo_s` (padrão 10 s): a última varredura, com os valores atuais;
+ *  - a cada `intervalo_s` (padrão 10 s): a última varredura, com os valores atuais,
+ *    e a lista dos alarmes ativos (a nuvem abre, fecha e notifica no celular);
  *  - a cada minuto: o que falta enviar do resumo de 5 min e do consumo por hora.
  *
  * O próprio banco da loja é a fila. Duas marcas dizem até onde a nuvem já
@@ -51,6 +52,7 @@ export class Nuvem {
     this.esperaAte = 0;
     this.ultimoErro = null;
     this.ultimoSucesso = null;
+    this.ultimoErroAlarmes = null;
     this.relogio = setInterval(() => this.enviarPendencias(), 60000);
     this.relogio.unref?.();
     this.primeira = setTimeout(() => this.enviarPendencias(), 5000);
@@ -85,8 +87,16 @@ export class Nuvem {
     if (Date.now() - this.ultimoAoVivo < (this.conf.intervalo_s || 10) * 1000) return;
     this.ultimoAoVivo = Date.now();
     this.aoVivoEmCurso = true;
-    this.enviar({ equipamentos: this.equipamentos(ultimo) })
-      .then(() => { this.equipamentosAceitos = true; })
+    const parte = { equipamentos: this.equipamentos(ultimo) };
+    const alarmes = this.alarmes(ultimo);
+    if (alarmes) parte.alarmes = alarmes;
+    this.enviar(parte)
+      .then((resposta) => {
+        this.equipamentosAceitos = true;
+        const erroAlarmes = resposta?.alarmes?.erro || null;
+        if (erroAlarmes && erroAlarmes !== this.ultimoErroAlarmes) console.error(`[nuvem] alarmes: ${erroAlarmes}`);
+        this.ultimoErroAlarmes = erroAlarmes;
+      })
       .catch(() => {}) // enviar() já registrou; o próximo ciclo tenta de novo
       .finally(() => { this.aoVivoEmCurso = false; });
   }
@@ -111,6 +121,28 @@ export class Nuvem {
         valores: soNumeros(e.valores),
       };
     });
+  }
+
+  /**
+   * Alarmes ativos agora, a lista inteira: o que estava aberto na nuvem e não
+   * vier aqui ela dá como normalizado. `ultimo.alarmes` é o que o motor de
+   * alarmes devolveu na varredura (e é atualizado ao reconhecer na tela).
+   */
+  alarmes(ultimo) {
+    if (!Array.isArray(ultimo?.alarmes)) return null;
+    return ultimo.alarmes
+      .filter((a) => Number.isInteger(a.id) && Number.isFinite(a.inicio))
+      .slice(0, 500)
+      .map((a) => ({
+        id: a.id,
+        tag: String(a.tag).slice(0, 200),
+        mensagem: String(a.mensagem || a.tag).slice(0, 300),
+        prioridade: a.prioridade || 'media',
+        valor: Number.isFinite(a.valor) ? a.valor : null,
+        limite: a.limite ? String(a.limite).slice(0, 120) : null,
+        inicio: a.inicio,
+        reconhecido: Boolean(a.reconhecido),
+      }));
   }
 
   /** Envia o atraso em lotes até ficar em dia (ou até o limite da rodada). */
