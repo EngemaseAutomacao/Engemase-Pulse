@@ -36,6 +36,19 @@ export type HistoryParams = z.input<typeof historyParams>;
 
 export const energyParams = z.object({ period: z.enum(ENERGY_PERIOD_IDS) });
 
+/** Dia do calendário (AAAA-MM-DD) que existe de verdade. */
+export const calendarDate = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida")
+  .refine((v) => {
+    const [y, m, d] = v.split("-").map(Number);
+    const date = new Date(Date.UTC(y, m - 1, d));
+    return date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d;
+  }, "Data inválida");
+
+/** Consumo por setor de uma unidade num dia. */
+export const consumptionParams = z.object({ site: z.uuid(), date: calendarDate });
+
 /**
  * Leituras ao vivo: por padrão só os campos de resumo de todos os medidores;
  * com `meter`, só aquele medidor com todos os campos.

@@ -70,9 +70,10 @@ export class AgentSource implements TelemetrySource {
   async energy(meter: MeterRef, window: EnergyWindow): Promise<EnergyBucket[]> {
     const unit = INTERVAL_UNIT[window.interval];
     // "hour" guarda o instante em UTC; convertido para o relógio local para agrupar e de volta.
-    const rows = await db.$queryRaw<{ start: number; kwh: number }[]>`
+    const rows = await db.$queryRaw<{ start: number; kwh: number; estimated: boolean }[]>`
       SELECT extract(epoch FROM date_trunc(${unit}::text, (hour AT TIME ZONE 'UTC') AT TIME ZONE ${window.timeZone}::text) AT TIME ZONE ${window.timeZone}::text)::float8 * 1000 AS start,
-             sum(value)::float8 AS kwh
+             sum(value)::float8 AS kwh,
+             bool_or(source = 'POWER') AS estimated
         FROM meter_energy_hours
        WHERE meter_id = ${meter.id}::uuid
          AND quantity = 'ACTIVE'
@@ -80,7 +81,7 @@ export class AgentSource implements TelemetrySource {
          AND hour < ${window.stop.toISOString()}::timestamp
        GROUP BY 1
        ORDER BY 1`;
-    return rows.map((r) => ({ start: Number(r.start), kwh: Number(r.kwh) }));
+    return rows.map((r) => ({ start: Number(r.start), kwh: Number(r.kwh), estimated: Boolean(r.estimated) }));
   }
 }
 

@@ -16,8 +16,11 @@ export type Series = Record<string, [number, number][]>;
 
 export type HistoryQuery = { fields: string[]; start: Date; stop: Date; every: string };
 
-/** Consumo de uma janela; `start` é o início da janela (epoch ms). */
-export type EnergyBucket = { start: number; kwh: number };
+/**
+ * Consumo de uma janela; `start` é o início da janela (epoch ms). `estimated`:
+ * calculado pela potência média porque o contador não serviu (Painel local).
+ */
+export type EnergyBucket = { start: number; kwh: number; estimated?: boolean };
 
 /**
  * Fonte de leituras de uma unidade. Implementações: InfluxDB (produção)
