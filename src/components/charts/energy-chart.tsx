@@ -159,7 +159,7 @@ function EnergyTooltip({
   );
 }
 
-function formatBucket(start: number, interval: EnergyInterval, timeZone: string, style: "short" | "long"): string {
+export function formatBucket(start: number, interval: EnergyInterval, timeZone: string, style: "short" | "long"): string {
   const date = new Date(start);
   if (interval === "1h") {
     const hour = date.toLocaleTimeString("pt-BR", { timeZone, hour: "2-digit", minute: "2-digit" });

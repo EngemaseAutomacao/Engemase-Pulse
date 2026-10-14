@@ -208,6 +208,7 @@ function formatTick(t: number, spanMs: number): string {
 
 /** Casas decimais do eixo pela grandeza: 160 · 12,5 · 0,95. */
 function formatAxisValue(value: number): string {
+  if (value === 0) return "0";
   const magnitude = Math.abs(value);
   return formatNumber(value, magnitude >= 100 ? 0 : magnitude >= 10 ? 1 : 2);
 }

@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { GitCompareArrowsIcon } from "lucide-react";
 import { z } from "zod";
 import { EnergyChart } from "@/components/charts/energy-chart";
 import { HistoryChart } from "@/components/charts/history-chart";
 import { MeterLivePanel } from "@/components/meters/meter-live-panel";
 import { PageContainer, PageHeader } from "@/components/shell/page";
+import { Button } from "@/components/ui/button";
 import { requireTenant } from "@/server/auth/dal";
 import { hasTenantRole } from "@/server/auth/permissions";
 import { findTenantMeter } from "@/server/telemetry/service";
@@ -37,6 +40,14 @@ export default async function MeterPage({ params }: PageProps<"/app/[tenant]/med
           </>
         }
         description={details.join(" · ")}
+        actions={
+          <Button asChild variant="outline">
+            <Link href={`/app/${tenant.slug}/comparar?m=${meter.id}`}>
+              <GitCompareArrowsIcon />
+              Comparar com outro
+            </Link>
+          </Button>
+        }
       />
 
       <MeterLivePanel tenantSlug={tenant.slug} meterId={meter.id} />

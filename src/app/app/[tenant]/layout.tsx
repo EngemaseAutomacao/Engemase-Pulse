@@ -1,5 +1,13 @@
 import { Suspense } from "react";
-import { ArrowLeftRightIcon, BellIcon, ChartColumnIcon, GaugeIcon, LayoutDashboardIcon, ShieldIcon } from "lucide-react";
+import {
+  ArrowLeftRightIcon,
+  BellIcon,
+  ChartColumnIcon,
+  GaugeIcon,
+  GitCompareArrowsIcon,
+  LayoutDashboardIcon,
+  ShieldIcon,
+} from "lucide-react";
 import { AppShell, type NavSection } from "@/components/shell/app-shell";
 import { ShellSkeleton } from "@/components/shell/shell-skeleton";
 import { BRAND_THEME_CLASS, brandThemeStyle } from "@/lib/color";
@@ -36,6 +44,7 @@ async function TenantShell({
         { label: "Visão geral", href: base, icon: <LayoutDashboardIcon />, exact: true },
         { label: "Medidores", href: `${base}/medidores`, icon: <GaugeIcon /> },
         { label: "Consumo", href: `${base}/consumo`, icon: <ChartColumnIcon /> },
+        { label: "Comparar", href: `${base}/comparar`, icon: <GitCompareArrowsIcon /> },
         { label: "Alarmes", href: `${base}/alarmes`, icon: <BellIcon />, badge: activeAlarms },
       ],
     },
