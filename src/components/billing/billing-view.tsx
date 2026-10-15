@@ -223,7 +223,7 @@ function Bill({ data, inProgress }: { data: BillingResponse; inProgress: boolean
       )}
       {data.noMainMeter && (
         <p className="text-sm text-muted-foreground">
-          Sem entrada geral marcada no Painel: a energia é a soma dos medidores e a demanda não é calculada.
+          Sem entrada geral marcada no gateway: a energia é a soma dos medidores e a demanda não é calculada.
         </p>
       )}
 

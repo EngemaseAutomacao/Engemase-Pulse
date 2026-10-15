@@ -6,12 +6,12 @@ import { scheduleHousekeeping } from "@/server/housekeeping";
 import { findSiteByAgentToken } from "@/server/agent/token";
 
 /**
- * Recebe as leituras do Painel local (supervisório instalado na loja).
+ * Recebe as leituras do gateway (Pulse Configurador instalado na unidade).
  * Autenticação: "Authorization: Bearer <token da unidade>", gerado em
  * Administração → Unidades. Formato do corpo: `src/lib/agent-payload.ts`.
  *
  * Respostas: 200 aceito · 400 corpo inválido · 401 token inválido · 413 corpo grande demais.
- * O Painel só avança o que já enviou depois de um 200.
+ * O gateway só avança o que já enviou depois de um 200.
  */
 export const maxDuration = 30;
 

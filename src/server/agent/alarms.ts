@@ -8,13 +8,13 @@ import type { MeterIndex } from "./meters";
 import type { AgentSite } from "./token";
 
 /**
- * Alarmes do Painel local na nuvem. A cada envio ao vivo o Painel manda a
+ * Alarmes do gateway na nuvem. A cada envio ao vivo o gateway manda a
  * lista inteira dos alarmes ativos; aqui ela é comparada com os abertos na
  * nuvem: abre os novos (e notifica), fecha os que sumiram da lista e marca os
- * reconhecidos na loja. Por ser a lista inteira, uma queda de internet se
+ * reconhecidos na unidade. Por ser a lista inteira, uma queda de internet se
  * resolve sozinha no próximo envio.
  *
- * Os limites, o atraso de confirmação e a banda morta são os do Painel: a
+ * Os limites, o atraso de confirmação e a banda morta são os do gateway: a
  * nuvem não reavalia nada, só espelha.
  */
 
@@ -36,11 +36,11 @@ export type AlarmSyncResult = {
   ativos: number;
   abertos: number;
   normalizados: number;
-  /** Ids (do Painel) reconhecidos na nuvem: o Painel reconhece também. */
+  /** Ids (do gateway) reconhecidos na nuvem: o gateway reconhece também. */
   reconhecer: number[];
 };
 
-/** Reconhecimento na nuvem: a próxima lista refaz a comparação e devolve o "reconhecer" ao Painel. */
+/** Reconhecimento na nuvem: a próxima lista refaz a comparação e devolve o "reconhecer" ao gateway. */
 export async function forgetPainelAlarmSignature(...siteIds: string[]): Promise<void> {
   if (siteIds.length > 0) await getCache().del(...siteIds.map(signatureKey));
 }
@@ -50,7 +50,7 @@ export async function syncPainelAlarms(
   alarms: AgentAlarm[],
   equipment: AgentEquipment[] | undefined,
   index: MeterIndex,
-  /** Diferença entre o relógio do servidor e o da loja (ms). */
+  /** Diferença entre o relógio do servidor e o da unidade (ms). */
   skewMs: number,
 ): Promise<AlarmSyncResult> {
   const cache = getCache();
@@ -69,7 +69,7 @@ export async function syncPainelAlarms(
     select: { id: true, openKey: true, acknowledgedAt: true, acknowledgedById: true },
   });
 
-  // Normalizados na loja: não vieram na lista.
+  // Normalizados na unidade: não vieram na lista.
   const toClear = open.filter((a) => !a.openKey || !wanted.has(a.openKey)).map((a) => a.id);
   if (toClear.length > 0) {
     await db.alarm.updateMany({
@@ -78,7 +78,7 @@ export async function syncPainelAlarms(
     });
   }
 
-  // Reconhecidos na loja (o reconhecimento na nuvem não volta para o Painel).
+  // Reconhecidos na unidade (o reconhecimento na nuvem não volta para o gateway).
   const toAcknowledge = open
     .filter((a) => a.openKey && wanted.get(a.openKey)?.reconhecido && !a.acknowledgedAt)
     .map((a) => a.id);
@@ -86,7 +86,7 @@ export async function syncPainelAlarms(
     await db.alarm.updateMany({ where: { id: { in: toAcknowledge } }, data: { acknowledgedAt: now } });
   }
 
-  // Reconhecidos por alguém na nuvem e ainda não no Painel.
+  // Reconhecidos por alguém na nuvem e ainda não no gateway.
   const reconhecer = open.flatMap((a) => {
     const painel = a.openKey ? wanted.get(a.openKey) : undefined;
     return painel && a.acknowledgedAt && a.acknowledgedById && !painel.reconhecido ? [painel.id] : [];
@@ -134,9 +134,9 @@ export async function syncPainelAlarms(
 }
 
 /**
- * Alarmes encerrados no Painel (com o horário do fim). Acerta o fim dos que a
+ * Alarmes encerrados no gateway (com o horário do fim). Acerta o fim dos que a
  * nuvem fechou pela lista (ela só sabe "sumiu da lista") e registra, sem
- * notificar, os que abriram e fecharam enquanto a loja estava sem internet.
+ * notificar, os que abriram e fecharam enquanto a unidade estava sem internet.
  */
 export async function syncClosedPainelAlarms(
   site: AgentSite,
@@ -218,7 +218,7 @@ function describe(alarm: AgentAlarm, equipmentName: string, siteName: string): s
 }
 
 /**
- * Notifica os alarmes novos, menos os já reconhecidos na loja e os que
+ * Notifica os alarmes novos, menos os já reconhecidos na unidade e os que
  * fecharam há pouco com o mesmo título (alarme "pisca-pisca").
  */
 async function notify(

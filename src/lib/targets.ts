@@ -1,7 +1,7 @@
 /**
  * Metas mensais de consumo (kWh) e de custo (R$) por unidade e por setor.
  * A projeção estende o que já foi consumido até o fim do mês, pelas horas
- * que têm leitura (uma loja sem internet por dois dias não vira "consumo zero").
+ * que têm leitura (uma unidade sem internet por dois dias não vira "consumo zero").
  */
 
 export type TargetStatus = "ok" | "near" | "over" | "none";

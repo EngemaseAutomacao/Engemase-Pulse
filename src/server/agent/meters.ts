@@ -8,8 +8,8 @@ import { invalidateTenantTopology } from "@/server/telemetry/topology";
 import type { AgentSite } from "./token";
 
 /**
- * Medidores das unidades com Painel local nascem e se atualizam a partir da
- * lista de equipamentos que o Painel envia: o cadastro da loja (nome, entrada
+ * Medidores das unidades com gateway nascem e se atualizam a partir da
+ * lista de equipamentos que o gateway envia: o cadastro da unidade (nome, entrada
  * geral, disjuntor, endereço) é a referência. Só equipamentos do grupo
  * "energia" viram medidor; CLP, reservatório e gerador ficam para depois.
  *
@@ -17,7 +17,7 @@ import type { AgentSite } from "./token";
  * em cache e o banco só é tocado quando a assinatura muda.
  */
 
-/** id do equipamento no Painel → id do medidor. */
+/** id do equipamento no gateway → id do medidor. */
 export type MeterIndex = Record<string, string>;
 
 type CachedIndex = { signature: string; meters: MeterIndex };

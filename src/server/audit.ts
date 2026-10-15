@@ -3,7 +3,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/server/db";
 
 export type AuditEntry = {
-  /** null: feito pelo próprio sistema (ex.: medidor criado pelo Painel local). */
+  /** null: feito pelo próprio sistema (ex.: medidor criado pelo gateway). */
   actorId: string | null;
   action: "create" | "update" | "delete" | "reset-password" | "rotate-agent-token";
   entityType: "tenant" | "site" | "meter" | "utility-equipment" | "user" | "alarm-rule" | "membership";

@@ -63,8 +63,8 @@ export default async function AdminMeterPage({ params }: PageProps<"/admin/medid
       <section className="space-y-3 rounded-xl border border-destructive/30 p-5">
         <h2 className="font-semibold text-destructive">Excluir medidor</h2>
         <p className="text-sm text-muted-foreground">
-          Remove o cadastro e o histórico dele na nuvem. O Painel local cria o medidor de novo quando o cadastro da
-          loja mudar. Para só esconder do painel, desative o medidor.
+          Remove o cadastro e o histórico dele na nuvem. O gateway cria o medidor de novo quando o cadastro da
+          unidade mudar. Para só esconder das telas, desative o medidor.
         </p>
         <DeleteButton
           action={removeMeter.bind(null, meter.id)}

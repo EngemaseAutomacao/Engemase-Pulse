@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { E2E, login } from "./fixtures";
 
-test("saúde do sistema lista a loja enviando", async ({ page }) => {
+test("saúde do sistema lista a unidade enviando", async ({ page }) => {
   await login(page);
   await page.goto("/admin/saude");
   const row = page.getByRole("row", { name: new RegExp(E2E.siteName) });

@@ -6,12 +6,12 @@ import { db } from "@/server/db";
 import type { EnergyBucket, HistoryQuery, MeterRef, Reading, Series, TelemetrySource } from "./types";
 
 /**
- * Leituras das unidades com Painel local: a leitura atual vem do último envio
- * do Painel, o histórico do resumo de 5 min e o consumo das horas fechadas
+ * Leituras das unidades com gateway: a leitura atual vem do último envio
+ * do gateway, o histórico do resumo de 5 min e o consumo das horas fechadas
  * que ele calculou (pelo contador do medidor, ou estimado pela potência).
  */
 
-/** Menor janela guardada: o Painel envia o resumo de 5 em 5 min. */
+/** Menor janela guardada: o gateway envia o resumo de 5 em 5 min. */
 const MIN_WINDOW_S = 300;
 
 export class AgentSource implements TelemetrySource {
@@ -65,7 +65,7 @@ export class AgentSource implements TelemetrySource {
 
   /**
    * Consumo agrupado por hora, dia ou mês do calendário local da unidade.
-   * Só horas fechadas: a hora em andamento entra quando o Painel a consolida.
+   * Só horas fechadas: a hora em andamento entra quando o gateway a consolida.
    */
   async energy(meter: MeterRef, window: EnergyWindow): Promise<EnergyBucket[]> {
     const unit = INTERVAL_UNIT[window.interval];

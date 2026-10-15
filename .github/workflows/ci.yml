@@ -24,7 +24,7 @@ jobs:
 
   # Testes de tela: banco próprio, sistema compilado como em produção e o
   # navegador clicando nas telas principais (login, painel, consumo, fatura,
-  # unifilar, comparação, alarmes do Painel, relatório, convite de usuário).
+  # unifilar, comparação, alarmes do gateway, relatório, convite de usuário).
   e2e:
     runs-on: ubuntu-latest
     needs: check

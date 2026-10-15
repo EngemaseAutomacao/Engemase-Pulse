@@ -29,7 +29,7 @@ export async function acknowledgeAlarm(slug: string, alarmId: string): Promise<{
     data: { acknowledgedAt: new Date(), acknowledgedById: user.id },
   });
   if (count === 0) return { error: "Alarme não encontrado ou já reconhecido." };
-  // Alarme do Painel: o próximo envio da loja recebe o "reconhecer".
+  // Alarme do gateway: o próximo envio da unidade recebe o "reconhecer".
   const alarm = await db.alarm.findUnique({ where: { id: alarmId }, select: { source: true, siteId: true } });
   if (alarm?.source === "PAINEL" && alarm.siteId) await forgetPainelAlarmSignature(alarm.siteId);
   revalidatePath(`/app/${slug}`, "layout");

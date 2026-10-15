@@ -32,7 +32,7 @@ export default async function HealthPage() {
     <PageContainer>
       <PageHeader
         title="Saúde do sistema"
-        description="O que falta configurar, como estão as lojas e os erros recentes."
+        description="O que falta configurar, como estão as unidades e os erros recentes."
       />
 
       <section aria-labelledby="checks-title" className="divide-y surface">
@@ -59,10 +59,10 @@ export default async function HealthPage() {
 
       <section aria-labelledby="stores-title" className="overflow-hidden surface">
         <h2 id="stores-title" className="border-b px-4 py-3 font-semibold">
-          Lojas (Painel local)
+          Unidades (gateways)
         </h2>
         {stores.length === 0 ? (
-          <p className="p-4 text-sm text-muted-foreground">Nenhuma unidade com token do Painel ainda.</p>
+          <p className="p-4 text-sm text-muted-foreground">Nenhuma unidade com token do gateway ainda.</p>
         ) : (
           <Table>
             <TableHeader>
@@ -70,7 +70,7 @@ export default async function HealthPage() {
                 <TableHead className="pl-4">Cliente / unidade</TableHead>
                 <TableHead>Situação</TableHead>
                 <TableHead>Último envio</TableHead>
-                <TableHead className="hidden pr-4 sm:table-cell">Versão do Painel</TableHead>
+                <TableHead className="hidden pr-4 sm:table-cell">Versão do gateway</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

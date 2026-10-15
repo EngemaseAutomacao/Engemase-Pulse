@@ -85,7 +85,7 @@ export type UtilitySiteView = {
   id: string;
   name: string;
   timeZone: string;
-  /** Último envio do Painel da unidade (ISO) ou null. */
+  /** Último envio do gateway da unidade (ISO) ou null. */
   receivedAt: string | null;
   equipment: UtilityView[];
 };

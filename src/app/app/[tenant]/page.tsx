@@ -36,7 +36,7 @@ export default async function TenantOverviewPage({ params }: PageProps<"/app/[te
         <EmptyState
           icon={<GaugeIcon />}
           title="Nenhum medidor cadastrado"
-          description="Os medidores aparecem sozinhos quando o Painel local da loja envia as primeiras leituras."
+          description="Os medidores aparecem sozinhos quando o gateway da unidade envia as primeiras leituras."
           action={
             user.isPlatformAdmin ? (
               <Button asChild>

@@ -111,7 +111,7 @@ export function TenantForm({
         <fieldset className="grid gap-2">
           <legend className="mb-1 text-sm font-medium">Módulos</legend>
           <p className="text-xs text-muted-foreground">
-            Energia está sempre incluída. Água e Gerador aparecem para o cliente quando o configurador da loja declara o
+            Energia está sempre incluída. Água e Gerador aparecem para o cliente quando o gateway da unidade declara o
             módulo (ou envia o equipamento). Desligue o que o cliente não contratou.
           </p>
           {UTILITY_MODULES.map((m) => (

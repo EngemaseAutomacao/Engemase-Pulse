@@ -23,7 +23,7 @@ export default async function SitesPage({ searchParams }: PageProps<"/admin/unid
     <PageContainer>
       <PageHeader
         title="Unidades"
-        description="Locais de cada cliente. Cada unidade recebe as leituras do Painel local instalado nela."
+        description="Locais de cada cliente. Cada unidade recebe as leituras do gateway instalado nela."
         actions={
           <Button asChild>
             <Link href={`/admin/unidades/novo${tenantId ? `?cliente=${tenantId}` : ""}`}>
@@ -54,7 +54,7 @@ export default async function SitesPage({ searchParams }: PageProps<"/admin/unid
                 <TableHead>Unidade</TableHead>
                 <TableHead className="hidden sm:table-cell">Cliente</TableHead>
                 <TableHead className="hidden md:table-cell">Cidade</TableHead>
-                <TableHead>Painel local</TableHead>
+                <TableHead>Gateway</TableHead>
                 <TableHead className="text-right">Medidores</TableHead>
               </TableRow>
             </TableHeader>

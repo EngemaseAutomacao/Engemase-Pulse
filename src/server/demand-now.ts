@@ -95,7 +95,7 @@ export const demandForecastKey = (siteId: string) => `${FORECAST_PREFIX}${siteId
 const clock = (t: number, timeZone: string) =>
   new Date(t).toLocaleTimeString("pt-BR", { timeZone, hour: "2-digit", minute: "2-digit" });
 
-/** Chamado a cada envio do Painel com leitura ao vivo; roda no máximo uma vez por minuto por unidade. */
+/** Chamado a cada envio do gateway com leitura ao vivo; roda no máximo uma vez por minuto por unidade. */
 export async function checkDemandForecast(siteId: string, now = Date.now()): Promise<void> {
   if (!(await getCache().acquire(`demand-forecast:${siteId}`, 60_000))) return;
   try {
@@ -166,7 +166,7 @@ export async function checkDemandForecast(siteId: string, now = Date.now()): Pro
   }
 }
 
-/** Loja que parou de enviar não pode deixar o aviso de demanda aberto. */
+/** Unidade que parou de enviar não pode deixar o aviso de demanda aberto. */
 export async function closeStaleDemandForecasts(now = Date.now()): Promise<number> {
   const open = await db.alarm.findMany({
     where: { openKey: { startsWith: FORECAST_PREFIX } },

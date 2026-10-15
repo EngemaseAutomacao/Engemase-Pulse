@@ -13,7 +13,7 @@ import { db } from "@/server/db";
 /**
  * Equipamentos de água e gerador de um cliente e os módulos que cada unidade
  * declara. Lido a cada atualização das telas, então fica em cache; o envio do
- * Painel que muda a lista (ou os módulos) invalida.
+ * Gateway que muda a lista (ou os módulos) invalida.
  */
 
 export type UtilityEquipmentRef = {
@@ -25,7 +25,7 @@ export type UtilityEquipmentRef = {
   name: string;
   tag: string | null;
   profile: string | null;
-  /** Parâmetros do Painel: capacidade_litros, capacidade_tanque_litros, potencia_nominal_kw… */
+  /** Parâmetros do gateway: capacidade_litros, capacidade_tanque_litros, potencia_nominal_kw… */
   settings: Record<string, number | string | boolean | null>;
   tagInfo: Record<string, TagInfo> | null;
 };
@@ -92,7 +92,7 @@ export function sitesWithModule(catalog: UtilityCatalog, module: UtilityModule):
   return catalog.sites.filter((s) => siteHasModule(s, module));
 }
 
-/** Número do parâmetro do Painel (null se ausente ou inválido). */
+/** Número do parâmetro do gateway (null se ausente ou inválido). */
 export function numericSetting(ref: Pick<UtilityEquipmentRef, "settings">, name: string): number | null {
   const v = ref.settings[name];
   return typeof v === "number" && Number.isFinite(v) && v > 0 ? v : null;

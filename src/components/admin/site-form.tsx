@@ -96,7 +96,7 @@ export function SiteForm({
               ))}
             </NativeSelect>
           </Field>
-          <Field label="Área (m²)" htmlFor="areaM2" error={error("areaM2")} hint="Para comparar lojas em kWh/m² (opcional).">
+          <Field label="Área (m²)" htmlFor="areaM2" error={error("areaM2")} hint="Para comparar unidades em kWh/m² (opcional).">
             <Input
               {...fieldProps(state, "areaM2", site?.areaM2 ? String(site.areaM2).replace(".", ",") : "")}
               inputMode="decimal"
@@ -107,9 +107,9 @@ export function SiteForm({
       </fieldset>
 
       <fieldset className="grid gap-3">
-        <legend className="mb-2 text-sm font-semibold">Painel local (loja)</legend>
+        <legend className="mb-2 text-sm font-semibold">Gateway da unidade</legend>
         <p className="text-sm text-muted-foreground">
-          As leituras chegam do Painel instalado na loja, que lê os multimedidores pela RS-485 e envia para cá.
+          As leituras chegam do gateway instalado na unidade, que lê os multimedidores pela RS-485 e envia para cá.
         </p>
         <AgentConnection status={site?.agent ?? null} rotateToken={rotateAgentToken} />
       </fieldset>

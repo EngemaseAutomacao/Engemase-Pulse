@@ -4,7 +4,7 @@ import { db } from "@/server/db";
 import { getSiteBilling, getSiteMonthConsumption } from "@/server/queries/billing";
 import { getTenantTopology } from "@/server/telemetry/topology";
 
-/** As lojas do cliente lado a lado num mês: consumo, custo, eficiência por m², FP e demanda. */
+/** As unidades do cliente lado a lado num mês: consumo, custo, eficiência por m², FP e demanda. */
 export async function getStoreRanking(tenantId: string, month: string, now = new Date()): Promise<RankingResponse> {
   const sites = (await getTenantTopology(tenantId)).filter((s) => s.meters.length > 0);
   const areas = new Map(

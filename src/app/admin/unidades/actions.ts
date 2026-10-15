@@ -58,7 +58,7 @@ export async function removeSite(siteId: string): Promise<void> {
 
 export type AgentTokenResult = { ok: true; token: string } | { ok: false; message: string };
 
-/** Gera (ou troca) o token do Painel local. O anterior para de valer na hora. */
+/** Gera (ou troca) o token do gateway. O anterior para de valer na hora. */
 export async function rotateAgentToken(siteId: string): Promise<AgentTokenResult> {
   const actor = await requireAdminForAction();
   try {

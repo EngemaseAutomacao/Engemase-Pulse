@@ -142,7 +142,7 @@ describe("gerador", () => {
     expect(stats.lastBatteryDrop).toBeCloseTo(5.3);
   });
 
-  it("falhas ligadas com o rótulo do Painel ou o padrão", () => {
+  it("falhas ligadas com o rótulo do gateway ou o padrão", () => {
     expect(
       activeFaults({ falha_bateria: 1, falha_partida: 0, potencia: 50 }, "GENERATOR", { falha_bateria: { label: "Bateria fraca" } }),
     ).toEqual([{ name: "falha_bateria", label: "Bateria fraca" }]);

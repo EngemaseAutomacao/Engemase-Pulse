@@ -2,7 +2,7 @@ import "server-only";
 import { AgentSource } from "./agent";
 import type { MeterRef, TelemetrySource } from "./types";
 
-/** Leituras de uma unidade: todas vêm do Painel local instalado na loja. */
+/** Leituras de uma unidade: todas vêm do gateway instalado na unidade. */
 export function sourceFor(site: { id: string }): TelemetrySource {
   return new AgentSource(site.id);
 }

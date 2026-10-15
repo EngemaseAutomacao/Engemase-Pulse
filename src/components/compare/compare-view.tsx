@@ -256,7 +256,7 @@ export function CompareView({
           <p className="font-medium">Escolha até {MAX_COMPARED_METERS} medidores para comparar</p>
           <p className="max-w-md text-sm text-muted-foreground">
             Podem ser da mesma unidade (ex.: dois setores) ou de unidades diferentes (ex.: a entrada geral de duas
-            lojas).
+            unidades).
           </p>
         </div>
       ) : (

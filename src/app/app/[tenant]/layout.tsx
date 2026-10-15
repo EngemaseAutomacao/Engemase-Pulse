@@ -54,7 +54,7 @@ async function TenantShell({
     getUtilityCatalog(tenant.id),
   ]);
   const multiSite = topology.filter((s) => s.meters.length > 0).length > 1;
-  // Energia some só quando nenhuma loja tem medidor nem declara o módulo, mas há outro módulo (loja só de água, p. ex.).
+  // Energia some só quando nenhuma unidade tem medidor nem declara o módulo, mas há outro módulo (unidade só de água, p. ex.).
   const hasEnergy =
     topology.some((s) => s.meters.length > 0) || catalog.sites.some((s) => s.declared.includes("energia")) || modules.length === 0;
 
@@ -77,7 +77,7 @@ async function TenantShell({
         { label: "Consumo", href: `${base}/consumo`, icon: <ChartColumnIcon /> },
         { label: "Fatura", href: `${base}/fatura`, icon: <ReceiptTextIcon /> },
         { label: "Metas", href: `${base}/metas`, icon: <TargetIcon /> },
-        ...(multiSite ? [{ label: "Lojas", href: `${base}/lojas`, icon: <StoreIcon /> }] : []),
+        ...(multiSite ? [{ label: "Ranking", href: `${base}/ranking`, icon: <StoreIcon /> }] : []),
         { label: "Comparar", href: `${base}/comparar`, icon: <GitCompareArrowsIcon /> },
       ],
     });

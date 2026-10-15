@@ -1,6 +1,6 @@
 /**
  * Carga do disjuntor de um medidor: a corrente da fase mais carregada sobre a
- * corrente nominal do disjuntor (vem do cadastro do Painel). É a fase mais
+ * corrente nominal do disjuntor (vem do cadastro do gateway). É a fase mais
  * carregada que faz o disjuntor desarmar, não a média.
  */
 

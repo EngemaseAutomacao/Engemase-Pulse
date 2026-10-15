@@ -311,7 +311,7 @@ export function estimateBill(input: BillInput): BillEstimate {
   let projection: BillEstimate["projection"] = null;
   const span = input.stop.getTime() - input.start.getTime();
   const elapsedTime = Math.min(1, Math.max(0, (input.now.getTime() - input.start.getTime()) / span));
-  // Loja que começou a enviar no meio do mês (ou ficou sem internet): projeta pelas
+  // Unidade que começou a enviar no meio do mês (ou ficou sem internet): projeta pelas
   // horas que têm leitura, senão a falta de dado viraria "consumo zero".
   const covered = (input.hours.length * 3_600_000) / span;
   const elapsed = Math.min(elapsedTime, covered);

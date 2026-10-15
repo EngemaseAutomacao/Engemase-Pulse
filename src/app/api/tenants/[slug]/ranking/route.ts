@@ -3,7 +3,7 @@ import { calendarMonth } from "@/lib/api-contracts";
 import { authorizeTenantApi, jsonError, NO_STORE_HEADERS } from "@/server/http";
 import { getStoreRanking } from "@/server/queries/ranking";
 
-/** Lojas do cliente comparadas num mês. */
+/** Unidades do cliente comparadas num mês. */
 export async function GET(request: NextRequest, ctx: RouteContext<"/api/tenants/[slug]/ranking">) {
   const { slug } = await ctx.params;
   const access = await authorizeTenantApi(slug);

@@ -12,7 +12,7 @@ import { formatMoney, formatNumber } from "@/lib/format";
 import { RANK_METRICS, metricValue, rankStores, type RankMetric, type RankingResponse } from "@/lib/ranking";
 import { cn } from "@/lib/utils";
 
-/** Lojas lado a lado num mês, ordenadas pelo indicador escolhido. */
+/** Unidades lado a lado num mês, ordenadas pelo indicador escolhido. */
 export function StoreRanking({ tenantSlug, timeZone }: { tenantSlug: string; timeZone: string }) {
   const current = localMonth(new Date(), timeZone);
   const [chosen, setChosen] = useState<string | null>(null);
@@ -52,7 +52,7 @@ export function StoreRanking({ tenantSlug, timeZone }: { tenantSlug: string; tim
           <div>
             <h2 className="font-semibold">{def.label}</h2>
             <p className="text-xs text-muted-foreground">
-              {def.lowerIsBetter ? "Menor é melhor" : "Maior é melhor"} · a melhor loja primeiro
+              {def.lowerIsBetter ? "Menor é melhor" : "Maior é melhor"} · a melhor unidade primeiro
             </p>
           </div>
           <div role="radiogroup" aria-label="Indicador" className="flex flex-wrap gap-1 rounded-lg border p-0.5">
@@ -97,7 +97,7 @@ export function StoreRanking({ tenantSlug, timeZone }: { tenantSlug: string; tim
         {!anyArea && (
           <p className="flex gap-1.5 text-xs text-muted-foreground">
             <InfoIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-            Para comparar em kWh/m², a Engemase cadastra a área de cada loja (Administração → Unidades).
+            Para comparar em kWh/m², a Engemase cadastra a área de cada unidade (Administração → Unidades).
           </p>
         )}
       </section>
@@ -106,7 +106,7 @@ export function StoreRanking({ tenantSlug, timeZone }: { tenantSlug: string; tim
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="pl-4">Loja</TableHead>
+              <TableHead className="pl-4">Unidade</TableHead>
               <TableHead className="text-right">Consumo</TableHead>
               <TableHead className="text-right">kWh/m²</TableHead>
               <TableHead className="text-right">Custo</TableHead>

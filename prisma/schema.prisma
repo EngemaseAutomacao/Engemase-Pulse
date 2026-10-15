@@ -1,5 +1,5 @@
 // Banco principal: cadastros (clientes, unidades, medidores), usuários e sessões.
-// Leituras: chegam do Painel local (supervisório instalado em cada loja); aqui
+// Leituras: chegam do gateway (Pulse Configurador instalado em cada unidade); aqui
 // ficam o resumo de 5 min e o consumo por hora de cada medidor.
 //
 // Fluxo de alteração:  editar este arquivo  →  npm run db:migrate -- --name <descricao>
@@ -37,7 +37,7 @@ model Tenant {
   loginTagline String?  @map("login_tagline")
   /// Minutos sem reconhecimento até avisar o escalonamento (null = não escalona).
   escalationMinutes Int? @map("escalation_minutes")
-  /// Módulos desligados pela administração ("agua", "gerador"), mesmo que o configurador da loja peça.
+  /// Módulos desligados pela administração ("agua", "gerador"), mesmo que o gateway da unidade peça.
   modulesOff   String[] @default([]) @map("modules_off")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
@@ -78,7 +78,7 @@ model TenantLoginBackground {
 }
 
 // ---------------------------------------------------------------------------
-// Unidades (cada uma com o seu Painel local)
+// Unidades (cada uma com o seu gateway)
 // ---------------------------------------------------------------------------
 
 model Site {
@@ -90,17 +90,17 @@ model Site {
   state    String?
   /// Fuso usado para agrupar consumo por hora/dia.
   timezone String  @default("America/Sao_Paulo")
-  /// Módulos que o configurador (Painel) da loja declara usar: "energia", "agua", "gerador".
-  /// Vazio: Painel antigo, que não declara (o módulo aparece quando chega o equipamento).
+  /// Módulos que o Pulse Configurador (gateway) da unidade declara usar: "energia", "agua", "gerador".
+  /// Vazio: gateway antigo, que não declara (o módulo aparece quando chega o equipamento).
   modules  String[] @default([])
-  /// Área construída (m²), para comparar lojas em kWh/m².
+  /// Área construída (m²), para comparar unidades em kWh/m².
   areaM2   Float?  @map("area_m2")
 
-  /// SHA-256 do token do Painel local. O token em si só é mostrado ao ser gerado.
+  /// SHA-256 do token do gateway. O token em si só é mostrado ao ser gerado.
   agentTokenHash  String?   @unique @map("agent_token_hash")
-  /// Último envio aceito do Painel local.
+  /// Último envio aceito do gateway.
   agentLastSeenAt DateTime? @map("agent_last_seen_at")
-  /// Versão do Painel e nome da planta informados no último envio.
+  /// Versão do gateway e nome da planta informados no último envio.
   agentInfo       Json?     @map("agent_info")
 
   createdAt DateTime @default(now()) @map("created_at")
@@ -118,13 +118,13 @@ model Site {
   @@map("sites")
 }
 
-/// Última leitura enviada pelo Painel local. Só é gravada sem Redis; com Redis fica no cache.
+/// Última leitura enviada pelo gateway. Só é gravada sem Redis; com Redis fica no cache.
 model SiteLiveSnapshot {
   siteId     String   @id @map("site_id") @db.Uuid
   receivedAt DateTime @map("received_at")
   /// Por id do medidor: { time, values } já com os nomes de campo do sistema.
   readings   Json
-  /// Por id do equipamento de água ou gerador: { time, online, values } com os nomes do Painel.
+  /// Por id do equipamento de água ou gerador: { time, online, values } com os nomes do gateway.
   utilities  Json?
 
   site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
@@ -153,7 +153,7 @@ model Meter {
   ctRatio       String? @map("ct_ratio")
   ptRatio       String? @map("pt_ratio")
 
-  /// Id do equipamento no Painel local (ex.: "geral"). Os medidores são criados pelo primeiro envio do Painel.
+  /// Id do equipamento no gateway (ex.: "geral"). Os medidores são criados pelo primeiro envio do gateway.
   externalId  String? @map("external_id")
   /// Entrada geral da unidade: os demais medidores são os alimentadores dela.
   isMain      Boolean @default(false) @map("is_main")
@@ -177,7 +177,7 @@ model Meter {
   @@map("meters")
 }
 
-/// Resumo de 5 min enviado pelo Painel local: { campo: [média, mínimo, máximo] }.
+/// Resumo de 5 min enviado pelo gateway: { campo: [média, mínimo, máximo] }.
 model MeterReading5m {
   meterId String   @map("meter_id") @db.Uuid
   /// Início da janela de 5 min.
@@ -205,7 +205,7 @@ enum EnergySource {
   POWER
 }
 
-/// Consumo por hora fechada, calculado pelo Painel local.
+/// Consumo por hora fechada, calculado pelo gateway.
 model MeterEnergyHour {
   meterId  String         @map("meter_id") @db.Uuid
   quantity EnergyQuantity @default(ACTIVE)
@@ -340,7 +340,7 @@ enum AlarmSeverity {
   CRITICAL
 }
 
-/// Quem abriu o alarme: as regras da nuvem ou o Painel local da loja.
+/// Quem abriu o alarme: as regras da nuvem ou o gateway da unidade.
 enum AlarmSource {
   CLOUD
   PAINEL
@@ -387,13 +387,13 @@ model AlarmRule {
 model Alarm {
   id               String        @id @default(uuid()) @db.Uuid
   tenantId         String        @map("tenant_id") @db.Uuid
-  /// Vazio em alarme do Painel sobre equipamento que não é medidor (gerador, CLP…).
+  /// Vazio em alarme do gateway sobre equipamento que não é medidor (gerador, CLP…).
   meterId          String?       @map("meter_id") @db.Uuid
-  /// Unidade do alarme (preenchida nos alarmes do Painel).
+  /// Unidade do alarme (preenchida nos alarmes do gateway).
   siteId           String?       @map("site_id") @db.Uuid
   ruleId           String?       @map("rule_id") @db.Uuid
   source           AlarmSource   @default(CLOUD)
-  /// Id do alarme no banco do Painel (alarmes do Painel); fica depois de fechado.
+  /// Id do alarme no banco do gateway (alarmes do gateway); fica depois de fechado.
   externalId       String?       @map("external_id")
   severity         AlarmSeverity
   title            String
@@ -406,7 +406,7 @@ model Alarm {
   acknowledgedById String?       @map("acknowledged_by_id") @db.Uuid
   /// Quando o escalonamento foi avisado (ninguém reconheceu no prazo).
   escalatedAt      DateTime?     @map("escalated_at")
-  /// "regra:medidor" (ou "painel:unidade:id" nos do Painel) enquanto o alarme está
+  /// "regra:medidor" (ou "painel:unidade:id" nos do gateway) enquanto o alarme está
   /// aberto; null ao normalizar. A unicidade garante no máximo um alarme aberto por
   /// chave, mesmo com avaliações simultâneas.
   openKey          String?       @unique @map("open_key")
@@ -544,7 +544,7 @@ model MonthlyReportDelivery {
 }
 
 // ---------------------------------------------------------------------------
-// Módulos Água e Gerador (equipamentos do Painel que não são medidores de energia)
+// Módulos Água e Gerador (equipamentos do gateway que não são medidores de energia)
 // ---------------------------------------------------------------------------
 
 enum UtilityKind {
@@ -552,21 +552,21 @@ enum UtilityKind {
   GENERATOR
 }
 
-/// Reservatório ou grupo gerador de uma unidade. Nasce do envio do Painel (o cadastro da loja manda).
+/// Reservatório ou grupo gerador de uma unidade. Nasce do envio do gateway (o cadastro da unidade manda).
 model UtilityEquipment {
   id         String      @id @default(uuid()) @db.Uuid
   siteId     String      @map("site_id") @db.Uuid
   kind       UtilityKind
-  /// Id do equipamento no Painel local (ex.: "reservatorio").
+  /// Id do equipamento no gateway (ex.: "reservatorio").
   externalId String      @map("external_id")
   /// Tag na planta (ex.: "TQ-01", "GMG-01").
   tag        String?
   name       String
-  /// Perfil do Painel (modelo do CLP ou do controlador).
+  /// Perfil do gateway (modelo do CLP ou do controlador).
   profile    String?
-  /// Parâmetros vindos do Painel: capacidade do reservatório, tanque de diesel, potência…
+  /// Parâmetros vindos do gateway: capacidade do reservatório, tanque de diesel, potência…
   settings   Json?
-  /// Rótulo, unidade e casas decimais de cada tag, como o Painel mostra.
+  /// Rótulo, unidade e casas decimais de cada tag, como o gateway mostra.
   tagInfo    Json?       @map("tag_info")
   sortOrder  Int         @default(0) @map("sort_order")
   createdAt  DateTime    @default(now()) @map("created_at")
@@ -581,7 +581,7 @@ model UtilityEquipment {
   @@map("utility_equipment")
 }
 
-/// Resumo de 5 min do equipamento: { tag do Painel: [média, mínimo, máximo] }.
+/// Resumo de 5 min do equipamento: { tag do gateway: [média, mínimo, máximo] }.
 model UtilityReading5m {
   equipmentId String   @map("equipment_id") @db.Uuid
   /// Início da janela de 5 min.
@@ -595,17 +595,17 @@ model UtilityReading5m {
   @@map("utility_readings_5m")
 }
 
-/// Uma corrida do grupo gerador (da partida até parar), calculada pelo Painel.
+/// Uma corrida do grupo gerador (da partida até parar), calculada pelo gateway.
 model GeneratorRun {
   equipmentId     String    @map("equipment_id") @db.Uuid
-  /// Id da corrida no banco do Painel.
+  /// Id da corrida no banco do gateway.
   externalId      Int       @map("external_id")
   startedAt       DateTime  @map("started_at")
   /// Vazio enquanto o grupo está rodando.
   endedAt         DateTime? @map("ended_at")
-  /// Motivo da partida (teste, falta de rede, manual…), como o Painel informa.
+  /// Motivo da partida (teste, falta de rede, manual…), como o gateway informa.
   reason          String?
-  /// Resultado (ok, falha de partida…), como o Painel informa.
+  /// Resultado (ok, falha de partida…), como o gateway informa.
   result          String?
   batteryRest     Float?    @map("battery_rest")
   batteryMin      Float?    @map("battery_min")

@@ -1,6 +1,6 @@
 /**
  * Grandezas de cada multimedidor, com os nomes usados em todo o sistema.
- * O Painel local envia com os nomes dele; a tradução está em `painel-fields.ts`.
+ * O gateway envia com os nomes dele; a tradução está em `painel-fields.ts`.
  */
 
 export type FieldGroup = "voltage" | "current" | "power" | "quality" | "energy";

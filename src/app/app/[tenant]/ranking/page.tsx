@@ -5,9 +5,9 @@ import { EmptyState, PageContainer, PageHeader } from "@/components/shell/page";
 import { requireTenant } from "@/server/auth/dal";
 import { getTenantTopology } from "@/server/telemetry/topology";
 
-export const metadata: Metadata = { title: "Lojas" };
+export const metadata: Metadata = { title: "Ranking de unidades" };
 
-export default async function StoresPage({ params }: PageProps<"/app/[tenant]/lojas">) {
+export default async function RankingPage({ params }: PageProps<"/app/[tenant]/ranking">) {
   const { tenant: slug } = await params;
   const { tenant } = await requireTenant(slug);
   const sites = (await getTenantTopology(tenant.id)).filter((s) => s.meters.length > 0);
@@ -15,7 +15,7 @@ export default async function StoresPage({ params }: PageProps<"/app/[tenant]/lo
   return (
     <PageContainer>
       <PageHeader
-        title="Lojas"
+        title="Ranking de unidades"
         description="As unidades lado a lado no mês: consumo, eficiência por m², custo, fator de potência e demanda."
       />
       {sites.length === 0 ? (

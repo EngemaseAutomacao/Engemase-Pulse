@@ -102,7 +102,7 @@ export async function ingestAgentPayload(site: AgentSite, payload: AgentPayload)
   }
 
   if (payload.alarmes) {
-    // Falha nos alarmes não pode derrubar o envio das leituras (o Painel recuaria e atrasaria tudo).
+    // Falha nos alarmes não pode derrubar o envio das leituras (o gateway recuaria e atrasaria tudo).
     try {
       result.alarmes = await syncPainelAlarms(
         site,
@@ -112,7 +112,7 @@ export async function ingestAgentPayload(site: AgentSite, payload: AgentPayload)
         receivedAt - payload.ts,
       );
     } catch (error) {
-      reportCaught("servidor", "alarmes do Painel", error);
+      reportCaught("servidor", "alarmes do gateway", error);
       result.alarmes = { erro: "Falha ao registrar os alarmes; tenta de novo no próximo envio" };
     }
   }
@@ -126,8 +126,8 @@ export async function ingestAgentPayload(site: AgentSite, payload: AgentPayload)
         receivedAt - payload.ts,
       );
     } catch (error) {
-      reportCaught("servidor", "alarmes encerrados do Painel", error);
-      // Erro de verdade: o Painel repete o lote (a marca dele só avança com 200).
+      reportCaught("servidor", "alarmes encerrados do gateway", error);
+      // Erro de verdade: o gateway repete o lote (a marca dele só avança com 200).
       throw error;
     }
   }
@@ -141,7 +141,7 @@ export async function ingestAgentPayload(site: AgentSite, payload: AgentPayload)
 
 /**
  * Leitura atual por medidor. O horário de cada leitura é corrigido pela
- * diferença entre o relógio da loja e o do servidor (`ts` do envio x agora):
+ * diferença entre o relógio da unidade e o do servidor (`ts` do envio x agora):
  * um mini PC com o relógio atrasado não pode fazer o medidor parecer offline.
  */
 function liveReadings(payload: AgentPayload, index: MeterIndex, receivedAt: number): Record<string, Reading> {

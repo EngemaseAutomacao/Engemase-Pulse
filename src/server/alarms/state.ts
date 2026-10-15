@@ -70,7 +70,7 @@ export async function loadAlarmState(tenantId: string): Promise<AlarmState> {
     tenant: { id: tenant.id, slug: tenant.slug, name: tenant.name, active: tenant.active },
     rules: tenant.alarmRules,
     open: Object.fromEntries(
-      // Só os das regras da nuvem; os do Painel são sincronizados pelo envio da loja.
+      // Só os das regras da nuvem; os do gateway são sincronizados pelo envio da unidade.
       tenant.alarms.flatMap((a) => (a.ruleId && a.meterId ? [[openKeyOf(a.ruleId, a.meterId), a.id]] : [])),
     ),
   };

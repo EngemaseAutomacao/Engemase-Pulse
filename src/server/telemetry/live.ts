@@ -7,7 +7,7 @@ import { sourceFor, toMeterRef } from "./sources";
 /**
  * Última leitura de todos os medidores de uma unidade, em cache por alguns
  * segundos. Com muitas pessoas olhando o mesmo cliente (e o avaliador de
- * alarmes), a última leitura do Painel é buscada uma vez por unidade por intervalo.
+ * alarmes), a última leitura do gateway é buscada uma vez por unidade por intervalo.
  */
 export const LIVE_CACHE_TTL_MS = 5_000;
 

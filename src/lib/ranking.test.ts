@@ -3,7 +3,7 @@ import { metricValue, rankStores, type StoreRank } from "./ranking";
 
 const store = (over: Partial<StoreRank>): StoreRank => ({
   siteId: over.siteName ?? "x",
-  siteName: "Loja",
+  siteName: "Unidade",
   areaM2: null,
   kwh: 0,
   kwhPrevious: null,
@@ -17,7 +17,7 @@ const store = (over: Partial<StoreRank>): StoreRank => ({
   ...over,
 });
 
-describe("ranking de lojas", () => {
+describe("ranking de unidades", () => {
   it("kWh/m² ordena da mais eficiente para a menos; sem área vai para o fim", () => {
     const stores = [
       store({ siteName: "A", kwh: 30_000, areaM2: 1000 }),

@@ -64,7 +64,7 @@ export const HELP_SECTIONS: HelpSection[] = [
     blocks: [
       {
         kind: "p",
-        text: "O sistema mostra, ao vivo, as leituras dos multimedidores das suas lojas. Quem envia os dados é o **Painel local**, o computador instalado em cada loja: ele lê os medidores e manda para a nuvem a cada poucos segundos.",
+        text: "O sistema mostra, ao vivo, as leituras dos multimedidores das suas unidades. Quem envia os dados é o **gateway**, o computador instalado em cada unidade: o Pulse Configurador, que roda nele, lê os medidores e manda para a nuvem a cada poucos segundos.",
       },
       {
         kind: "steps",
@@ -99,7 +99,7 @@ export const HELP_SECTIONS: HelpSection[] = [
       },
       {
         kind: "p",
-        text: "Estados de cada medidor: **Online** (leitura recente), **Sem comunicação** (o medidor ou a loja parou de enviar; o valor mostrado é o último recebido) e **Sem leituras** (nunca enviou). A tela atualiza sozinha a cada 10 segundos.",
+        text: "Estados de cada medidor: **Online** (leitura recente), **Sem comunicação** (o medidor ou a unidade parou de enviar; o valor mostrado é o último recebido) e **Sem leituras** (nunca enviou). A tela atualiza sozinha a cada 10 segundos.",
       },
     ],
   },
@@ -214,15 +214,15 @@ export const HELP_SECTIONS: HelpSection[] = [
     ],
   },
   {
-    id: "lojas",
-    title: "Lojas (ranking)",
+    id: "ranking",
+    title: "Ranking de unidades",
     icon: "stores",
-    path: "/lojas",
+    path: "/ranking",
     summary: "As unidades lado a lado: kWh/m², custo, variação, FP e demanda.",
     blocks: [
       {
         kind: "p",
-        text: "Aparece para clientes com duas ou mais unidades. Escolha o indicador (kWh por m², consumo, custo, R$ por m², variação contra o mês anterior, fator de potência ou demanda sobre a contratada); a melhor loja vem primeiro. Para kWh/m², a área de cada loja precisa estar cadastrada (peça à Engemase).",
+        text: "Aparece para clientes com duas ou mais unidades. Escolha o indicador (kWh por m², consumo, custo, R$ por m², variação contra o mês anterior, fator de potência ou demanda sobre a contratada); a melhor unidade vem primeiro. Para kWh/m², a área de cada unidade precisa estar cadastrada (peça à Engemase).",
       },
     ],
   },
@@ -253,9 +253,9 @@ export const HELP_SECTIONS: HelpSection[] = [
       {
         kind: "list",
         items: [
-          "**Do Painel da loja**: os alarmes configurados no Painel local chegam aqui e fecham sozinhos; reconhecer aqui reconhece lá também.",
+          "**Do gateway da unidade**: os alarmes configurados no gateway chegam aqui e fecham sozinhos; reconhecer aqui reconhece lá também.",
           "**Regras da nuvem**: limite de uma grandeza (ex.: corrente acima de X) ou medidor sem enviar há N minutos. O administrador cria em Alarmes › Regras.",
-          "**Automáticos**: loja sem comunicação (10 min sem envio), demanda vai passar da contratada (aviso no meio da janela de 15 min), demanda acima da contratada no mês, consumo fora do padrão e projeção acima da meta.",
+          "**Automáticos**: unidade sem comunicação (10 min sem envio), demanda vai passar da contratada (aviso no meio da janela de 15 min), demanda acima da contratada no mês, consumo fora do padrão e projeção acima da meta.",
         ],
       },
       {
@@ -285,7 +285,7 @@ export const HELP_SECTIONS: HelpSection[] = [
     title: "Tela de TV",
     icon: "tv",
     path: "@tv",
-    summary: "Painel para sala de controle, com telas que alternam sozinhas.",
+    summary: "Tela cheia para a sala de controle, com telas que alternam sozinhas.",
     blocks: [
       {
         kind: "p",
@@ -350,8 +350,8 @@ export const HELP_SECTIONS: HelpSection[] = [
       {
         kind: "list",
         items: [
-          "**Reservatório**: nível em %, volume em litros e a capacidade informada no configurador da loja. Abaixo de 20 % o contorno do desenho fica em atenção.",
-          "**Consumo hoje**: quanto a loja gastou desde a meia-noite, em m³. Com medidor de vazão de entrada, é medido (o que entrou menos o que o reservatório subiu); só com o nível, é calculado pela descida do reservatório e estimado enquanto a bomba enche.",
+          "**Reservatório**: nível em %, volume em litros e a capacidade informada no Pulse Configurador da unidade. Abaixo de 20 % o contorno do desenho fica em atenção.",
+          "**Consumo hoje**: quanto a unidade gastou desde a meia-noite, em m³. Com medidor de vazão de entrada, é medido (o que entrou menos o que o reservatório subiu); só com o nível, é calculado pela descida do reservatório e estimado enquanto a bomba enche.",
           "**Ritmo agora** e **Autonomia**: o consumo médio das últimas 3 horas e quantas horas o reservatório aguenta nesse ritmo se a reposição parar (falta d'água da rua, bomba parada).",
           "**Bomba de recalque** (quando o CLP tem o sinal): ligada ou desligada, horas ligada e partidas no dia, pressão de recalque.",
           "**Consumo por dia** (últimos 15 dias; o de hoje, mais claro, é parcial) e **Madrugada**: a hora mais calma entre 0h e 5h, dia a dia.",
@@ -360,11 +360,11 @@ export const HELP_SECTIONS: HelpSection[] = [
       },
       {
         kind: "p",
-        text: "**Possível vazamento**: com a loja fechada, o consumo da madrugada deveria ser parecido todas as noites. Quando a hora mais calma passa do dobro do normal da própria loja (e pelo menos 30 L/h a mais), aparece o aviso na tela e um alarme de Atenção, enviado pelos canais de cada pessoa. O normal é a mediana das últimas 14 noites; nos primeiros 7 dias o sistema ainda não julga.",
+        text: "**Possível vazamento**: com a unidade fechada, o consumo da madrugada deveria ser parecido todas as noites. Quando a hora mais calma passa do dobro do normal da própria unidade (e pelo menos 30 L/h a mais), aparece o aviso na tela e um alarme de Atenção, enviado pelos canais de cada pessoa. O normal é a mediana das últimas 14 noites; nos primeiros 7 dias o sistema ainda não julga.",
       },
       {
         kind: "tip",
-        text: "Torre de resfriamento ou máquina de gelo gastam água a noite toda e não são vazamento: por isso a comparação é com a própria loja, e não com um número fixo.",
+        text: "Torre de resfriamento ou máquina de gelo gastam água a noite toda e não são vazamento: por isso a comparação é com a própria unidade, e não com um número fixo.",
       },
     ],
   },
@@ -389,7 +389,7 @@ export const HELP_SECTIONS: HelpSection[] = [
       },
       {
         kind: "p",
-        text: "Os números vêm do configurador da loja, que lê o controlador do gerador: o Pulse mostra os mesmos valores da tela local. As falhas do gerador também chegam como alarmes do Painel.",
+        text: "Os números vêm do gateway da unidade, que lê o controlador do gerador: o Pulse mostra os mesmos valores da tela local. As falhas do gerador também chegam como alarmes do gateway.",
       },
     ],
   },
@@ -398,11 +398,11 @@ export const HELP_SECTIONS: HelpSection[] = [
     title: "Configurar água e gerador",
     icon: "setup",
     adminOnly: true,
-    summary: "Como o configurador da loja liga os módulos no Pulse e o que ele precisa ter cadastrado.",
+    summary: "Como o gateway da unidade liga os módulos no Pulse e o que ele precisa ter cadastrado.",
     blocks: [
       {
         kind: "p",
-        text: "Quem liga os módulos é o **configurador da loja** (Painel local): ele informa ao Pulse quais módulos a loja usa e as telas aparecem sozinhas. A administração só **desliga** um módulo de um cliente que não contratou (Administração › Clientes › Módulos).",
+        text: "Quem liga os módulos é o **Pulse Configurador**, no gateway da unidade: ele informa ao Pulse quais módulos a unidade usa e as telas aparecem sozinhas. A administração só **desliga** um módulo de um cliente que não contratou (Administração › Clientes › Módulos).",
       },
       {
         kind: "steps",
@@ -425,21 +425,21 @@ export const HELP_SECTIONS: HelpSection[] = [
     title: "Administração (Engemase)",
     icon: "admin",
     adminOnly: true,
-    summary: "Clientes, unidades, token do Painel, tarifa e saúde do sistema.",
+    summary: "Clientes, unidades, token do gateway, tarifa e saúde do sistema.",
     blocks: [
       {
         kind: "list",
         items: [
-          "**Clientes**: nome, cores (principal e de destaque), logo, imagem de fundo do login próprio (/login/<cliente>), frase da tela de login e os **módulos** que o cliente pode usar (Água e Gerador ligam sozinhos pelo configurador da loja; desligue o que não foi contratado).",
-          "**Unidades**: nome, endereço, fuso, **área (m²)** para o ranking, **token do Painel local** (aparece uma vez só, ao gerar) e a **tarifa** (modalidade, preços, demanda contratada, horário de ponta e impostos).",
-          "**Medidores**: são criados pelo próprio Painel; aqui se ajustam nome, ordem e dados de cadastro.",
+          "**Clientes**: nome, cores (principal e de destaque), logo, imagem de fundo do login próprio (/login/<cliente>), frase da tela de login e os **módulos** que o cliente pode usar (Água e Gerador ligam sozinhos pelo gateway da unidade; desligue o que não foi contratado).",
+          "**Unidades**: nome, endereço, fuso, **área (m²)** para o ranking, **token do gateway** (aparece uma vez só, ao gerar) e a **tarifa** (modalidade, preços, demanda contratada, horário de ponta e impostos).",
+          "**Medidores**: são criados pelo próprio gateway; aqui se ajustam nome, ordem e dados de cadastro.",
           "**Usuários**: contas da equipe e dos clientes, com acesso a um ou mais clientes.",
-          "**Saúde do sistema**: o que falta configurar (push, e-mail, Telegram, Redis, agendador), lojas sem envio e erros recentes.",
+          "**Saúde do sistema**: o que falta configurar (push, e-mail, Telegram, Redis, agendador), unidades sem envio e erros recentes.",
         ],
       },
       {
         kind: "tip",
-        text: "Ao instalar uma loja nova: crie a unidade, gere o token, coloque no config.json do Painel local e confira em Saúde do sistema se a loja aparece como “Enviando”.",
+        text: "Ao instalar uma unidade nova: crie a unidade, gere o token, coloque no config.json do gateway e confira em Saúde do sistema se a unidade aparece como “Enviando”.",
       },
     ],
   },
@@ -471,8 +471,8 @@ export const FAQ: FaqItem[] = [
     question: "O que significa “Sem comunicação”?",
     section: "visao-geral",
     answer: [
-      "O medidor (ou a loja inteira) parou de enviar leituras. O valor mostrado é o último recebido. Quando é a loja toda, normalmente é a internet ou o computador do Painel local; quando é um medidor só, costuma ser o cabo RS-485 ou o próprio medidor.",
-      "Se a loja ficar 10 minutos sem enviar, abre o alarme **Loja sem comunicação**. Ele fecha sozinho quando o envio volta, e o histórico desse intervalo é completado pelo Painel.",
+      "O medidor (ou a unidade inteira) parou de enviar leituras. O valor mostrado é o último recebido. Quando é a unidade toda, normalmente é a internet ou o computador do gateway; quando é um medidor só, costuma ser o cabo RS-485 ou o próprio medidor.",
+      "Se a unidade ficar 10 minutos sem enviar, abre o alarme **Unidade sem comunicação**. Ele fecha sozinho quando o envio volta, e o histórico desse intervalo é completado pelo gateway.",
     ],
   },
   {
@@ -516,7 +516,7 @@ export const FAQ: FaqItem[] = [
     section: "alarmes",
     answer: [
       "Cada hora é comparada com a mesma hora do mesmo dia da semana nas 4 semanas anteriores. Se duas horas seguidas saem bem da faixa normal, abre o alarme.",
-      "**Acima** costuma ser equipamento esquecido ligado ou com defeito; **abaixo**, equipamento parado (câmara fria, compressor, ar-condicionado). Feriados e mudanças de horário da loja também podem disparar.",
+      "**Acima** costuma ser equipamento esquecido ligado ou com defeito; **abaixo**, equipamento parado (câmara fria, compressor, ar-condicionado). Feriados e mudanças de horário da unidade também podem disparar.",
     ],
   },
   {
@@ -596,7 +596,7 @@ export const FAQ: FaqItem[] = [
     id: "modulo-nao-aparece",
     question: "Por que não aparece Água ou Gerador no menu?",
     answer: [
-      "Os módulos aparecem quando o configurador da loja os declara (ou envia o reservatório ou o gerador) e o módulo faz parte do contrato do cliente. Se a sua loja tem reservatório ou gerador e eles não aparecem, fale com a Engemase.",
+      "Os módulos aparecem quando o gateway da unidade os declara (ou envia o reservatório ou o gerador) e o módulo faz parte do contrato do cliente. Se a sua unidade tem reservatório ou gerador e eles não aparecem, fale com a Engemase.",
     ],
   },
   {
@@ -614,7 +614,7 @@ export const FAQ: FaqItem[] = [
     section: "agua",
     module: "agua",
     answer: [
-      "Com a loja fechada, a hora mais calma da madrugada (0h–5h) deveria gastar parecido todas as noites. Quando ela passa do dobro do normal da própria loja e de 30 L/h a mais, o sistema avisa. Confira descargas, boias, torneiras e o próprio reservatório. O alarme fecha sozinho quando a madrugada volta ao normal.",
+      "Com a unidade fechada, a hora mais calma da madrugada (0h–5h) deveria gastar parecido todas as noites. Quando ela passa do dobro do normal da própria unidade e de 30 L/h a mais, o sistema avisa. Confira descargas, boias, torneiras e o próprio reservatório. O alarme fecha sozinho quando a madrugada volta ao normal.",
     ],
   },
   {
@@ -623,16 +623,16 @@ export const FAQ: FaqItem[] = [
     section: "gerador",
     module: "gerador",
     answer: [
-      "O configurador da loja considera o grupo pronto só com todas as condições: em automático, sem falha, com diesel acima da reserva e bateria acima do mínimo. Basta uma faltar — o mais comum é o controlador ter ficado em manual depois de uma manutenção.",
+      "O gateway da unidade considera o grupo pronto só com todas as condições: em automático, sem falha, com diesel acima da reserva e bateria acima do mínimo. Basta uma faltar — o mais comum é o controlador ter ficado em manual depois de uma manutenção.",
     ],
   },
   {
-    id: "loja-nova",
-    question: "Como coloco uma loja nova no sistema?",
+    id: "unidade-nova",
+    question: "Como coloco uma unidade nova no sistema?",
     section: "administracao",
     adminOnly: true,
     answer: [
-      "Administração › Unidades › Nova unidade; gere o token do Painel e cole no config.json do Painel local da loja (trecho “nuvem”). Os medidores aparecem sozinhos no primeiro envio. Cadastre a tarifa e a área da loja.",
+      "Administração › Unidades › Nova unidade; gere o token do gateway e cole no config.json do gateway da unidade (trecho “nuvem”). Os medidores aparecem sozinhos no primeiro envio. Cadastre a tarifa e a área da unidade.",
     ],
   },
 ];

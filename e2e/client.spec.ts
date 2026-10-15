@@ -5,7 +5,7 @@ test.beforeEach(async ({ page }) => {
   await login(page);
 });
 
-test("painel mostra a loja com os medidores do Painel e a carga do disjuntor", async ({ page }) => {
+test("painel mostra a unidade com os medidores do gateway e a carga do disjuntor", async ({ page }) => {
   await page.goto(`/app/${E2E.slug}`);
   await expect(page.getByRole("heading", { name: "Visão geral" })).toBeVisible();
   await expect(page.getByText("Entrada geral").first()).toBeVisible();
@@ -52,10 +52,10 @@ test("comparar dois medidores", async ({ page }) => {
   await expect(page).toHaveURL(/m=/);
 });
 
-test("alarme do Painel aparece marcado e o relatório abre", async ({ page }) => {
+test("alarme do gateway aparece marcado e o relatório abre", async ({ page }) => {
   await page.goto(`/app/${E2E.slug}/alarmes`);
   await expect(page.getByText("QGBT-01 — Fator de potência abaixo do mínimo")).toBeVisible();
-  await expect(page.getByText("Painel da loja").first()).toBeVisible();
+  await expect(page.getByText("Gateway da unidade").first()).toBeVisible();
 
   await page.goto(`/relatorio/${E2E.slug}`);
   await expect(page.getByRole("heading", { name: /Relatório de energia/ })).toBeVisible();

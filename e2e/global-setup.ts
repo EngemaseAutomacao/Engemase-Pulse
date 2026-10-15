@@ -5,9 +5,9 @@ import type { FullConfig } from "@playwright/test";
 import { E2E } from "./fixtures";
 
 /**
- * Prepara os dados dos testes: cliente "e2e" com uma loja, tarifa verde e um
- * token do Painel; depois envia leituras sintéticas por /api/ingest, como o
- * Painel faria (equipamentos, resumo de 5 min, consumo por hora e alarmes).
+ * Prepara os dados dos testes: cliente "e2e" com uma unidade, tarifa verde e um
+ * token do gateway; depois envia leituras sintéticas por /api/ingest, como o
+ * Gateway faria (equipamentos, resumo de 5 min, consumo por hora e alarmes).
  */
 export default async function globalSetup(config: FullConfig) {
   const baseURL = config.projects[0].use.baseURL!;
@@ -82,14 +82,14 @@ function values(kw: number, main: boolean) {
   };
 }
 
-/** Reservatório (só nível) e grupo gerador, como o Painel v3 envia (grupos agua e gerador). */
+/** Reservatório (só nível) e grupo gerador, como o gateway v3 envia (grupos agua e gerador). */
 const TANK = { id: "caixa", nome: "Caixa d'água E2E", tag_isa: "TQ-01", capacidade: 10_000 };
 const GENSET = { id: "gmg", nome: "Gerador E2E", tag_isa: "GMG-01" };
 
 /** Nível do reservatório: desce 0,5 % a cada 5 min e a bomba enche de volta a cada 2 h. */
 const tankLevel = (t: number) => 95 - ((t / WINDOW) % 24) * 1.5;
 
-/** Envios do "Painel": ao vivo (com um alarme), 24 h de resumo de 5 min e consumo por hora. */
+/** Envios do "Gateway": ao vivo (com um alarme), 24 h de resumo de 5 min e consumo por hora. */
 function painelPayloads(now: number) {
   const equipments = [
     { id: "geral", nome: "Entrada geral", tag_isa: "QGBT-01", principal: true, disjuntor_a: 400, kw: MAIN_KW },
@@ -98,7 +98,7 @@ function painelPayloads(now: number) {
   const live = {
     versao: 1,
     ts: now,
-    agente: { versao: "e2e", planta: "Loja E2E", modulos: ["energia", "agua", "gerador"] },
+    agente: { versao: "e2e", planta: "Unidade E2E", modulos: ["energia", "agua", "gerador"] },
     equipamentos: [
       ...equipments.map((e) => ({
         id: e.id,

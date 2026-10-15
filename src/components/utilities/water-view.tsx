@@ -53,7 +53,7 @@ export function WaterModuleView({ tenantSlug }: { tenantSlug: string }) {
         <EmptyState
           icon={<DropletsIcon />}
           title="Aguardando o reservatório"
-          description="O configurador desta loja declarou o módulo Água, mas ainda não enviou o reservatório. Confira no configurador se o equipamento do reservatório está cadastrado e lendo (veja a Ajuda, “Configurar água e gerador”)."
+          description="O gateway desta unidade declarou o módulo Água, mas ainda não enviou o reservatório. Confira no Pulse Configurador se o equipamento do reservatório está cadastrado e lendo (veja a Ajuda, “Configurar água e gerador”)."
         />
       ) : (
         site.equipment.map((e) =>
@@ -93,7 +93,7 @@ function TankSection({ tenantSlug, tank, range }: { tenantSlug: string; tank: Wa
       )}
       {noCapacity && (
         <Notice tone="info" icon={<InfoIcon />}>
-          Informe a capacidade do reservatório (litros) no configurador da loja para calcular volume, consumo e autonomia.
+          Informe a capacidade do reservatório (litros) no Pulse Configurador da unidade para calcular volume, consumo e autonomia.
         </Notice>
       )}
 
@@ -166,7 +166,7 @@ function TankSection({ tenantSlug, tank, range }: { tenantSlug: string; tank: Wa
           <div className="surface space-y-3 p-4">
             <ChartHeader
               title="Madrugada (hora mais calma, 0h–5h)"
-              note="Vazamento aparece aqui: a loja fechada deveria gastar sempre parecido."
+              note="Vazamento aparece aqui: fora do expediente, o consumo deveria ser sempre parecido."
             />
             <NightChart days={tank.days} baseline={tank.leak.baselineLh} timeZone={tank.timeZone} />
           </div>
@@ -225,7 +225,7 @@ function LeakNotice({ tank }: { tank: Water }) {
   return (
     <Notice tone="warning" icon={<TriangleAlertIcon />}>
       <strong className="font-semibold">Possível vazamento.</strong> Na madrugada {today ? "de hoje" : "de ontem"}, a hora mais
-      calma gastou {formatNumber(leak.nightMinLh, 0)} L/h; o normal desta loja é {formatNumber(leak.baselineLh, 0)} L/h
+      calma gastou {formatNumber(leak.nightMinLh, 0)} L/h; o normal desta unidade é {formatNumber(leak.baselineLh, 0)} L/h
       (últimas {leak.nights} noites). Confira descargas, boias, torneiras e o próprio reservatório.
     </Notice>
   );
@@ -346,10 +346,10 @@ function NightChart({ days, baseline, timeZone }: { days: WaterDay[]; baseline: 
               return (
                 <TooltipBox
                   title={`Madrugada de ${weekday(d.day)} ${dayLabel(d.day)}${d.day === todayKey ? " (hoje)" : ""}`}
-                  subtitle={high ? "acima do normal da loja" : undefined}
+                  subtitle={high ? "acima do normal da unidade" : undefined}
                   rows={[
                     { key: "n", label: "Hora mais calma", value: `${formatNumber(d.nightMinLh, 0)} L/h`, color: high ? "var(--warning)" : "var(--chart-1)" },
-                    ...(baseline !== null ? [{ key: "b", label: "Normal da loja", value: `${formatNumber(baseline, 0)} L/h` }] : []),
+                    ...(baseline !== null ? [{ key: "b", label: "Normal da unidade", value: `${formatNumber(baseline, 0)} L/h` }] : []),
                   ]}
                 />
               );

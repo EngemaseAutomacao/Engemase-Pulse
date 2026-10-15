@@ -1,14 +1,14 @@
 # Engemase Pulse
 
 Supervisório de utilidades da Engemase: plataforma multi-cliente que acompanha em tempo real os
-**multimedidores de energia** das lojas (água e gerador são os próximos módulos).
+**multimedidores de energia**, os **reservatórios de água** e os **grupos geradores** das unidades.
 Cada cliente tem seu login, sua marca (logo e cores) e suas unidades; cada unidade recebe as
-leituras do **Painel local**, o supervisório instalado na loja.
+leituras do seu **gateway**, o computador instalado nela com o **Pulse Configurador** (o antigo Painel).
 
 > Nome, nome curto e linha de apoio ficam em [`src/config/app.ts`](src/config/app.ts).
 
 ```
-Multimedidores ──RS485/Modbus──▶ Painel local (mini PC na loja, SQLite)
+Multimedidores ──RS485/Modbus──▶ Gateway da unidade (Pulse Configurador, SQLite)
                                         │  HTTPS, só de saída (POST /api/ingest)
                                         ▼
                 Next.js na Vercel (São Paulo) ◀──▶ Neon Postgres (cadastros, histórico, alarmes)
@@ -18,7 +18,7 @@ Multimedidores ──RS485/Modbus──▶ Painel local (mini PC na loja, SQLite
 
 ## O que tem
 
-- **Painel do cliente**: potência, FP global, medidores online, cartões ao vivo (atualiza a cada 10 s).
+- **Visão geral do cliente**: potência, FP global, medidores online, cartões ao vivo (atualiza a cada 10 s).
 - **Detalhe do medidor**: tabela por fase (V, A, kW, kVA, kVAr, FP), THD, neutro e demanda, consumo por
   hora/dia/mês (no fuso da unidade) e CSV para Excel. **Histórico** (tendência) com grandeza e período
   rápido ou personalizado, setas para voltar/avançar, zoom arrastando, **comparação com o período
@@ -37,22 +37,22 @@ Multimedidores ──RS485/Modbus──▶ Painel local (mini PC na loja, SQLite
 - **Fator de potência**: kVAr de capacitor recomendados (banco automático, cobre 95 % do tempo) e a
   economia estimada no excedente de reativo.
 - **Metas** de consumo (kWh) e custo (R$) por unidade e setor, com a projeção do mês e alarme quando a
-  projeção passa da meta. **Lojas**: ranking entre as unidades (kWh/m², custo, variação, FP, demanda).
+  projeção passa da meta. **Ranking** entre as unidades (kWh/m², custo, variação, FP, demanda).
 - **Consumo fora do padrão**: cada hora comparada com a mesma hora da semana nas 4 semanas anteriores;
   duas horas seguidas fora do normal (para cima ou para baixo, ex.: câmara parada) abrem alarme.
 - **Módulo Água**: reservatório ao vivo (nível, volume, autonomia sem reposição), bomba de recalque,
   consumo por dia em m³ (medido pela vazão de entrada ou calculado pelo nível), a hora mais calma da
-  madrugada e alarme de **possível vazamento** (madrugada acima do normal da própria loja).
+  madrugada e alarme de **possível vazamento** (madrugada acima do normal da própria unidade).
 - **Módulo Gerador**: pronto para partir / em operação / em falha, diesel e autonomia, bateria (e a queda
-  no arranque), dias desde a última partida, indicadores de 30 dias e a lista de partidas do Painel.
-- **Módulos ligados pelo configurador**: a loja (Painel) declara os módulos que usa e o Pulse mostra as
+  no arranque), dias desde a última partida, indicadores de 30 dias e a lista de partidas do gateway.
+- **Módulos ligados pelo Pulse Configurador**: o gateway declara os módulos que a unidade usa e o Pulse mostra as
   telas; a administração só desliga o que o cliente não contratou. O menu se organiza por módulo.
 - **Tela de TV** (`/tv/<cliente>`): números grandes, telas que alternam (agora, demanda, água e gerador,
   alarmes, consumo de hoje), tela sempre acesa; `?tempo=20` muda os segundos por tela.
 - **Unifilar** ao vivo: entrada, barramento e setores com disjuntor, potência e **% de carga**.
 - **Comparar** até 3 medidores (da mesma unidade ou de unidades diferentes).
-- **Alarmes**: regras da nuvem (limite de grandeza ou "sem comunicação"), alarmes do **Painel da loja**
-  (abrem, fecham e são reconhecidos dos dois lados), **loja sem comunicação** e **demanda acima da
+- **Alarmes**: regras da nuvem (limite de grandeza ou "sem comunicação"), alarmes do **gateway da unidade**
+  (abrem, fecham e são reconhecidos dos dois lados), **unidade sem comunicação** e **demanda acima da
   contratada** automáticos, com **notificação push**, **e-mail** e **Telegram** (cada pessoa escolhe em
   *Minha conta → Avisos*) e **escalonamento**: alarme sem reconhecimento no prazo vai para as pessoas
   marcadas pelo administrador do cliente (*Usuários*).
@@ -61,12 +61,12 @@ Multimedidores ──RS485/Modbus──▶ Painel local (mini PC na loja, SQLite
   **esqueci minha senha** por e-mail (opcional).
 - **Administração** (equipe da plataforma): clientes com logo, cores (principal: botões, links, menu;
   destaque: faixa da marca e item aberto do menu — valem também em menus, janelas e no e-mail) e imagem
-  de fundo no login próprio em `/login/<slug>`, unidades com o token do Painel e a tarifa, medidores (criados pelo Painel), usuários
-  e a tela **Saúde do sistema** (o que falta configurar, lojas sem envio, erros recentes).
+  de fundo no login próprio em `/login/<slug>`, unidades com o token do gateway e a tarifa, medidores (criados pelo gateway), usuários
+  e a tela **Saúde do sistema** (o que falta configurar, unidades sem envio, erros recentes).
 - **PWA**: instalável no Android, iOS e desktop; página offline; aviso de "sem conexão".
 - **Responsivo** do celular ao monitor grande; tema **claro, escuro (preto) ou automático** (segue o aparelho).
-- **Painel local**: o supervisório instalado na loja lê o Modbus e envia as leituras para a nuvem,
-  sem porta aberta na loja. Ver [Painel local](#painel-local-supervisório-da-loja).
+- **Gateway da unidade**: o Pulse Configurador instalado nele lê o Modbus e envia as leituras para a nuvem,
+  sem porta aberta na unidade. Ver [Gateway e Pulse Configurador](#gateway-e-pulse-configurador).
 
 ## Stack
 
@@ -75,7 +75,7 @@ Multimedidores ──RS485/Modbus──▶ Painel local (mini PC na loja, SQLite
 | App (SSR, API, Server Actions) | Next.js 16 (App Router, Cache Components) · React 19 · TypeScript estrito |
 | UI | Tailwind CSS 4 · shadcn/ui (Radix) · Recharts · SWR |
 | Banco | PostgreSQL via **Prisma 7** (produção: **Neon**, região São Paulo) |
-| Telemetria | Painel local (supervisório da loja), envio por HTTPS para `/api/ingest` |
+| Telemetria | Gateway da unidade (Pulse Configurador), envio por HTTPS para `/api/ingest` |
 | Autenticação | Própria: scrypt + sessão no banco (cookie `httpOnly`), limite de tentativas |
 | Push | Web Push (VAPID) com `web-push` |
 | E-mail | Resend (opcional), por HTTP |
@@ -119,7 +119,7 @@ npm run dev                 # http://localhost:3000
 ```
 
 Entre com `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` do `.env`. Para ver leituras, crie uma unidade,
-gere o token e rode o Painel em modo demonstração (`npm run demo` no Painel) apontando para
+gere o token e rode o Pulse Configurador em modo demonstração (`npm run demo` nele) apontando para
 `http://localhost:3000`.
 
 ## Deploy na Vercel
@@ -162,16 +162,16 @@ gere o token e rode o Painel em modo demonstração (`npm run demo` no Painel) a
 
 Depois do deploy, abra **Administração → Saúde do sistema**: ela diz o que ainda falta configurar.
 
-### Agendador (alarmes e lojas sem comunicação)
+### Agendador (alarmes e unidades sem comunicação)
 
-As tarefas periódicas — regras de alarme da nuvem, **loja sem comunicação** (Painel sem enviar há 10 min),
+As tarefas periódicas — regras de alarme da nuvem, **unidade sem comunicação** (gateway sem enviar há 10 min),
 **demanda acima da contratada**, **consumo fora do padrão** (a cada 15 min), **metas** (a cada hora),
 **escalonamento**, **possível vazamento de água** (a cada hora; a madrugada é julgada depois das 6 h),
 **resumo do mês por e-mail** (dia 1, a partir das 6 h) e limpeza do histórico — rodam
 **de carona** no tráfego: cada envio de
-loja e cada tela aberta pedem uma rodada (no máximo uma por minuto). Com pelo menos uma loja enviando,
-funciona sem nada configurado. O agendador cobre o caso em que **nenhuma** loja envia e ninguém está
-olhando (ex.: a única loja caiu de madrugada).
+unidade e cada tela aberta pedem uma rodada (no máximo uma por minuto). Com pelo menos uma unidade enviando,
+funciona sem nada configurado. O agendador cobre o caso em que **nenhuma** unidade envia e ninguém está
+olhando (ex.: a única unidade caiu de madrugada).
 
 A rota é `/api/cron/alarms` (GET ou POST), com `Authorization: Bearer <CRON_SECRET>` ou a assinatura do
 Upstash QStash. Escolha **uma** forma de chamá-la:
@@ -207,56 +207,56 @@ npm run build && npm run test:e2e   # telas (Playwright)
 
 Os testes de tela precisam de um Postgres migrado e com o administrador criado (`npm run db:seed`); usam
 `SEED_ADMIN_EMAIL`/`SEED_ADMIN_PASSWORD` (ou `E2E_ADMIN_*`) para entrar. A preparação cria o cliente `e2e`
-com uma loja e manda leituras sintéticas por `/api/ingest`, como o Painel. No GitHub Actions eles rodam em
+com uma unidade e manda leituras sintéticas por `/api/ingest`, como o gateway. No GitHub Actions eles rodam em
 todo pull request e em todo push na `main`, com um Postgres próprio.
 
 ## Escalabilidade
 
 O sistema foi preparado para muitos clientes, unidades e medidores sem gargalo de dados:
 
-- **Leituras ao vivo em cache compartilhado** (Upstash Redis): o envio do Painel vai para o cache, e as
+- **Leituras ao vivo em cache compartilhado** (Upstash Redis): o envio do gateway vai para o cache, e as
   telas leem de lá no máximo uma vez a cada ~5 s por unidade, não importa quantas estejam abertas.
 - **Cadastro em cache**: unidades e medidores são lidos do cache e invalidados na hora quando a
   administração altera algo. As atualizações das telas quase não usam o Postgres.
-- **Respostas enxutas**: painel e tabela recebem só os campos de resumo; o detalhe recebe um medidor.
+- **Respostas enxutas**: cartões e tabela recebem só os campos de resumo; o detalhe recebe um medidor.
   As listas têm busca, ordenação ("problemas primeiro") e carregamento em blocos.
 - **Avaliador de alarmes sem carga no banco**: regras e alarmes abertos ficam no cache, e as leituras vêm
   do mesmo cache das telas. O Postgres só é usado quando um alarme abre ou normaliza. Vários clientes
   são avaliados em paralelo, com limite de tempo e rodízio. A coluna única `open_key` impede alarmes
   duplicados, mesmo com execuções simultâneas.
 - **Histórico resumido**: a nuvem guarda médias de 5 min (não cada leitura) e o consumo por hora já
-  calculado pelo Painel; gráficos longos agregam isso no Postgres.
+  calculado pelo gateway; gráficos longos agregam isso no Postgres.
 
-## Painel local (supervisório da loja)
+## Gateway e Pulse Configurador
 
-Cada loja roda o **Painel** (supervisório Node.js com SQLite, em um mini PC ligado à RS-485). Ele continua sendo a
-referência na loja — leitura Modbus, perfis de equipamento, alarmes, tela local, funciona
+Cada unidade tem um **gateway** (mini PC ligado à RS-485) com o **Pulse Configurador** — o antigo Painel,
+Node.js com SQLite. Ele continua sendo a referência na unidade — leitura Modbus, perfis de equipamento, alarmes, tela local, funciona
 sem internet — e **copia** as leituras para a nuvem:
 
 ```
-Multimedidores ──RS485/Modbus──▶ Painel (mini PC, SQLite) ──HTTPS, só de saída──▶ POST /api/ingest
+Multimedidores ──RS485/Modbus──▶ Gateway (Pulse Configurador, SQLite) ──HTTPS, só de saída──▶ POST /api/ingest
 ```
 
 1. Em **Administração → Unidades**, crie a unidade e clique em **Gerar token**.
    O token aparece uma única vez (no banco fica só o SHA-256), já com o trecho do `config.json`.
-2. No Painel, instale o módulo de envio: [`integracoes/painel/`](integracoes/painel/LEIAME.md).
+2. No Pulse Configurador, instale o módulo de envio: [`integracoes/painel/`](integracoes/painel/LEIAME.md).
 3. No primeiro envio, os **medidores são criados sozinhos** a partir dos equipamentos de energia
-   do Painel (nome, TAG ISA, entrada geral, disjuntor, endereço Modbus); reservatórios e grupos
+   do configurador (nome, TAG ISA, entrada geral, disjuntor, endereço Modbus); reservatórios e grupos
    geradores (grupos `agua` e `gerador`) viram os equipamentos dos módulos, com os parâmetros da
-   instalação. O Painel declara os módulos que a loja usa (`agente.modulos`) — ver o LEIAME.
+   instalação. O configurador declara os módulos que a unidade usa (`agente.modulos`) — ver o LEIAME.
 
-O que a nuvem guarda de cada unidade com Painel local:
+O que a nuvem guarda de cada unidade com gateway:
 
 | Dado | Onde | Retenção |
 | --- | --- | --- |
 | Leitura atual (a cada ~10 s) | Upstash Redis (sem Redis: tabela `site_live_snapshots`) | último envio |
 | Resumo de 5 min (média, mín., máx.) | `meter_readings_5m` | 400 dias |
-| Consumo por hora, já calculado pelo Painel (contador ou estimado pela potência) | `meter_energy_hours` | para sempre |
-| Reservatórios e geradores: resumo de 5 min (nomes de tag do Painel) | `utility_readings_5m` | 400 dias |
+| Consumo por hora, já calculado pelo gateway (contador ou estimado pela potência) | `meter_energy_hours` | para sempre |
+| Reservatórios e geradores: resumo de 5 min (nomes de tag do configurador) | `utility_readings_5m` | 400 dias |
 | Corridas do gerador (motivo, resultado, duração, litros, bateria) | `generator_runs` | para sempre |
 
-A energia vem do contador lido corretamente pelo Painel (float32 na ordem CDAB do Siemens 7KT),
-sem os saltos de 1024 kWh de gateways que leem a ordem errada. O formato do envio está em [`src/lib/agent-payload.ts`](src/lib/agent-payload.ts)
+A energia vem do contador lido corretamente pelo configurador (float32 na ordem CDAB do Siemens 7KT),
+sem os saltos de 1024 kWh de equipamentos que leem a ordem errada. O formato do envio está em [`src/lib/agent-payload.ts`](src/lib/agent-payload.ts)
 e a tradução das grandezas em [`src/lib/painel-fields.ts`](src/lib/painel-fields.ts).
 
 ## Notificações push e instalação (PWA)
@@ -291,12 +291,12 @@ src/
     login/              login geral e /login/<slug> com a marca do cliente
     app/[tenant]/       área do cliente: visão geral, medidores, consumo, alarmes, conta
     admin/              administração da plataforma
-    api/                leituras (live/history/energy/consumption/export), logo, cron, ingest do Painel
+    api/                leituras (live/history/energy/consumption/export), logo, cron, ingest do gateway
   components/           UI (shell, gráficos, medidores, alarmes, formulários, pwa)
   lib/                  código compartilhado: campos do medidor, validação, períodos, alarmes
-  server/               só servidor: auth (DAL), banco, cripto, Painel local (agent), telemetria, push
+  server/               só servidor: auth (DAL), banco, cripto, gateway (agent), telemetria, push
 public/sw.js            service worker (push + offline)
-integracoes/painel/     módulo de envio para o Painel local (vai no supervisório da loja)
+integracoes/painel/     módulo de envio (vai no Pulse Configurador, no gateway da unidade)
 ```
 
 Princípios: verificação de acesso perto dos dados (DAL em `src/server/auth/dal.ts`), toda entrada
@@ -313,6 +313,6 @@ acabar, o Neon suspende o banco até o mês seguinte. **Com o Upstash Redis conf
 alarmes não acorda o banco enquanto nada muda — só o uso real das telas consome a cota. Sem Redis, cada
 execução consulta o banco; nesse caso, agende o avaliador a cada 15 min em vez de 5.
 
-**Com lojas enviando**, o banco recebe o histórico do Painel a cada minuto e praticamente não dorme. Uma
-ou duas lojas costumam caber na cota gratuita por pouco tempo; com lojas em produção, conte com o plano
+**Com unidades enviando**, o banco recebe o histórico dos gateways a cada minuto e praticamente não dorme. Uma
+ou duas unidades costumam caber na cota gratuita por pouco tempo; com unidades em produção, conte com o plano
 pago do Neon (confira o uso em *Neon → Monitoring*).

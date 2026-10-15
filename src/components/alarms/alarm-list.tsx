@@ -49,10 +49,10 @@ export function AlarmList({
               {alarm.source === "PAINEL" && (
                 <span
                   className="inline-flex items-center gap-1 text-xs text-muted-foreground"
-                  title="Alarme configurado e detectado no Painel da loja"
+                  title="Alarme configurado e detectado no gateway da unidade"
                 >
                   <StoreIcon className="size-3.5" aria-hidden />
-                  Painel da loja
+                  Gateway da unidade
                 </span>
               )}
             </div>
@@ -71,7 +71,7 @@ export function AlarmList({
               {alarm.clearedAt && ` · Fim: ${formatDateTime(alarm.clearedAt)}`}
               {alarm.acknowledgedAt &&
                 ` · Reconhecido ${
-                  alarm.acknowledgedBy ? `por ${alarm.acknowledgedBy.name}` : alarm.source === "PAINEL" ? "na loja" : "por —"
+                  alarm.acknowledgedBy ? `por ${alarm.acknowledgedBy.name}` : alarm.source === "PAINEL" ? "no gateway" : "por —"
                 } em ${formatDateTime(alarm.acknowledgedAt)}`}
             </p>
           </div>

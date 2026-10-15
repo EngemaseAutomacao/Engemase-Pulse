@@ -349,7 +349,7 @@ async function Report({ params, searchParams }: PageProps<"/relatorio/[tenant]">
         </section>
 
         <footer className="border-t pt-3 text-xs text-muted-foreground">
-          Valores estimados a partir das medições do Painel da loja e da tarifa cadastrada, no mês do calendário. A
+          Valores estimados a partir das medições do gateway da unidade e da tarifa cadastrada, no mês do calendário. A
           fatura da distribuidora usa o ciclo de leitura e pode ter outros itens.{" "}
           {inProgress && "Mês em andamento: as comparações usam o mesmo trecho do mês anterior."}
         </footer>

@@ -62,7 +62,7 @@ export async function updateSite(actor: AuthUser, id: string, input: SiteInput) 
   return site;
 }
 
-/** Novo token do Painel local; devolve o token (a única vez em que ele aparece). */
+/** Novo token do gateway; devolve o token (a única vez em que ele aparece). */
 export async function rotateSiteAgentToken(actor: AuthUser, id: string): Promise<string> {
   const { token, hash } = generateAgentToken();
   const previous = await db.site.findUniqueOrThrow({ where: { id }, select: { agentTokenHash: true } });

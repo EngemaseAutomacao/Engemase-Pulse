@@ -8,7 +8,7 @@ import { db } from "@/server/db";
 import { getTenantTopology, type SiteTopology } from "@/server/telemetry/topology";
 
 /**
- * Consumo do mês e fatura estimada. As leituras vêm das tabelas do Painel
+ * Consumo do mês e fatura estimada. As leituras vêm das tabelas do gateway
  * local: consumo por hora (meter_energy_hours) e resumo de 5 min
  * (meter_readings_5m), de onde saem a demanda de 15 min e o fator de potência.
  */

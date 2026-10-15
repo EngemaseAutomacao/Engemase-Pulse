@@ -5,8 +5,8 @@ export const ADMIN = {
   password: process.env.E2E_ADMIN_PASSWORD ?? process.env.SEED_ADMIN_PASSWORD ?? "",
 };
 
-/** Cliente e loja criados pela preparação (global-setup). */
-export const E2E = { slug: "e2e", tenantName: "Cliente E2E", siteName: "Loja E2E" };
+/** Cliente e unidade criados pela preparação (global-setup). */
+export const E2E = { slug: "e2e", tenantName: "Cliente E2E", siteName: "Unidade E2E" };
 
 export async function login(page: Page, email = ADMIN.email, password = ADMIN.password) {
   await page.goto("/login");

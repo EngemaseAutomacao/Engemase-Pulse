@@ -1,6 +1,6 @@
 /**
  * Consumo fora do padrão: cada hora é comparada com a mesma hora do mesmo dia
- * da semana nas 4 semanas anteriores (a loja tem rotina semanal: abre,
+ * da semana nas 4 semanas anteriores (a unidade tem rotina semanal: abre,
  * fecha, liga a iluminação, faz degelo nos mesmos horários).
  *
  * A faixa normal usa a mediana e o desvio mediano (MAD), que não se deixam

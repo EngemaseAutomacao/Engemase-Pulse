@@ -4,7 +4,7 @@ import { generateSessionToken, hashSessionToken } from "@/server/crypto";
 import { db } from "@/server/db";
 
 /**
- * Token do Painel local: identifica a unidade em cada envio para /api/ingest.
+ * Token do gateway: identifica a unidade em cada envio para /api/ingest.
  * Como a senha de sessão, só o SHA-256 vai para o banco; o token aparece uma
  * única vez, na tela de administração, ao ser gerado.
  */
@@ -26,7 +26,7 @@ export function generateAgentToken(): { token: string; hash: string } {
 const siteKey = (hash: string) => `agent:site:v1:${hash}`;
 
 /**
- * Unidade dona do token, ou null. Em cache por 1 min: o Painel envia a cada
+ * Unidade dona do token, ou null. Em cache por 1 min: o gateway envia a cada
  * poucos segundos e não precisa de uma consulta ao banco a cada envio.
  */
 export async function findSiteByAgentToken(token: string): Promise<AgentSite | null> {

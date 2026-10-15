@@ -45,7 +45,7 @@ export default async function TenantPage({ params }: PageProps<"/admin/clientes/
             <Button asChild variant="outline">
               <Link href={`/app/${tenant.slug}`}>
                 <ExternalLinkIcon />
-                Abrir painel
+                Abrir área do cliente
               </Link>
             </Button>
           </>
@@ -112,7 +112,7 @@ export default async function TenantPage({ params }: PageProps<"/admin/clientes/
                     <span className="font-medium">{s.name}</span>
                     <span className="text-xs text-muted-foreground">
                       {s._count.meters} medidor(es) ·{" "}
-                      {s.agentLastSeenAt ? <>último envio <RelativeTime value={s.agentLastSeenAt.toISOString()} /></> : "sem envio do Painel"}
+                      {s.agentLastSeenAt ? <>último envio <RelativeTime value={s.agentLastSeenAt.toISOString()} /></> : "sem envio do gateway"}
                     </span>
                   </Link>
                 </li>

@@ -1,7 +1,7 @@
 /**
- * Tradução das grandezas do Painel local (supervisório da loja) para os campos
+ * Tradução das grandezas do gateway (Pulse Configurador da unidade) para os campos
  * do sistema (`meter-fields.ts`). Os nomes da esquerda são os `nome` das tags
- * nos perfis de equipamento do Painel (ex.: perfis/7kt0310-entrada.json).
+ * nos perfis de equipamento do gateway (ex.: perfis/7kt0310-entrada.json).
  * Grandeza que não está aqui é ignorada.
  */
 export const PAINEL_FIELD_MAP: Readonly<Record<string, string>> = {
@@ -24,7 +24,7 @@ export const PAINEL_FIELD_MAP: Readonly<Record<string, string>> = {
   energia_ativa: "Total_net_kWh",
   energia_aparente: "Total_kVAh",
   energia_reativa: "Total_kVAhr",
-  // No Painel o THD sem sufixo é o da fase A (a tela mostra "THD tensão V1").
+  // No gateway o THD sem sufixo é o da fase A (a tela mostra "THD tensão V1").
   thd_tensao: "THD_V1",
   thd_tensao_b: "THD_V2",
   thd_tensao_c: "THD_V3",
@@ -33,7 +33,7 @@ export const PAINEL_FIELD_MAP: Readonly<Record<string, string>> = {
   thd_corrente_c: "THD_I3",
 };
 
-/** Médias que o Painel não manda, mas as telas usam: calculadas quando há as três fases. */
+/** Médias que o gateway não manda, mas as telas usam: calculadas quando há as três fases. */
 const DERIVED_AVERAGES: readonly [string, readonly [string, string, string]][] = [
   ["VN_AVG", ["V1N", "V2N", "V3N"]],
   ["VLL_AVG", ["V12", "V23", "V31"]],
@@ -42,7 +42,7 @@ const DERIVED_AVERAGES: readonly [string, readonly [string, string, string]][] =
 
 const isNumber = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
 
-/** Valores instantâneos do Painel → campos do sistema (com as médias por fase). */
+/** Valores instantâneos do gateway → campos do sistema (com as médias por fase). */
 export function mapPainelValues(valores: Readonly<Record<string, unknown>>): Record<string, number> {
   const out: Record<string, number> = {};
   for (const [tag, value] of Object.entries(valores)) {
@@ -60,7 +60,7 @@ export function mapPainelValues(valores: Readonly<Record<string, unknown>>): Rec
 export type SummaryTriple = [avg: number, min: number, max: number];
 
 /**
- * Resumo de 5 min do Painel ({ tag: [média, mín, máx] }) → campos do sistema.
+ * Resumo de 5 min do gateway ({ tag: [média, mín, máx] }) → campos do sistema.
  * As médias por fase também são derivadas aqui (mín/máx da média = média dos mín/máx,
  * uma aproximação suficiente para o gráfico).
  */

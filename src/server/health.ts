@@ -37,7 +37,7 @@ export type StoreHealth = {
 const SCHEDULER_OK_MS = 15 * 60_000;
 /** Tarefas periódicas (carona ou agendador) há menos que isso = em dia. */
 const TASKS_OK_MS = 10 * 60_000;
-/** Envio do Painel há mais que isso = atrasado (ele envia a cada 10 s). */
+/** Envio do gateway há mais que isso = atrasado (ele envia a cada 10 s). */
 const STORE_LATE_MS = 2 * 60_000;
 
 export async function getSystemHealth() {
@@ -98,7 +98,7 @@ export async function getSystemHealth() {
           label: "Cache compartilhado (Redis)",
           status: "warn",
           detail:
-            "Sem Redis: a leitura ao vivo de cada loja é gravada no banco a cada 10 s e cada servidor tem o próprio cache.",
+            "Sem Redis: a leitura ao vivo de cada unidade é gravada no banco a cada 10 s e cada servidor tem o próprio cache.",
           fix: "Na Vercel: Storage → Upstash (Redis) → criar e conectar ao projeto; as variáveis (KV_REST_API_URL e KV_REST_API_TOKEN) entram sozinhas. Depois, um novo deploy.",
         },
     schedulerAge !== null && schedulerAge < SCHEDULER_OK_MS
@@ -109,22 +109,22 @@ export async function getSystemHealth() {
           status: "warn",
           detail: schedulerLastRun
             ? `Não chama desde ${time(schedulerLastRun)}.`
-            : "Nunca chamou. Os alarmes rodam junto com os envios das lojas e com quem está usando o sistema; sem agendador, uma loja parada só é percebida quando outra loja envia ou alguém abre uma tela.",
+            : "Nunca chamou. Os alarmes rodam junto com os envios das unidades e com quem está usando o sistema; sem agendador, uma unidade parada só é percebida quando outra unidade envia ou alguém abre uma tela.",
           fix: "Crie no Upstash QStash um agendamento a cada 5 min para /api/cron/alarms (passo a passo no README, seção “Agendador”).",
         },
     tasksAge !== null && tasksAge < TASKS_OK_MS
       ? {
           key: "tasks",
-          label: "Alarmes e verificação das lojas",
+          label: "Alarmes e verificação das unidades",
           status: "ok",
           detail: `Última rodada às ${time(tasksAt!)} · ${evaluator.status!.opened} aberto(s), ${evaluator.status!.cleared} normalizado(s)`,
         }
       : {
           key: "tasks",
-          label: "Alarmes e verificação das lojas",
+          label: "Alarmes e verificação das unidades",
           status: "warn",
           detail: tasksAt ? `Última rodada às ${time(tasksAt)}.` : `Ainda não rodou${shared ? "" : " neste servidor"}.`,
-          fix: "Rodam a cada envio de loja e pelo agendador. Se nenhuma loja está enviando, configure o agendador.",
+          fix: "Rodam a cada envio de unidade e pelo agendador. Se nenhuma unidade está enviando, configure o agendador.",
         },
     isEmailConfigured()
       ? {

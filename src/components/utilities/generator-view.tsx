@@ -61,7 +61,7 @@ export function GeneratorModuleView({ tenantSlug }: { tenantSlug: string }) {
         <EmptyState
           icon={<FuelIcon />}
           title="Aguardando o grupo gerador"
-          description="O configurador desta loja declarou o módulo Gerador, mas ainda não enviou o grupo. Confira no configurador se o controlador do gerador está cadastrado e lendo (veja a Ajuda, “Configurar água e gerador”)."
+          description="O gateway desta unidade declarou o módulo Gerador, mas ainda não enviou o grupo. Confira no Pulse Configurador se o controlador do gerador está cadastrado e lendo (veja a Ajuda, “Configurar água e gerador”)."
         />
       ) : (
         site.equipment.map((e) =>

@@ -13,11 +13,11 @@ export type HistoryQuery = { fields: string[]; start: Date; stop: Date; every: s
 
 /**
  * Consumo de uma janela; `start` é o início da janela (epoch ms). `estimated`:
- * calculado pela potência média porque o contador não serviu (Painel local).
+ * calculado pela potência média porque o contador não serviu (gateway).
  */
 export type EnergyBucket = { start: number; kwh: number; estimated?: boolean };
 
-/** Fonte de leituras de uma unidade (hoje, o Painel local: `agent.ts`). */
+/** Fonte de leituras de uma unidade (hoje, o gateway: `agent.ts`). */
 export interface TelemetrySource {
   latest(meters: MeterRef[]): Promise<Map<string, Reading>>;
   history(meter: MeterRef, query: HistoryQuery): Promise<Series>;

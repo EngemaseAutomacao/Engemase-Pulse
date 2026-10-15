@@ -1,7 +1,7 @@
 import { zonedParts } from "@/lib/tz";
 
 /**
- * Módulos Água e Gerador: equipamentos do Painel local que não são medidores
+ * Módulos Água e Gerador: equipamentos do gateway que não são medidores
  * de energia. Aqui ficam os nomes, os rótulos das tags e as contas — tudo puro,
  * usado pelo servidor e pelas telas.
  */
@@ -21,7 +21,7 @@ export const MODULE_INFO: Record<UtilityModule, { label: string; kind: UtilityKi
 
 export const MODULE_BY_KIND: Record<UtilityKind, UtilityModule> = { WATER: "agua", GENERATOR: "gerador" };
 
-/** Grupo do equipamento no Painel → tipo na nuvem (os demais grupos ficam de fora). */
+/** Grupo do equipamento no gateway → tipo na nuvem (os demais grupos ficam de fora). */
 export function kindForGroup(grupo: string | null | undefined): UtilityKind | null {
   if (grupo === "agua") return "WATER";
   if (grupo === "gerador") return "GENERATOR";
@@ -34,7 +34,7 @@ export function normalizeModules(input: unknown): UtilityModule[] {
   return UTILITY_MODULES.filter((m) => list.includes(m));
 }
 
-/** Módulos que o configurador da loja pode declarar (energia incluída). */
+/** Módulos que o gateway da unidade pode declarar (energia incluída). */
 export const DECLARABLE_MODULES = ["energia", ...UTILITY_MODULES] as const;
 
 export function normalizeDeclared(input: unknown): string[] {
@@ -44,9 +44,9 @@ export function normalizeDeclared(input: unknown): string[] {
 
 /** O que a nuvem sabe de cada unidade para decidir os módulos. */
 export type SiteModuleInfo = {
-  /** Declarados pelo configurador (vazio: Painel antigo, sem declaração). */
+  /** Declarados pelo configurador (vazio: gateway antigo, sem declaração). */
   declared: readonly string[];
-  /** Tipos de equipamento que o Painel já enviou. */
+  /** Tipos de equipamento que o gateway já enviou. */
   kinds: readonly UtilityKind[];
 };
 
@@ -61,7 +61,7 @@ export function resolveModules(sites: SiteModuleInfo[], off: readonly string[]):
 }
 
 // ---------------------------------------------------------------------------
-// Tags: rótulo, unidade e casas (o Painel manda os dele; estes são o padrão)
+// Tags: rótulo, unidade e casas (o gateway manda os dele; estes são o padrão)
 // ---------------------------------------------------------------------------
 
 export type TagInfo = { label: string; unit?: string | null; decimals?: number | null };
@@ -103,7 +103,7 @@ export const GENERATOR_TAGS: Record<string, TagInfo> = {
   disjuntor_fechado: { label: "Disjuntor do gerador fechado" },
 };
 
-/** Rótulo de uma tag: o que o Painel mandou, o padrão do módulo ou o nome legível. */
+/** Rótulo de uma tag: o que o gateway mandou, o padrão do módulo ou o nome legível. */
 export function tagInfo(name: string, kind: UtilityKind, fromPainel?: Record<string, TagInfo> | null): TagInfo {
   return fromPainel?.[name] ?? (kind === "WATER" ? WATER_TAGS : GENERATOR_TAGS)[name] ?? { label: humanize(name) };
 }
@@ -157,7 +157,7 @@ function median(values: number[]): number {
 }
 
 /**
- * Consumo de água da loja janela a janela (litros), visto do reservatório:
+ * Consumo de água da unidade janela a janela (litros), visto do reservatório:
  *  - com vazão de entrada: o que entrou menos o quanto o volume subiu;
  *  - só com o nível: o quanto o volume desceu. Enquanto ele sobe (bomba
  *    enchendo), o consumo é estimado pelo ritmo das últimas descidas.
@@ -292,7 +292,7 @@ export function waterDays(samples: WaterSample[], capacityL: number, timeZone: s
 /** Madrugada acima do normal: pelo menos 2× a mediana das noites anteriores e 30 L/h a mais. */
 export const LEAK_FACTOR = 2;
 export const LEAK_MARGIN_LH = 30;
-/** Noites anteriores com dado necessárias antes de julgar (o "normal" varia de loja para loja). */
+/** Noites anteriores com dado necessárias antes de julgar (o "normal" varia de unidade para unidade). */
 export const LEAK_MIN_NIGHTS = 7;
 
 export type LeakCheck = {
@@ -304,7 +304,7 @@ export type LeakCheck = {
 
 /**
  * Possível vazamento na madrugada de `day`: a hora mais calma da noite (0h–5h)
- * comparada com a mesma medida nas 14 noites anteriores. Compara a loja com
+ * comparada com a mesma medida nas 14 noites anteriores. Compara a unidade com
  * ela mesma — torre de resfriamento ou máquina de gelo gastam água a noite
  * toda e não são vazamento; o que denuncia é o salto.
  */
@@ -331,7 +331,7 @@ export function leakCheck(days: WaterDay[], day: string): LeakCheck {
 // Gerador
 // ---------------------------------------------------------------------------
 
-/** `estado` do Painel (mesma língua para qualquer controlador). */
+/** `estado` do gateway (mesma língua para qualquer controlador). */
 export const GENERATOR_STATES = ["Parado", "Pré-partida", "Partindo", "Em carga", "Resfriando", "Em falha"] as const;
 
 export function generatorStateLabel(estado: number | null | undefined): string | null {
@@ -358,7 +358,7 @@ export const runFailed = (r: Pick<GeneratorRunLite, "result">) => /falha de part
 /** Pegou e assumiu, mas desarmou por falha. */
 export const runTripped = (r: Pick<GeneratorRunLite, "result">) => /^desarme/i.test(r.result ?? "");
 
-/** Corrida com tempo suficiente para medir o consumo (igual ao Painel). */
+/** Corrida com tempo suficiente para medir o consumo (igual ao gateway). */
 const MIN_RUN_FOR_RATE_S = 600;
 
 export type GeneratorStats = {

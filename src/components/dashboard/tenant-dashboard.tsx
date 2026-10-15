@@ -25,7 +25,7 @@ type SortMode = "default" | "problems" | "power";
 /** Ordem dos cartões: problemas de comunicação primeiro facilita a operação em clientes grandes. */
 const STATUS_RANK = { offline: 0, "no-data": 1, online: 2 } as const;
 
-/** Painel do cliente: indicadores somados e cartões dos medidores, ao vivo. */
+/** Visão geral do cliente: indicadores somados e cartões dos medidores, ao vivo. */
 export function TenantDashboard({
   tenantSlug,
   sites,

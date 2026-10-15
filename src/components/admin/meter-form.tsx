@@ -22,9 +22,9 @@ type MeterFormValues = {
 };
 
 /**
- * Edição de um medidor. Ele nasce do Painel local, que também mantém nome,
- * entrada geral, disjuntor e endereço: se a loja mudar o cadastro dela, esses
- * campos voltam a seguir o Painel. O resto é informativo e fica como salvo aqui.
+ * Edição de um medidor. Ele nasce do gateway, que também mantém nome,
+ * entrada geral, disjuntor e endereço: se a unidade mudar o cadastro dela, esses
+ * campos voltam a seguir o gateway. O resto é informativo e fica como salvo aqui.
  */
 export function MeterForm({
   action,
@@ -86,7 +86,7 @@ export function MeterForm({
       <SwitchField
         name="active"
         label="Medidor ativo"
-        description="Medidores inativos não aparecem no painel do cliente."
+        description="Medidores inativos não aparecem nas telas do cliente."
         defaultChecked={meter.active}
       />
       <FormMessage state={state} />

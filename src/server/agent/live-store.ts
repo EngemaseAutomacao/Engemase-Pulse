@@ -6,9 +6,9 @@ import type { Reading } from "@/server/telemetry/types";
 import type { UtilityReading } from "./utilities";
 
 /**
- * Última leitura enviada pelo Painel local de cada unidade.
+ * Última leitura enviada pelo gateway de cada unidade.
  *
- * Com Redis, fica só no cache: o Painel envia a cada ~10 s e gravar isso no
+ * Com Redis, fica só no cache: o gateway envia a cada ~10 s e gravar isso no
  * Postgres manteria o banco acordado o tempo todo. Sem Redis, cada instância
  * do servidor tem a própria memória, então a leitura vai para o banco (é o
  * único lugar que todas as instâncias enxergam).
@@ -22,7 +22,7 @@ export type AgentLive = {
   utilities?: Record<string, UtilityReading>;
 };
 
-/** Painel parado continua aparecendo (como "sem comunicação") por um dia. */
+/** Gateway parado continua aparecendo (como "sem comunicação") por um dia. */
 const LIVE_TTL_MS = 24 * 3_600_000;
 
 const liveKey = (siteId: string) => `agent:live:v1:${siteId}`;

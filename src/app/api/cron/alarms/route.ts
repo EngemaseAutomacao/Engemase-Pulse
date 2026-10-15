@@ -5,9 +5,9 @@ import { env } from "@/server/env";
 import { markSchedulerRun, runHousekeeping } from "@/server/housekeeping";
 
 /**
- * Tarefas periódicas (alarmes, lojas sem comunicação, limpeza). Elas também
+ * Tarefas periódicas (alarmes, unidades sem comunicação, limpeza). Elas também
  * rodam de carona no tráfego (ver housekeeping.ts); este agendador cobre os
- * períodos sem envio de nenhuma loja. Aceita dois tipos de chamada autenticada:
+ * períodos sem envio de nenhuma unidade. Aceita dois tipos de chamada autenticada:
  *  - "Authorization: Bearer <CRON_SECRET>" — Cron da Vercel ou GitHub Actions;
  *  - assinatura do Upstash QStash (cabeçalho upstash-signature) — agendador com
  *    reenvio automático, funciona em qualquer plano da Vercel.

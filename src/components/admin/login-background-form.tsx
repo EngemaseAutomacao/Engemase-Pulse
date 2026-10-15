@@ -93,7 +93,7 @@ export function LoginBackgroundForm({
           }}
         />
         <p className="text-xs text-muted-foreground">
-          PNG, JPG ou WEBP. Prefira foto na horizontal (a loja, a fachada, o quadro elétrico). A imagem é reduzida antes
+          PNG, JPG ou WEBP. Prefira foto na horizontal (a fachada, o prédio, o quadro elétrico). A imagem é reduzida antes
           do envio e aparece escurecida atrás do texto, para ele continuar legível.
         </p>
         <FormMessage state={state} />

@@ -23,6 +23,10 @@ const nextConfig: NextConfig = {
       },
     },
   },
+  async redirects() {
+    // A tela "Lojas" virou "Ranking" (as lojas agora são unidades).
+    return [{ source: "/app/:tenant/lojas", destination: "/app/:tenant/ranking", permanent: true }];
+  },
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },

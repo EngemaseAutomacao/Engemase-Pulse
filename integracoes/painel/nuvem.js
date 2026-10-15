@@ -1,9 +1,10 @@
 /**
- * Envio para a nuvem (Engemase Pulse) — vai em src/nuvem.js do Painel. Versão 3.
+ * Envio para a nuvem (Engemase Pulse) — vai em src/nuvem.js do Pulse Configurador
+ * (o antigo Painel), instalado no gateway de cada unidade. Versão 3.
  *
- * O supervisório continua sendo a referência na loja: lê o Modbus, guarda o
+ * O configurador continua sendo a referência na unidade: lê o Modbus, guarda o
  * histórico, calcula alarmes e consumo, e funciona sem internet. Este módulo só
- * COPIA para a nuvem, por HTTPS e sempre saindo da loja (nenhuma porta aberta):
+ * COPIA para a nuvem, por HTTPS e sempre saindo da unidade (nenhuma porta aberta):
  *
  *  - a cada `intervalo_s` (padrão 10 s): a última varredura, com os valores atuais,
  *    e a lista dos alarmes ativos (a nuvem abre, fecha e notifica no celular; o
@@ -12,14 +13,14 @@
  *    gerador), do consumo por hora, dos alarmes encerrados (fim exato, inclusive
  *    os que abriram e fecharam com a internet fora) e das corridas do gerador.
  *
- * Módulos: a loja diz à nuvem quais usa ("energia", "agua", "gerador") e o
+ * Módulos: a unidade diz à nuvem quais usa ("energia", "agua", "gerador") e o
  * Pulse liga as telas sozinho. Sem a chave `modulos`, vale o que estiver
  * configurado aqui: energia se houver medidor de energia, água se houver
  * reservatório, gerador se houver grupo gerador. Junto da lista de equipamentos
  * vão os parâmetros do reservatório e do gerador (capacidade, tanque, consumo,
  * potência) e o rótulo/unidade das tags, para a nuvem mostrar igual à tela daqui.
  *
- * O próprio banco da loja é a fila. Duas marcas dizem até onde a nuvem já
+ * O próprio banco do gateway é a fila. Duas marcas dizem até onde a nuvem já
  * confirmou (só avançam depois de um HTTP 200):
  *  - `nuvem_resumo_ate`: janelas de 5 min antes deste instante já foram (as
  *    janelas antes de `resumo_ate` não mudam mais, então nada se perde);
@@ -32,7 +33,7 @@
  *    foram (a que está em andamento vai de novo a cada minuto até terminar).
  * Internet caiu: quando voltar, o atraso vai em lotes, sem intervenção.
  *
- * Configuração (config.json da loja):
+ * Configuração (config.json do gateway):
  *   "nuvem": { "url": "https://engemase-pulse.vercel.app", "token": "pnl_…" }
  * Opcionais: "intervalo_s": 10, "historico_inicial_dias": 7 (quanto do resumo de
  * 5 min já gravado sobe no primeiro envio; o consumo por hora sobe inteiro) e
@@ -165,7 +166,7 @@ export class Nuvem {
     });
   }
 
-  /** Módulos que esta loja usa: os da configuração ou, sem ela, os que existem aqui. */
+  /** Módulos que esta unidade usa: os da configuração ou, sem ela, os que existem aqui. */
   modulos() {
     const config = this.lerConfig();
     if (Array.isArray(config.nuvem?.modulos)) return MODULOS.filter((m) => config.nuvem.modulos.includes(m));
@@ -254,7 +255,7 @@ export class Nuvem {
         const corridas = lerCorridas ? this.lerCorridas() : { linhas: [], marca: null, falta: false };
         if (resumo.ate === null && consumo.rowid === null && encerrados.marca === null && !corridas.linhas.length) break;
         try {
-          // fatia sem dado nenhum (Painel parado naquele período): só avança a marca
+          // fatia sem dado nenhum (configurador parado naquele período): só avança a marca
           if (resumo.janelas.length || consumo.linhas.length || encerrados.linhas.length || corridas.linhas.length) {
             const parte = { resumo_5min: resumo.janelas, consumo_horario: consumo.linhas };
             if (encerrados.linhas.length) parte.alarmes_encerrados = encerrados.linhas;

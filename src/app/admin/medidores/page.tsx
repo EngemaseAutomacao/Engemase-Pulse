@@ -24,7 +24,7 @@ export default async function AdminMetersPage({ searchParams }: PageProps<"/admi
     <PageContainer>
       <PageHeader
         title="Medidores"
-        description="Criados pelo Painel local de cada loja, a partir dos equipamentos de energia dele."
+        description="Criados pelo gateway de cada unidade, a partir dos equipamentos de energia dele."
       />
       <FilterForm
         filters={[
@@ -55,7 +55,7 @@ export default async function AdminMetersPage({ searchParams }: PageProps<"/admi
               <TableRow>
                 <TableHead>Medidor</TableHead>
                 <TableHead>Cliente / unidade</TableHead>
-                <TableHead className="hidden md:table-cell">No Painel</TableHead>
+                <TableHead className="hidden md:table-cell">No gateway</TableHead>
                 <TableHead>Situação</TableHead>
               </TableRow>
             </TableHeader>

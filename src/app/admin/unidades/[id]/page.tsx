@@ -80,7 +80,7 @@ export default async function SitePage({ params }: PageProps<"/admin/unidades/[i
         <h2 className="font-semibold">Medidores desta unidade</h2>
         {site.meters.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            Nenhum medidor ainda. Eles aparecem sozinhos no primeiro envio do Painel local, a partir dos equipamentos de
+            Nenhum medidor ainda. Eles aparecem sozinhos no primeiro envio do gateway, a partir dos equipamentos de
             energia cadastrados nele.
           </p>
         ) : (
@@ -107,7 +107,7 @@ export default async function SitePage({ params }: PageProps<"/admin/unidades/[i
         <div>
           <h2 className="font-semibold">Módulos e equipamentos de água e gerador</h2>
           <p className="text-sm text-muted-foreground">
-            Vêm do configurador (Painel) da loja: os módulos que ele declara e os equipamentos dos grupos água e gerador.
+            Vêm do Pulse Configurador (gateway) da unidade: os módulos que ele declara e os equipamentos dos grupos água e gerador.
           </p>
         </div>
         <p className="flex flex-wrap items-center gap-1.5 text-sm">
@@ -144,7 +144,7 @@ export default async function SitePage({ params }: PageProps<"/admin/unidades/[i
         <h2 className="font-semibold text-destructive">Excluir unidade</h2>
         <p className="text-sm text-muted-foreground">
           Remove a unidade e os {site.meters.length} medidor(es) dela, com o histórico guardado na nuvem. O histórico da
-          loja continua no Painel local.
+          unidade continua no gateway.
         </p>
         <DeleteButton
           action={removeSite.bind(null, site.id)}

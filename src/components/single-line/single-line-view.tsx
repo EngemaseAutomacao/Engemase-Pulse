@@ -130,7 +130,7 @@ export function SingleLineView({ tenantSlug, sites }: { tenantSlug: string; site
             <>
               <Stem on={busOn} />
               <p className="max-w-md py-2 text-center text-xs text-muted-foreground">
-                Sem entrada geral marcada no Painel desta loja. Marque o equipamento da entrada como principal para ver
+                Sem entrada geral marcada no gateway desta unidade. Marque o equipamento da entrada como principal para ver
                 o total e o consumo não medido.
               </p>
               <Stem on={busOn} />

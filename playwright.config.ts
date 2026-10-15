@@ -3,7 +3,7 @@ import { defineConfig, devices } from "@playwright/test";
 /**
  * Testes de tela (ponta a ponta). Precisam de um Postgres migrado e com o
  * administrador criado (npm run db:seed). A preparação (e2e/global-setup.ts)
- * cria o cliente "e2e" e manda leituras sintéticas como o Painel da loja.
+ * cria o cliente "e2e" e manda leituras sintéticas como o gateway da unidade.
  *
  *   npm run build && npm run test:e2e
  *

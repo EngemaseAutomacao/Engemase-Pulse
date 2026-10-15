@@ -24,7 +24,7 @@ export const MIN_HISTORY_SPAN_MS = 30 * 60_000;
 
 /**
  * Janelas de agregação possíveis, da menor para a maior. A menor é 5 min
- * porque é a resolução guardada (resumo de 5 min do Painel).
+ * porque é a resolução guardada (resumo de 5 min do gateway).
  */
 const WINDOW_LADDER: { every: string; ms: number }[] = [
   { every: "5m", ms: 300_000 },

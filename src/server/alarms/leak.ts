@@ -8,7 +8,7 @@ import { notifyAlarms, type AlarmNotice } from "./notify";
 
 /**
  * Possível vazamento de água: a hora mais calma da madrugada (0h–5h) de cada
- * reservatório contra as noites anteriores da mesma loja (ver leakCheck). Roda
+ * reservatório contra as noites anteriores da mesma unidade (ver leakCheck). Roda
  * nas tarefas periódicas a cada hora; a madrugada só é julgada depois das 6h.
  */
 
@@ -84,7 +84,7 @@ export async function checkLeaks(now = Date.now()): Promise<{ opened: number; cl
       title: `Possível vazamento de água — ${tank.tag ? `${tank.tag} ` : ""}${tank.name} (${tank.site.name})`,
       message:
         `Na madrugada de ${day.slice(8, 10)}/${day.slice(5, 7)}, a hora mais calma gastou ${formatNumber(nightMinLh, 0)} L/h; ` +
-        `o normal desta loja é ${formatNumber(baselineLh, 0)} L/h (últimas ${nights} noites). ` +
+        `o normal desta unidade é ${formatNumber(baselineLh, 0)} L/h (últimas ${nights} noites). ` +
         "Confira descargas, boias, torneiras e o próprio reservatório.",
       value: nightMinLh,
       openKey: leakKey(tank.id),

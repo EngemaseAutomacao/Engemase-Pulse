@@ -15,7 +15,7 @@ export type MeterTopology = {
   siteId: string;
   /** Entrada geral da unidade (os demais medidores são alimentadores dela). */
   isMain: boolean;
-  /** Corrente nominal do disjuntor do circuito (A), vinda do Painel. */
+  /** Corrente nominal do disjuntor do circuito (A), vinda do gateway. */
   breakerAmps: number | null;
 };
 

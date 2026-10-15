@@ -33,7 +33,7 @@ export async function getSimulationData(tenantId: string, siteId: string, now = 
     6 * 3_600_000,
     () => loadMonths(site.timezone, main?.id ?? null, meterIds, start, stop, peakStartHour, peakEndHour),
   );
-  // Loja nova, sem mês fechado: simula com o mês atual até agora (melhor que nada, avisado na tela).
+  // Unidade nova, sem mês fechado: simula com o mês atual até agora (melhor que nada, avisado na tela).
   const partialCurrent = months.every((m) => m.coverage === 0);
   if (partialCurrent) {
     months = await cached(

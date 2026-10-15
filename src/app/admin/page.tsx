@@ -121,7 +121,7 @@ function HealthSummary({ problems }: { problems: number }) {
         <span className="block font-semibold">Saúde do sistema</span>
         <span className="block text-sm text-muted-foreground">
           {problems > 0
-            ? `${problems} ponto(s) de atenção: configuração, lojas sem comunicação ou erros.`
+            ? `${problems} ponto(s) de atenção: configuração, unidades sem comunicação ou erros.`
             : "Tudo configurado e funcionando."}
         </span>
       </span>

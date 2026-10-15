@@ -6,7 +6,7 @@ import { db } from "@/server/db";
 import { RENOTIFY_AFTER_MS, notifyAlarms, type AlarmNotice } from "./notify";
 
 /**
- * Consumo fora do padrão por medidor, pelas horas fechadas que o Painel
+ * Consumo fora do padrão por medidor, pelas horas fechadas que o gateway
  * consolida (meter_energy_hours). Roda nas tarefas periódicas a cada 15 min;
  * a hora que ainda não chegou fica para a próxima rodada.
  */

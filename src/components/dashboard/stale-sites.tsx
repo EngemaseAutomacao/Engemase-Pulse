@@ -6,7 +6,7 @@ import type { LiveMeter } from "@/lib/telemetry-types";
 
 /**
  * Unidades em que nenhum medidor está comunicando, mas já houve leitura:
- * quase sempre é a loja inteira fora (internet ou mini PC do Painel). Os
+ * quase sempre é a unidade inteira fora (internet ou gateway). Os
  * valores na tela são os últimos recebidos.
  */
 export function staleSites(
@@ -37,14 +37,14 @@ export function StaleSitesNotice({
     <div role="alert" className="space-y-1 rounded-xl border border-warning/30 bg-warning/10 p-4 text-sm">
       <p className="flex items-center gap-2 font-medium text-warning">
         <WifiOffIcon className="size-4" aria-hidden />
-        {sites.length === 1 ? "Loja sem comunicação" : `${sites.length} lojas sem comunicação`}
+        {sites.length === 1 ? "Unidade sem comunicação" : `${sites.length} unidades sem comunicação`}
       </p>
       <ul className="space-y-0.5 pl-6 text-foreground/80">
         {sites.map((s) => (
           <li key={s.siteId}>
             <span className="font-medium">{siteNames.get(s.siteId) ?? "Unidade"}:</span> último dado{" "}
             <RelativeTime value={s.lastTime} />. Os valores mostrados são os últimos recebidos — verifique a internet e
-            o mini PC da loja.
+            o gateway da unidade.
           </li>
         ))}
       </ul>

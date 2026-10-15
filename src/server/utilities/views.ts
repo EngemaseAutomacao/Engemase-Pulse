@@ -29,7 +29,7 @@ import {
 } from "./catalog";
 
 /**
- * O que as telas dos módulos mostram: leitura ao vivo do Painel (cache) mais as
+ * O que as telas dos módulos mostram: leitura ao vivo do gateway (cache) mais as
  * contas sobre o resumo de 5 min (consumo por dia, vazamento, corridas). As
  * contas pesadas ficam 5 min em cache por equipamento.
  */

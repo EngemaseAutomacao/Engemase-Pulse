@@ -15,8 +15,8 @@ export type AgentStatus = {
 };
 
 /**
- * Ligação com o Painel local: último envio recebido e o token que vai no
- * config.json do Painel. O token aparece uma única vez, logo depois de gerado.
+ * Ligação com o gateway: último envio recebido e o token que vai no
+ * config.json do gateway. O token aparece uma única vez, logo depois de gerado.
  */
 export function AgentConnection({
   status,
@@ -33,7 +33,7 @@ export function AgentConnection({
   if (!rotateToken) {
     return (
       <p className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
-        Crie a unidade para gerar o token do Painel local.
+        Crie a unidade para gerar o token do gateway.
       </p>
     );
   }
@@ -41,7 +41,7 @@ export function AgentConnection({
   const generate = () => {
     if (status?.hasToken && !token) {
       const ok = window.confirm(
-        "Gerar um novo token? O Painel que usa o token atual para de enviar até receber o novo.",
+        "Gerar um novo token? O gateway que usa o token atual para de enviar até receber o novo.",
       );
       if (!ok) return;
     }
@@ -67,11 +67,11 @@ export function AgentConnection({
         </p>
         {(status?.plant || status?.version) && (
           <p className="text-muted-foreground">
-            {[status.plant, status.version && `Painel ${status.version}`].filter(Boolean).join(" · ")}
+            {[status.plant, status.version && `versão ${status.version}`].filter(Boolean).join(" · ")}
           </p>
         )}
         <p className="text-xs text-muted-foreground">
-          Os medidores são criados sozinhos a partir dos equipamentos de energia cadastrados no Painel.
+          Os medidores são criados sozinhos a partir dos equipamentos de energia cadastrados no gateway.
         </p>
       </div>
 
@@ -93,7 +93,7 @@ export function AgentConnection({
           <CopyField label="Token" value={token} />
           <div className="grid gap-1.5">
             <p className="text-xs text-muted-foreground">
-              No <code>config.json</code> do Painel da loja, acrescente:
+              No <code>config.json</code> do gateway da unidade, acrescente:
             </p>
             <pre className="overflow-x-auto rounded-md bg-muted p-3 text-xs">{config}</pre>
             <CopyButton value={config} label="Copiar trecho" />

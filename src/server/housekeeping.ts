@@ -14,16 +14,16 @@ import { sendMonthlyReports } from "@/server/monthly-report";
 import { checkTargets } from "@/server/targets";
 
 /**
- * Tarefas periódicas: regras de alarme da nuvem, lojas sem comunicação,
+ * Tarefas periódicas: regras de alarme da nuvem, unidades sem comunicação,
  * ultrapassagem de demanda, consumo fora do padrão, metas, escalonamento,
  * resumo mensal por e-mail e limpeza do histórico antigo. Cada uma tem a
  * própria trava de intervalo (umas rodam a cada minuto, outras a cada hora).
  *
  * Rodam pelo agendador (/api/cron/alarms, chamado pelo QStash, Cron da Vercel
  * ou GitHub Actions) e também "de carona" no tráfego normal: cada envio do
- * Painel e cada atualização de tela pede uma rodada, no máximo uma por minuto
+ * Gateway e cada atualização de tela pede uma rodada, no máximo uma por minuto
  * no sistema todo. Assim os alarmes funcionam mesmo sem agendador; ele só
- * garante a detecção quando nenhuma loja envia e ninguém está olhando.
+ * garante a detecção quando nenhuma unidade envia e ninguém está olhando.
  */
 
 export type HousekeepingResult = {

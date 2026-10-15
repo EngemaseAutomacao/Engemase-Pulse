@@ -3,7 +3,7 @@ import { getCache } from "@/server/cache";
 import { db } from "@/server/db";
 
 /**
- * O resumo de 5 min do Painel local (medidores, reservatórios e geradores) fica 400 dias (dá para comparar com o
+ * O resumo de 5 min do gateway (medidores, reservatórios e geradores) fica 400 dias (dá para comparar com o
  * mesmo mês do ano anterior); o consumo por hora fica para sempre.
  */
 export const READINGS_5M_RETENTION_DAYS = 400;

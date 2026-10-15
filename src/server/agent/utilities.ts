@@ -11,11 +11,11 @@ import type { AgentSite } from "./token";
 
 /**
  * Equipamentos dos módulos Água e Gerador: nascem e se atualizam pela lista de
- * equipamentos do Painel (grupos "agua" e "gerador"), como os medidores de
- * energia. Os valores ficam com os nomes de tag do Painel — não há tradução.
+ * equipamentos do gateway (grupos "agua" e "gerador"), como os medidores de
+ * energia. Os valores ficam com os nomes de tag do gateway — não há tradução.
  */
 
-/** id do equipamento no Painel → id na nuvem e tipo. */
+/** id do equipamento no gateway → id na nuvem e tipo. */
 export type UtilityIndex = Record<string, { id: string; kind: UtilityKind }>;
 
 type CachedIndex = { signature: string; equipment: UtilityIndex };
@@ -103,10 +103,10 @@ async function syncEquipment(site: AgentSite, relevant: AgentEquipment[]): Promi
   return index;
 }
 
-/** Leitura atual de um equipamento de água ou gerador (nomes de tag do Painel). */
+/** Leitura atual de um equipamento de água ou gerador (nomes de tag do gateway). */
 export type UtilityReading = { time: string | null; online: boolean; values: Record<string, number> };
 
-/** Leituras ao vivo por id do equipamento na nuvem, com o horário corrigido pelo relógio da loja. */
+/** Leituras ao vivo por id do equipamento na nuvem, com o horário corrigido pelo relógio da unidade. */
 export function utilityLiveReadings(
   payload: AgentPayload,
   index: UtilityIndex,
@@ -200,9 +200,9 @@ export async function upsertGeneratorRuns(runs: AgentGeneratorRun[], index: Util
 
 const modulesKey = (siteId: string) => `agent:modules:v1:${siteId}`;
 
-/** Módulos declarados pelo configurador da loja; o banco só é tocado quando a lista muda. */
+/** Módulos declarados pelo gateway da unidade; o banco só é tocado quando a lista muda. */
 export async function syncDeclaredModules(site: AgentSite, declared: readonly string[] | null | undefined): Promise<void> {
-  if (!declared) return; // Painel antigo: não declara
+  if (!declared) return; // gateway antigo: não declara
   const list = normalizeDeclared(declared);
   const signature = list.join(",");
   const cache = getCache();

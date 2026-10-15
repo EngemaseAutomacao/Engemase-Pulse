@@ -1,4 +1,4 @@
-/** Comparação entre as lojas do cliente num mês (resposta de /api/tenants/<slug>/ranking). */
+/** Comparação entre as unidades do cliente num mês (resposta de /api/tenants/<slug>/ranking). */
 
 export type StoreRank = {
   siteId: string;
@@ -51,7 +51,7 @@ export function metricValue(store: StoreRank, metric: RankMetric): number | null
   }
 }
 
-/** Lojas na ordem do indicador (a melhor primeiro); sem valor vão para o fim. */
+/** Unidades na ordem do indicador (a melhor primeiro); sem valor vão para o fim. */
 export function rankStores(stores: StoreRank[], metric: RankMetric): StoreRank[] {
   const def = RANK_METRICS.find((m) => m.id === metric)!;
   return [...stores].sort((a, b) => {

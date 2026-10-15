@@ -1,28 +1,29 @@
-# Painel local → Engemase Pulse (nuvem) — módulo de envio versão 3
+# Pulse Configurador → Engemase Pulse (nuvem) — módulo de envio versão 3
 
-O Painel (supervisório da loja) continua fazendo tudo o que já faz: lê o Modbus,
+O **Pulse Configurador** (o antigo Painel), instalado no **gateway** de cada unidade,
+continua fazendo tudo o que já faz: lê o Modbus,
 guarda o histórico em SQLite, calcula alarmes e consumo e funciona sem internet.
 Com o módulo `nuvem.js`, ele passa a **copiar** as leituras para a nuvem, onde o
 cliente acessa pelo navegador ou pelo celular, com o login dele.
 
 ```
-Loja (mini PC)                                  Nuvem (Vercel)
-Painel ── HTTPS, só de saída, a cada 10 s ──▶   POST /api/ingest
+Gateway da unidade                              Nuvem (Vercel)
+Configurador ── HTTPS, só de saída, 10 s ──▶   POST /api/ingest
   SQLite = fila do que falta enviar               medidores criados sozinhos
 ```
 
-- **Nenhuma porta aberta na loja** e nenhuma VPN para os dados: o Painel é que chama a nuvem.
-- **Internet caiu:** a loja segue normal; quando a conexão volta, o atraso sobe em lotes.
+- **Nenhuma porta aberta na unidade** e nenhuma VPN para os dados: o gateway é que chama a nuvem.
+- **Internet caiu:** a unidade segue normal; quando a conexão volta, o atraso sobe em lotes.
 - **Os medidores nascem sozinhos na nuvem**, a partir dos equipamentos do grupo `energia`
-  (nome, TAG ISA, entrada geral, disjuntor e endereço vêm do `config.json` da loja).
+  (nome, TAG ISA, entrada geral, disjuntor e endereço vêm do `config.json` do gateway).
 - **Reservatório e grupo gerador também** (grupos `agua` e `gerador`), com os parâmetros
-  da instalação e o histórico, e a loja declara quais módulos usa (ver [Módulos](#módulos-energia-água-e-gerador)).
-- **Os alarmes do Painel aparecem na nuvem** e avisam no celular de quem tem acesso
+  da instalação e o histórico, e o configurador declara quais módulos a unidade usa (ver [Módulos](#módulos-energia-água-e-gerador)).
+- **Os alarmes do configurador aparecem na nuvem** e avisam no celular de quem tem acesso
   ao cliente (prioridade média e alta).
 
-## Instalar (no código do Painel)
+## Instalar (no código do Pulse Configurador)
 
-1. Copie `nuvem.js` para `src/nuvem.js` do Painel.
+1. Copie `nuvem.js` para `src/nuvem.js` do configurador.
 2. No `server.js`, quatro linhas:
 
    ```js
@@ -42,7 +43,7 @@ Painel ── HTTPS, só de saída, a cada 10 s ──▶   POST /api/ingest
    `() => config` (e não `config`) é proposital: quando a Engenharia aplica uma
    configuração nova, o módulo já enxerga a lista nova de equipamentos.
 
-3. No `config.json` da loja:
+3. No `config.json` do gateway:
 
    ```json
    "nuvem": { "url": "https://engemase-pulse.vercel.app", "token": "pnl_…" }
@@ -57,7 +58,7 @@ Painel ── HTTPS, só de saída, a cada 10 s ──▶   POST /api/ingest
 
 ## Módulos: energia, água e gerador
 
-O Painel (configurador da loja) diz à nuvem quais módulos a loja usa, e o
+O Pulse Configurador diz à nuvem quais módulos a unidade usa, e o
 **Engemase Pulse liga as telas sozinho** — ninguém precisa mexer na nuvem.
 
 ```jsonc
@@ -70,12 +71,12 @@ O Painel (configurador da loja) diz à nuvem quais módulos a loja usa, e o
 
 * **Com `modulos`:** vale exatamente a lista. Serve para ligar o módulo antes de o
   equipamento existir (a tela do Pulse avisa que está aguardando) ou para deixar um
-  equipamento só na loja.
+  equipamento só no gateway.
 * **Sem `modulos`:** vale o que está configurado — energia se houver medidor de
   energia, água se houver reservatório (`caixa_agua.medidor` ou equipamento do grupo
   `agua`), gerador se houver grupo gerador (`gerador.medidor` ou grupo `gerador`).
 * A equipe Engemase ainda pode **desligar** um módulo por cliente na administração do
-  Pulse (cliente que não contratou). Ligar, quem liga é a loja.
+  Pulse (cliente que não contratou). Ligar, quem liga é o configurador.
 
 ### Reservatório (módulo Água)
 
@@ -110,7 +111,7 @@ O Painel (configurador da loja) diz à nuvem quais módulos a loja usa, e o
    `gerador_corridas`: motivo, resultado, duração, litros, queda da bateria).
 
 O rótulo, a unidade e as casas decimais de cada tag vão junto, então o Pulse escreve
-igual à tela da loja. Tags marcadas como `oculto` e equipamentos de outros grupos
+igual à tela do configurador. Tags marcadas como `oculto` e equipamentos de outros grupos
 (subestação, CLP de disjuntor…) ficam só aqui.
 
 ## O que é enviado
@@ -137,17 +138,17 @@ Grandeza nova num perfil: acrescente nessa tabela para ela aparecer na nuvem.
 
 ## Alarmes
 
-Os alarmes continuam sendo configurados e detectados no Painel (limites, atraso
+Os alarmes continuam sendo configurados e detectados no configurador (limites, atraso
 de confirmação e banda morta são os dele). A cada envio ao vivo vai a lista
 inteira dos ativos, e a nuvem só espelha:
 
-| No Painel | Na nuvem |
+| No configurador | Na nuvem |
 | --- | --- |
-| alarme novo na lista | abre o alarme (marcado "Painel da loja") e notifica no celular se a prioridade for `media` ou `alta` |
+| alarme novo na lista | abre o alarme (marcado "Gateway da unidade") e notifica no celular se a prioridade for `media` ou `alta` |
 | some da lista | fecha (normalizado) |
-| `reconhecido` | marca como reconhecido na loja |
+| `reconhecido` | marca como reconhecido no gateway |
 | encerrado (com `fim`) | acerta o horário do fim; se a nuvem nunca soube dele (abriu e fechou com a internet fora), entra no histórico, sem notificar |
-| reconhecido **na nuvem** | volta na resposta do envio e o Painel reconhece também (auditoria da loja: “pela nuvem”) |
+| reconhecido **na nuvem** | volta na resposta do envio e o configurador reconhece também (auditoria do configurador: “pela nuvem”) |
 
 Prioridade: `alta` → Crítico, `media` → Atenção, `baixa` → Informativo. Alarme de
 equipamento que não é medidor (gerador, CLP…) também aparece, sem link para medidor.
@@ -163,7 +164,7 @@ estado muda:
 | Mensagem | Causa |
 | --- | --- |
 | `[nuvem] HTTP 401: Token inválido ou revogado` | token errado ou gerado de novo na nuvem |
-| `[nuvem] sem conexão com a nuvem (…)` | internet da loja, DNS ou firewall bloqueando a saída HTTPS |
+| `[nuvem] sem conexão com a nuvem (…)` | internet da unidade, DNS ou firewall bloqueando a saída HTTPS |
 | `[nuvem] lote recusado e pulado (HTTP 400 …)` | dado fora do formato; o lote é pulado para não travar a fila |
 | `[nuvem] alarmes: …` | a nuvem recebeu as leituras mas não conseguiu registrar os alarmes (tenta de novo a cada envio) |
 | `[nuvem] envio restabelecido` | voltou ao normal |
