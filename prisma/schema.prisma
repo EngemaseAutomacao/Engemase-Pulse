@@ -37,6 +37,8 @@ model Tenant {
   loginTagline String?  @map("login_tagline")
   /// Minutos sem reconhecimento até avisar o escalonamento (null = não escalona).
   escalationMinutes Int? @map("escalation_minutes")
+  /// Módulos desligados pela administração ("agua", "gerador"), mesmo que o configurador da loja peça.
+  modulesOff   String[] @default([]) @map("modules_off")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
@@ -88,6 +90,9 @@ model Site {
   state    String?
   /// Fuso usado para agrupar consumo por hora/dia.
   timezone String  @default("America/Sao_Paulo")
+  /// Módulos que o configurador (Painel) da loja declara usar: "energia", "agua", "gerador".
+  /// Vazio: Painel antigo, que não declara (o módulo aparece quando chega o equipamento).
+  modules  String[] @default([])
   /// Área construída (m²), para comparar lojas em kWh/m².
   areaM2   Float?  @map("area_m2")
 
@@ -107,6 +112,7 @@ model Site {
   alarms       Alarm[]
   tariff       SiteTariff?
   targets      EnergyTarget[]
+  utilities    UtilityEquipment[]
 
   @@unique([tenantId, name])
   @@map("sites")
@@ -118,6 +124,8 @@ model SiteLiveSnapshot {
   receivedAt DateTime @map("received_at")
   /// Por id do medidor: { time, values } já com os nomes de campo do sistema.
   readings   Json
+  /// Por id do equipamento de água ou gerador: { time, online, values } com os nomes do Painel.
+  utilities  Json?
 
   site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
@@ -533,4 +541,85 @@ model MonthlyReportDelivery {
 
   @@id([tenantId, month])
   @@map("monthly_report_deliveries")
+}
+
+// ---------------------------------------------------------------------------
+// Módulos Água e Gerador (equipamentos do Painel que não são medidores de energia)
+// ---------------------------------------------------------------------------
+
+enum UtilityKind {
+  WATER
+  GENERATOR
+}
+
+/// Reservatório ou grupo gerador de uma unidade. Nasce do envio do Painel (o cadastro da loja manda).
+model UtilityEquipment {
+  id         String      @id @default(uuid()) @db.Uuid
+  siteId     String      @map("site_id") @db.Uuid
+  kind       UtilityKind
+  /// Id do equipamento no Painel local (ex.: "reservatorio").
+  externalId String      @map("external_id")
+  /// Tag na planta (ex.: "TQ-01", "GMG-01").
+  tag        String?
+  name       String
+  /// Perfil do Painel (modelo do CLP ou do controlador).
+  profile    String?
+  /// Parâmetros vindos do Painel: capacidade do reservatório, tanque de diesel, potência…
+  settings   Json?
+  /// Rótulo, unidade e casas decimais de cada tag, como o Painel mostra.
+  tagInfo    Json?       @map("tag_info")
+  sortOrder  Int         @default(0) @map("sort_order")
+  createdAt  DateTime    @default(now()) @map("created_at")
+  updatedAt  DateTime    @updatedAt @map("updated_at")
+
+  site       Site               @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  readings5m UtilityReading5m[]
+  runs       GeneratorRun[]
+
+  @@unique([siteId, externalId])
+  @@index([siteId])
+  @@map("utility_equipment")
+}
+
+/// Resumo de 5 min do equipamento: { tag do Painel: [média, mínimo, máximo] }.
+model UtilityReading5m {
+  equipmentId String   @map("equipment_id") @db.Uuid
+  /// Início da janela de 5 min.
+  ts          DateTime
+  values      Json
+
+  equipment UtilityEquipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+
+  @@id([equipmentId, ts])
+  @@index([ts])
+  @@map("utility_readings_5m")
+}
+
+/// Uma corrida do grupo gerador (da partida até parar), calculada pelo Painel.
+model GeneratorRun {
+  equipmentId     String    @map("equipment_id") @db.Uuid
+  /// Id da corrida no banco do Painel.
+  externalId      Int       @map("external_id")
+  startedAt       DateTime  @map("started_at")
+  /// Vazio enquanto o grupo está rodando.
+  endedAt         DateTime? @map("ended_at")
+  /// Motivo da partida (teste, falta de rede, manual…), como o Painel informa.
+  reason          String?
+  /// Resultado (ok, falha de partida…), como o Painel informa.
+  result          String?
+  batteryRest     Float?    @map("battery_rest")
+  batteryMin      Float?    @map("battery_min")
+  startSeconds    Float?    @map("start_seconds")
+  durationSeconds Float?    @map("duration_seconds")
+  kwh             Float?
+  liters          Float?
+  peakKw          Float?    @map("peak_kw")
+  levelStart      Float?    @map("level_start")
+  levelEnd        Float?    @map("level_end")
+
+  equipment UtilityEquipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+
+  @@id([equipmentId, externalId])
+  @@index([equipmentId, startedAt])
+  @@map("generator_runs")
 }

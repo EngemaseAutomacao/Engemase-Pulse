@@ -64,6 +64,7 @@ export default async function TenantPage({ params }: PageProps<"/admin/clientes/
             accentColor: tenant.accentColor,
             loginTagline: tenant.loginTagline,
             active: tenant.active,
+            modulesOff: tenant.modulesOff,
           }}
         />
       </section>

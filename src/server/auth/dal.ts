@@ -75,6 +75,8 @@ export type TenantContext = {
     accentColor: string;
     hasLogo: boolean;
     logoVersion: number | null;
+    /** Módulos desligados pela administração ("agua", "gerador"). */
+    modulesOff: string[];
   };
 };
 
@@ -105,6 +107,7 @@ async function findTenantAccess(user: AuthUser, slug: string, minimum: Role): Pr
       active: true,
       primaryColor: true,
       accentColor: true,
+      modulesOff: true,
       logo: { select: { updatedAt: true } },
     },
   });
@@ -122,6 +125,7 @@ async function findTenantAccess(user: AuthUser, slug: string, minimum: Role): Pr
       accentColor: tenant.accentColor,
       hasLogo: tenant.logo !== null,
       logoVersion: tenant.logo?.updatedAt.getTime() ?? null,
+      modulesOff: tenant.modulesOff,
     },
   };
 }

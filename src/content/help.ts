@@ -26,6 +26,9 @@ export type HelpIcon =
   | "tv"
   | "users"
   | "account"
+  | "water"
+  | "generator"
+  | "setup"
   | "admin";
 
 export type HelpSection = {
@@ -38,6 +41,8 @@ export type HelpSection = {
   path?: string;
   /** Só para a equipe da plataforma (Engemase). */
   adminOnly?: boolean;
+  /** Só aparece para clientes com o módulo. */
+  module?: "agua" | "gerador";
 };
 
 export type FaqItem = {
@@ -47,6 +52,7 @@ export type FaqItem = {
   /** Seção do manual relacionada. */
   section?: string;
   adminOnly?: boolean;
+  module?: "agua" | "gerador";
 };
 
 export const HELP_SECTIONS: HelpSection[] = [
@@ -334,6 +340,87 @@ export const HELP_SECTIONS: HelpSection[] = [
     ],
   },
   {
+    id: "agua",
+    title: "Água",
+    icon: "water",
+    path: "/agua",
+    module: "agua",
+    summary: "Reservatório ao vivo, consumo por dia, bomba de recalque e aviso de possível vazamento.",
+    blocks: [
+      {
+        kind: "list",
+        items: [
+          "**Reservatório**: nível em %, volume em litros e a capacidade informada no configurador da loja. Abaixo de 20 % o contorno do desenho fica em atenção.",
+          "**Consumo hoje**: quanto a loja gastou desde a meia-noite, em m³. Com medidor de vazão de entrada, é medido (o que entrou menos o que o reservatório subiu); só com o nível, é calculado pela descida do reservatório e estimado enquanto a bomba enche.",
+          "**Ritmo agora** e **Autonomia**: o consumo médio das últimas 3 horas e quantas horas o reservatório aguenta nesse ritmo se a reposição parar (falta d'água da rua, bomba parada).",
+          "**Bomba de recalque** (quando o CLP tem o sinal): ligada ou desligada, horas ligada e partidas no dia, pressão de recalque.",
+          "**Consumo por dia** (últimos 15 dias; o de hoje, mais claro, é parcial) e **Madrugada**: a hora mais calma entre 0h e 5h, dia a dia.",
+          "**Tendência**: nível e, quando houver, vazão de entrada ou pressão, em 24 h, 7 ou 30 dias.",
+        ],
+      },
+      {
+        kind: "p",
+        text: "**Possível vazamento**: com a loja fechada, o consumo da madrugada deveria ser parecido todas as noites. Quando a hora mais calma passa do dobro do normal da própria loja (e pelo menos 30 L/h a mais), aparece o aviso na tela e um alarme de Atenção, enviado pelos canais de cada pessoa. O normal é a mediana das últimas 14 noites; nos primeiros 7 dias o sistema ainda não julga.",
+      },
+      {
+        kind: "tip",
+        text: "Torre de resfriamento ou máquina de gelo gastam água a noite toda e não são vazamento: por isso a comparação é com a própria loja, e não com um número fixo.",
+      },
+    ],
+  },
+  {
+    id: "gerador",
+    title: "Gerador",
+    icon: "generator",
+    path: "/gerador",
+    module: "gerador",
+    summary: "Se o grupo vai partir quando a rede cair, diesel e autonomia, bateria, partidas e falhas.",
+    blocks: [
+      {
+        kind: "list",
+        items: [
+          "**Situação**: Pronto para partir (em automático, sem falha, com diesel e bateria), Não está pronto, Em operação (com a potência fornecida), Em falha (com as falhas ligadas) ou Sem comunicação.",
+          "**Diesel e autonomia**: litros no tanque e horas de operação que ainda dão, pelo consumo medido nas partidas (ou pelo informado no configurador).",
+          "**Bateria**: tensão em repouso e quanto ela caiu no último arranque. Queda que aumenta de partida em partida denuncia bateria no fim da vida antes de ela falhar.",
+          "**Última partida**: dias desde a última vez que o grupo rodou. Teste semanal é a prática recomendada: a partir de 7 dias fica em atenção.",
+          "**Últimos 30 dias**: % do tempo pronto para partir, partidas e falhas, horas rodando, diesel gasto, energia gerada e a maior queda de bateria.",
+          "**Partidas**: cada corrida com início, motivo (teste, queda de rede, partida manual, exercício), resultado, duração, diesel, energia e queda da bateria.",
+        ],
+      },
+      {
+        kind: "p",
+        text: "Os números vêm do configurador da loja, que lê o controlador do gerador: o Pulse mostra os mesmos valores da tela local. As falhas do gerador também chegam como alarmes do Painel.",
+      },
+    ],
+  },
+  {
+    id: "configurar-modulos",
+    title: "Configurar água e gerador",
+    icon: "setup",
+    adminOnly: true,
+    summary: "Como o configurador da loja liga os módulos no Pulse e o que ele precisa ter cadastrado.",
+    blocks: [
+      {
+        kind: "p",
+        text: "Quem liga os módulos é o **configurador da loja** (Painel local): ele informa ao Pulse quais módulos a loja usa e as telas aparecem sozinhas. A administração só **desliga** um módulo de um cliente que não contratou (Administração › Clientes › Módulos).",
+      },
+      {
+        kind: "steps",
+        items: [
+          "No configurador, use o módulo de envio **versão 3** (src/nuvem.js) e a seção **nuvem** com url e token da unidade.",
+          "Opcional: declare os módulos em **nuvem.modulos**, por exemplo [\"energia\", \"agua\", \"gerador\"]. Sem essa chave, valem os que existem no configurador.",
+          "**Reservatório**: cadastre o CLP com perfil do grupo agua (clp-reservatorio, só nível, ou clp-utilidades, com vazão, pressão e bomba) e, na seção **caixa_agua**, informe **medidor** (id do equipamento) e **capacidade_litros**.",
+          "**Gerador**: cadastre o controlador com perfil do grupo gerador e, na seção **gerador**, informe **medidor**, **capacidade_tanque_litros**, **consumo_litros_hora** e **potencia_nominal_kw**.",
+          "Reinicie o serviço e confira em **Administração › Unidades › (a unidade)**: os módulos declarados e os equipamentos recebidos aparecem no fim da página.",
+        ],
+      },
+      {
+        kind: "tip",
+        text: "Sem capacidade_litros o Pulse mostra só o nível (sem volume, consumo, autonomia ou aviso de vazamento). O histórico de água e gerador sobe a partir do módulo versão 3; com a versão 2 aparece só a leitura ao vivo.",
+      },
+    ],
+  },
+  {
     id: "administracao",
     title: "Administração (Engemase)",
     icon: "admin",
@@ -343,7 +430,7 @@ export const HELP_SECTIONS: HelpSection[] = [
       {
         kind: "list",
         items: [
-          "**Clientes**: nome, cores (principal e de destaque), logo, imagem de fundo do login próprio (/login/<cliente>) e frase da tela de login.",
+          "**Clientes**: nome, cores (principal e de destaque), logo, imagem de fundo do login próprio (/login/<cliente>), frase da tela de login e os **módulos** que o cliente pode usar (Água e Gerador ligam sozinhos pelo configurador da loja; desligue o que não foi contratado).",
           "**Unidades**: nome, endereço, fuso, **área (m²)** para o ranking, **token do Painel local** (aparece uma vez só, ao gerar) e a **tarifa** (modalidade, preços, demanda contratada, horário de ponta e impostos).",
           "**Medidores**: são criados pelo próprio Painel; aqui se ajustam nome, ordem e dados de cadastro.",
           "**Usuários**: contas da equipe e dos clientes, com acesso a um ou mais clientes.",
@@ -503,6 +590,40 @@ export const FAQ: FaqItem[] = [
     section: "primeiros-passos",
     answer: [
       "Sim: todas as telas se ajustam ao celular, e dá para instalar como aplicativo (veja Primeiros passos).",
+    ],
+  },
+  {
+    id: "modulo-nao-aparece",
+    question: "Por que não aparece Água ou Gerador no menu?",
+    answer: [
+      "Os módulos aparecem quando o configurador da loja os declara (ou envia o reservatório ou o gerador) e o módulo faz parte do contrato do cliente. Se a sua loja tem reservatório ou gerador e eles não aparecem, fale com a Engemase.",
+    ],
+  },
+  {
+    id: "agua-consumo",
+    question: "Como o consumo de água é calculado?",
+    section: "agua",
+    module: "agua",
+    answer: [
+      "Pelo reservatório. Com medidor de vazão de entrada: o que entrou menos o quanto o reservatório subiu (medido). Só com o sensor de nível: o quanto o reservatório desceu; enquanto a bomba enche, o consumo é estimado pelo ritmo das descidas anteriores — o gráfico mostra quanto do dia foi estimado.",
+    ],
+  },
+  {
+    id: "agua-vazamento",
+    question: "O que é o aviso de possível vazamento?",
+    section: "agua",
+    module: "agua",
+    answer: [
+      "Com a loja fechada, a hora mais calma da madrugada (0h–5h) deveria gastar parecido todas as noites. Quando ela passa do dobro do normal da própria loja e de 30 L/h a mais, o sistema avisa. Confira descargas, boias, torneiras e o próprio reservatório. O alarme fecha sozinho quando a madrugada volta ao normal.",
+    ],
+  },
+  {
+    id: "gerador-nao-pronto",
+    question: "Por que o gerador aparece como “Não está pronto”?",
+    section: "gerador",
+    module: "gerador",
+    answer: [
+      "O configurador da loja considera o grupo pronto só com todas as condições: em automático, sem falha, com diesel acima da reserva e bateria acima do mínimo. Basta uma faltar — o mais comum é o controlador ter ficado em manual depois de uma manutenção.",
     ],
   },
   {

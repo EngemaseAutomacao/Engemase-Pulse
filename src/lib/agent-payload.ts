@@ -9,7 +9,11 @@ import { z } from "zod";
  *  - `equipamentos`: leitura atual de cada equipamento (a cada ~10 s);
  *  - `resumo_5min`: janelas de 5 min já fechadas (média, mínimo e máximo);
  *  - `consumo_horario`: consumo de cada hora fechada, com a origem do cálculo;
- *  - `alarmes`: os alarmes ativos no Painel (junto do envio ao vivo).
+ *  - `alarmes`: os alarmes ativos no Painel (junto do envio ao vivo);
+ *  - `gerador_corridas`: corridas do grupo gerador (da partida até parar).
+ *
+ * Campos novos são opcionais: Painel com módulo antigo continua valendo, e
+ * Painel novo falando com nuvem antiga só tem o campo ignorado.
  */
 
 /** 2000-01-01 a 2100-01-01, em ms: barra relógio errado e segundos no lugar de ms. */
@@ -21,7 +25,7 @@ export const agentEquipmentSchema = z.object({
   id: equipmentId,
   nome: z.string().trim().min(1).max(120),
   tag_isa: z.string().trim().max(40).nullish(),
-  /** energia, agua, gerador, subestacao… Só "energia" vira medidor. */
+  /** energia, agua, gerador, subestacao… "energia" vira medidor; "agua" e "gerador", equipamento dos módulos. */
   grupo: z.string().trim().max(40).nullish(),
   perfil: z.string().trim().max(200).nullish(),
   /** Entrada geral da instalação. */
@@ -34,6 +38,42 @@ export const agentEquipmentSchema = z.object({
   /** Última leitura bem-sucedida do equipamento. */
   lido_em: epochMs.nullish(),
   valores: z.record(tagName, z.number().nullable()).default({}),
+  /** Parâmetros do equipamento (capacidade do reservatório, tanque de diesel, potência…). */
+  parametros: z
+    .record(z.string().max(60), z.union([z.number(), z.string().max(60), z.boolean()]).nullable())
+    .refine((v) => Object.keys(v).length <= 30, "parâmetros demais")
+    .nullish(),
+  /** Rótulo, unidade e casas de cada tag (água e gerador), como a tela do Painel mostra. */
+  tags: z
+    .array(
+      z.object({
+        nome: tagName,
+        rotulo: z.string().trim().max(120).nullish(),
+        unidade: z.string().trim().max(20).nullish(),
+        decimais: z.number().int().min(0).max(6).nullish(),
+      }),
+    )
+    .max(200)
+    .nullish(),
+});
+
+export const agentGeneratorRunSchema = z.object({
+  /** Id da corrida no banco da loja. */
+  id: z.number().int().nonnegative(),
+  medidor: equipmentId,
+  inicio: epochMs,
+  fim: epochMs.nullish(),
+  motivo: z.string().trim().max(80).nullish(),
+  resultado: z.string().trim().max(160).nullish(),
+  bateria_repouso: z.number().nullish(),
+  bateria_minima: z.number().nullish(),
+  tempo_partida_s: z.number().nullish(),
+  duracao_s: z.number().nullish(),
+  kwh: z.number().nullish(),
+  litros: z.number().nullish(),
+  pico_kw: z.number().nullish(),
+  nivel_inicial: z.number().nullish(),
+  nivel_final: z.number().nullish(),
 });
 
 export const agentAlarmSchema = z.object({
@@ -55,7 +95,14 @@ export const agentPayloadSchema = z.object({
   versao: z.literal(1),
   /** Quando o Painel montou o envio. */
   ts: epochMs,
-  agente: z.object({ versao: z.string().max(40).nullish(), planta: z.string().max(200).nullish() }).nullish(),
+  agente: z
+    .object({
+      versao: z.string().max(40).nullish(),
+      planta: z.string().max(200).nullish(),
+      /** Módulos que o configurador da loja declara usar ("energia", "agua", "gerador"). */
+      modulos: z.array(z.string().max(20)).max(10).nullish(),
+    })
+    .nullish(),
   equipamentos: z.array(agentEquipmentSchema).max(200).optional(),
   resumo_5min: z
     .array(
@@ -96,9 +143,12 @@ export const agentPayloadSchema = z.object({
     .array(agentAlarmSchema.extend({ fim: epochMs }))
     .max(500)
     .optional(),
+  /** Corridas do gerador novas ou atualizadas (a em andamento vem até terminar). */
+  gerador_corridas: z.array(agentGeneratorRunSchema).max(500).optional(),
 });
 
 export type AgentPayload = z.infer<typeof agentPayloadSchema>;
 export type AgentEquipment = z.infer<typeof agentEquipmentSchema>;
 export type AgentAlarm = z.infer<typeof agentAlarmSchema>;
 export type AgentClosedAlarm = AgentAlarm & { fim: number };
+export type AgentGeneratorRun = z.infer<typeof agentGeneratorRunSchema>;

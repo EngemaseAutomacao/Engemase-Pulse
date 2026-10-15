@@ -9,6 +9,7 @@ import { PageContainer, PageHeader } from "@/components/shell/page";
 import { Badge } from "@/components/ui/badge";
 import { getSiteForEdit, getSiteTariff } from "@/server/admin/sites";
 import { tenantOptions } from "@/server/admin/tenants";
+import { MODULE_INFO, type UtilityModule } from "@/lib/utilities";
 import { requirePlatformAdmin } from "@/server/auth/dal";
 import { removeSite, rotateAgentToken, saveSite, saveSiteTariff } from "../actions";
 
@@ -102,6 +103,43 @@ export default async function SitePage({ params }: PageProps<"/admin/unidades/[i
         )}
       </section>
 
+      <section className="space-y-3 surface p-5">
+        <div>
+          <h2 className="font-semibold">Módulos e equipamentos de água e gerador</h2>
+          <p className="text-sm text-muted-foreground">
+            Vêm do configurador (Painel) da loja: os módulos que ele declara e os equipamentos dos grupos água e gerador.
+          </p>
+        </div>
+        <p className="flex flex-wrap items-center gap-1.5 text-sm">
+          <span className="text-muted-foreground">Módulos declarados:</span>
+          {site.modules.length === 0 ? (
+            <span>nenhum (configurador antigo: o módulo aparece quando chega o equipamento)</span>
+          ) : (
+            site.modules.map((m) => (
+              <Badge key={m} variant="secondary">
+                {m === "energia" ? "Energia" : (MODULE_INFO[m as UtilityModule]?.label ?? m)}
+              </Badge>
+            ))
+          )}
+        </p>
+        {site.utilities.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nenhum reservatório ou gerador recebido ainda.</p>
+        ) : (
+          <ul className="divide-y rounded-lg border">
+            {site.utilities.map((u) => (
+              <li key={u.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
+                <span>
+                  {u.tag && <span className="mr-2 font-mono text-xs text-muted-foreground">{u.tag}</span>}
+                  {u.name}
+                  <span className="ml-2 text-xs text-muted-foreground">{u.kind === "WATER" ? "Água" : "Gerador"}</span>
+                </span>
+                <span className="text-xs text-muted-foreground">{settingsText(u.settings)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
       <section className="space-y-3 rounded-xl border border-destructive/30 p-5">
         <h2 className="font-semibold text-destructive">Excluir unidade</h2>
         <p className="text-sm text-muted-foreground">
@@ -117,4 +155,20 @@ export default async function SitePage({ params }: PageProps<"/admin/unidades/[i
       </section>
     </PageContainer>
   );
+}
+
+const SETTING_LABEL: Record<string, string> = {
+  capacidade_litros: "reservatório (L)",
+  capacidade_tanque_litros: "tanque (L)",
+  consumo_litros_hora: "consumo (L/h)",
+  potencia_nominal_kw: "potência (kW)",
+};
+
+/** Parâmetros que o configurador enviou, em texto curto. */
+function settingsText(settings: unknown): string {
+  const entries = Object.entries((settings ?? {}) as Record<string, unknown>).filter(
+    ([k, v]) => k in SETTING_LABEL && typeof v === "number",
+  );
+  if (entries.length === 0) return "sem parâmetros";
+  return entries.map(([k, v]) => `${SETTING_LABEL[k]}: ${(v as number).toLocaleString("pt-BR")}`).join(" · ");
 }

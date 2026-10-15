@@ -1,5 +1,5 @@
 /**
- * Envio para a nuvem (Engemase Pulse) — vai em src/nuvem.js do Painel.
+ * Envio para a nuvem (Engemase Pulse) — vai em src/nuvem.js do Painel. Versão 3.
  *
  * O supervisório continua sendo a referência na loja: lê o Modbus, guarda o
  * histórico, calcula alarmes e consumo, e funciona sem internet. Este módulo só
@@ -8,9 +8,16 @@
  *  - a cada `intervalo_s` (padrão 10 s): a última varredura, com os valores atuais,
  *    e a lista dos alarmes ativos (a nuvem abre, fecha e notifica no celular; o
  *    que for reconhecido na nuvem volta na resposta e é reconhecido aqui);
- *  - a cada minuto: o que falta enviar do resumo de 5 min, do consumo por hora e
- *    dos alarmes encerrados (fim exato, inclusive os que abriram e fecharam com
- *    a internet fora).
+ *  - a cada minuto: o que falta enviar do resumo de 5 min (energia, água e
+ *    gerador), do consumo por hora, dos alarmes encerrados (fim exato, inclusive
+ *    os que abriram e fecharam com a internet fora) e das corridas do gerador.
+ *
+ * Módulos: a loja diz à nuvem quais usa ("energia", "agua", "gerador") e o
+ * Pulse liga as telas sozinho. Sem a chave `modulos`, vale o que estiver
+ * configurado aqui: energia se houver medidor de energia, água se houver
+ * reservatório, gerador se houver grupo gerador. Junto da lista de equipamentos
+ * vão os parâmetros do reservatório e do gerador (capacidade, tanque, consumo,
+ * potência) e o rótulo/unidade das tags, para a nuvem mostrar igual à tela daqui.
  *
  * O próprio banco da loja é a fila. Duas marcas dizem até onde a nuvem já
  * confirmou (só avançam depois de um HTTP 200):
@@ -20,13 +27,16 @@
  *    (o consolidar só INSERE horas novas, então o rowid só cresce — inclusive
  *    quando uma hora antiga é consolidada depois de o servidor ficar parado);
  *  - `nuvem_alarmes_fim` / `nuvem_alarmes_id`: alarmes encerrados até este fim
- *    (e id, para empates) já foram.
+ *    (e id, para empates) já foram;
+ *  - `nuvem_corridas_id`: corridas do gerador até este id, já encerradas, já
+ *    foram (a que está em andamento vai de novo a cada minuto até terminar).
  * Internet caiu: quando voltar, o atraso vai em lotes, sem intervenção.
  *
  * Configuração (config.json da loja):
- *   "nuvem": { "url": "https://monitor.exemplo.com.br", "token": "pnl_…" }
+ *   "nuvem": { "url": "https://engemase-pulse.vercel.app", "token": "pnl_…" }
  * Opcionais: "intervalo_s": 10, "historico_inicial_dias": 7 (quanto do resumo de
- * 5 min já gravado sobe no primeiro envio; o consumo por hora sobe inteiro).
+ * 5 min já gravado sobe no primeiro envio; o consumo por hora sobe inteiro) e
+ * "modulos": ["energia", "agua", "gerador"] (o que o Pulse deve mostrar).
  *
  * Sem dependências: só Node 20+ (fetch nativo). Ligação no server.js: LEIAME.md.
  */
@@ -37,6 +47,15 @@ const FATIA_RESUMO_MS = 6 * 3600000; // resumo enviado em fatias de 6 h
 const LOTE_CONSUMO = 2000;
 const MAX_LOTES_POR_RODADA = 30;  // em atraso, até 30 lotes seguidos por minuto
 const LOTE_ALARMES = 200;
+const LOTE_CORRIDAS = 200;
+const MODULOS = ['energia', 'agua', 'gerador'];
+/** Grupos de equipamento que a nuvem entende; os demais (subestação, CLP…) ficam só aqui. */
+const GRUPOS_NA_NUVEM = new Set(MODULOS);
+/** Parâmetros da instalação que a nuvem usa (seções caixa_agua e gerador). */
+const PARAMETROS = {
+  caixa_agua: ['capacidade_litros', 'altura_util_m', 'formato'],
+  gerador: ['potencia_nominal_kw', 'capacidade_tanque_litros', 'consumo_litros_hora'],
+};
 
 export class Nuvem {
   /**
@@ -109,16 +128,18 @@ export class Nuvem {
   }
 
   equipamentos(ultimo) {
-    const defs = new Map((this.lerConfig().medidores || []).map((m) => [m.id, m]));
+    const config = this.lerConfig();
+    const defs = new Map((config.medidores || []).map((m) => [m.id, m]));
     return Object.values(ultimo?.equipamentos || {}).map((e) => {
       const d = defs.get(e.id) || {};
       const disjuntor = d.limites?.corrente_a?.max;
       const endereco = d.conexao?.unit_id;
-      return {
+      const grupo = e.grupo || d.grupo || 'energia';
+      const linha = {
         id: e.id,
         nome: e.nome || e.id,
         tag_isa: e.tag_isa || null,
-        grupo: e.grupo || d.grupo || 'energia',
+        grupo,
         perfil: d.perfil || null,
         principal: Boolean(d.principal),
         disjuntor_a: Number.isFinite(disjuntor) && disjuntor > 0 ? disjuntor : null,
@@ -127,7 +148,32 @@ export class Nuvem {
         lido_em: Number.isFinite(e.lidoEm) ? e.lidoEm : null,
         valores: soNumeros(e.valores),
       };
+      if (grupo === 'agua' || grupo === 'gerador') {
+        const secao = grupo === 'agua' ? 'caixa_agua' : 'gerador';
+        linha.parametros = config[secao]?.medidor === e.id ? parametrosDe(config[secao], PARAMETROS[secao]) : null;
+        linha.tags = (d.tags || [])
+          .filter((t) => t?.nome && !t.oculto)
+          .slice(0, 200)
+          .map((t) => ({
+            nome: String(t.nome).slice(0, 100),
+            rotulo: t.rotulo ? String(t.rotulo).slice(0, 120) : null,
+            unidade: t.unidade ? String(t.unidade).slice(0, 20) : null,
+            decimais: Number.isInteger(t.decimais) && t.decimais >= 0 && t.decimais <= 6 ? t.decimais : null,
+          }));
+      }
+      return linha;
     });
+  }
+
+  /** Módulos que esta loja usa: os da configuração ou, sem ela, os que existem aqui. */
+  modulos() {
+    const config = this.lerConfig();
+    if (Array.isArray(config.nuvem?.modulos)) return MODULOS.filter((m) => config.nuvem.modulos.includes(m));
+    const grupos = new Set((config.medidores || []).map((m) => m.grupo || 'energia'));
+    return MODULOS.filter((m) =>
+      m === 'agua' ? grupos.has('agua') || Boolean(config.caixa_agua?.medidor)
+        : m === 'gerador' ? grupos.has('gerador') || Boolean(config.gerador?.medidor)
+          : grupos.has(m));
   }
 
   /**
@@ -199,18 +245,22 @@ export class Nuvem {
     if (!this.ativa || !this.equipamentosAceitos || this.pendenciasEmCurso || Date.now() < this.esperaAte) return;
     this.pendenciasEmCurso = true;
     try {
+      // a corrida em andamento vai uma vez por rodada (a cada minuto), não a cada lote
+      let lerCorridas = true;
       for (let i = 0; i < MAX_LOTES_POR_RODADA; i++) {
         const resumo = this.lerResumo();
         const consumo = this.lerConsumo();
         const encerrados = this.lerEncerrados();
-        if (resumo.ate === null && consumo.rowid === null && encerrados.marca === null) break;
+        const corridas = lerCorridas ? this.lerCorridas() : { linhas: [], marca: null, falta: false };
+        if (resumo.ate === null && consumo.rowid === null && encerrados.marca === null && !corridas.linhas.length) break;
         try {
           // fatia sem dado nenhum (Painel parado naquele período): só avança a marca
-          if (resumo.janelas.length || consumo.linhas.length || encerrados.linhas.length) {
+          if (resumo.janelas.length || consumo.linhas.length || encerrados.linhas.length || corridas.linhas.length) {
             const parte = { resumo_5min: resumo.janelas, consumo_horario: consumo.linhas };
             if (encerrados.linhas.length) parte.alarmes_encerrados = encerrados.linhas;
+            if (corridas.linhas.length) parte.gerador_corridas = corridas.linhas;
             const r = await this.enviar(parte);
-            if (r.ignorados) console.warn(`[nuvem] ${r.ignorados} linha(s) de equipamento que a nuvem não tem como medidor`);
+            if (r.ignorados) console.warn(`[nuvem] ${r.ignorados} linha(s) de equipamento que a nuvem não reconhece`);
           }
         } catch (e) {
           // 400 = a nuvem recusou o formato deste lote. Repetir não resolve e
@@ -224,7 +274,9 @@ export class Nuvem {
           this.banco.gravarMarca('nuvem_alarmes_fim', encerrados.marca.fim);
           this.banco.gravarMarca('nuvem_alarmes_id', encerrados.marca.id);
         }
-        if (!resumo.falta && !consumo.falta && !encerrados.falta) break;
+        if (corridas.marca !== null) this.banco.gravarMarca('nuvem_corridas_id', corridas.marca);
+        lerCorridas = corridas.falta;
+        if (!resumo.falta && !consumo.falta && !encerrados.falta && !corridas.falta) break;
       }
     } catch {
       // enviar() já registrou; tenta de novo no próximo minuto
@@ -233,7 +285,54 @@ export class Nuvem {
     }
   }
 
-  /** Próxima fatia do resumo de 5 min (só equipamentos de energia, só janelas fechadas). */
+  /**
+   * Corridas do gerador ainda não confirmadas, pela ordem do id. A marca só
+   * passa das encerradas: a em andamento (e as depois dela) vêm de novo.
+   */
+  lerCorridas() {
+    const vazio = { linhas: [], marca: null, falta: false };
+    const desde = this.banco.marca('nuvem_corridas_id') ?? 0;
+    let linhas;
+    try {
+      linhas = this.banco.db
+        .prepare('SELECT * FROM gerador_corridas WHERE id > ? ORDER BY id LIMIT ?')
+        .all(desde, LOTE_CORRIDAS);
+    } catch {
+      return vazio; // banco sem a tabela (instalação sem gerador)
+    }
+    if (!linhas.length) return vazio;
+    let marca = null;
+    for (const c of linhas) {
+      if (!Number.isFinite(c.fim)) break;
+      marca = c.id;
+    }
+    const n = (v) => (Number.isFinite(v) ? v : null);
+    return {
+      linhas: linhas
+        .filter((c) => Number.isFinite(c.inicio))
+        .map((c) => ({
+          id: c.id,
+          medidor: c.medidor,
+          inicio: c.inicio,
+          fim: n(c.fim),
+          motivo: c.motivo ? String(c.motivo).slice(0, 80) : null,
+          resultado: c.resultado ? String(c.resultado).slice(0, 160) : null,
+          bateria_repouso: n(c.bateria_repouso),
+          bateria_minima: n(c.bateria_minima),
+          tempo_partida_s: n(c.tempo_partida_s),
+          duracao_s: n(c.duracao_s),
+          kwh: n(c.kwh),
+          litros: n(c.litros),
+          pico_kw: n(c.pico_kw),
+          nivel_inicial: n(c.nivel_inicial),
+          nivel_final: n(c.nivel_final),
+        })),
+      marca,
+      falta: linhas.length === LOTE_CORRIDAS,
+    };
+  }
+
+  /** Próxima fatia do resumo de 5 min (energia, água e gerador; só janelas fechadas). */
   lerResumo() {
     const vazio = { janelas: [], ate: null, falta: false };
     const resumoAte = this.banco.marca('resumo_ate');
@@ -249,8 +348,13 @@ export class Nuvem {
 
     const tags = new Map();
     for (const m of this.lerConfig().medidores || []) {
-      if ((m.grupo || 'energia') !== 'energia') continue;
-      for (const t of m.tags || []) tags.set(`${m.id}.${t.nome}`, [m.id, t.nome]);
+      const grupo = m.grupo || 'energia';
+      if (!GRUPOS_NA_NUVEM.has(grupo)) continue;
+      for (const t of m.tags || []) {
+        // tag escondida (palavra de status crua) não interessa a ninguém fora daqui
+        if (grupo !== 'energia' && t.oculto) continue;
+        tags.set(`${m.id}.${t.nome}`, [m.id, t.nome]);
+      }
     }
     if (!tags.size) return { janelas: [], ate, falta: ate < resumoAte };
 
@@ -294,7 +398,7 @@ export class Nuvem {
     const corpo = {
       versao: 1,
       ts: Date.now(),
-      agente: { versao: this.info.versao || null, planta: this.lerConfig().planta || null },
+      agente: { versao: this.info.versao || null, planta: this.lerConfig().planta || null, modulos: this.modulos() },
       ...parte,
     };
     try {
@@ -332,6 +436,19 @@ export class Nuvem {
       throw e;
     }
   }
+}
+
+/** Só os parâmetros conhecidos, com valor simples (número, texto curto ou sim/não). */
+function parametrosDe(secao, chaves) {
+  if (!secao) return null;
+  const saida = {};
+  for (const chave of chaves) {
+    const v = secao[chave];
+    if (typeof v === 'number' && Number.isFinite(v)) saida[chave] = v;
+    else if (typeof v === 'string' && v.length <= 60) saida[chave] = v;
+    else if (typeof v === 'boolean') saida[chave] = v;
+  }
+  return Object.keys(saida).length ? saida : null;
 }
 
 /** Só números (bits viram 0/1): a nuvem recusa o envio inteiro se vier texto. */

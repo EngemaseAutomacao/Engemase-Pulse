@@ -1,4 +1,4 @@
-# Painel local → Engemase Pulse (nuvem)
+# Painel local → Engemase Pulse (nuvem) — módulo de envio versão 3
 
 O Painel (supervisório da loja) continua fazendo tudo o que já faz: lê o Modbus,
 guarda o histórico em SQLite, calcula alarmes e consumo e funciona sem internet.
@@ -15,6 +15,8 @@ Painel ── HTTPS, só de saída, a cada 10 s ──▶   POST /api/ingest
 - **Internet caiu:** a loja segue normal; quando a conexão volta, o atraso sobe em lotes.
 - **Os medidores nascem sozinhos na nuvem**, a partir dos equipamentos do grupo `energia`
   (nome, TAG ISA, entrada geral, disjuntor e endereço vêm do `config.json` da loja).
+- **Reservatório e grupo gerador também** (grupos `agua` e `gerador`), com os parâmetros
+  da instalação e o histórico, e a loja declara quais módulos usa (ver [Módulos](#módulos-energia-água-e-gerador)).
 - **Os alarmes do Painel aparecem na nuvem** e avisam no celular de quem tem acesso
   ao cliente (prioridade média e alta).
 
@@ -43,7 +45,7 @@ Painel ── HTTPS, só de saída, a cada 10 s ──▶   POST /api/ingest
 3. No `config.json` da loja:
 
    ```json
-   "nuvem": { "url": "https://ENDERECO-DA-NUVEM", "token": "pnl_…" }
+   "nuvem": { "url": "https://engemase-pulse.vercel.app", "token": "pnl_…" }
    ```
 
    O token é gerado na nuvem em **Administração → Unidades → (a unidade) → Gerar token**. Ele aparece uma única vez; a própria
@@ -53,15 +55,75 @@ Painel ── HTTPS, só de saída, a cada 10 s ──▶   POST /api/ingest
    (quanto do resumo de 5 min já gravado sobe no primeiro envio; o consumo por
    hora sobe inteiro).
 
+## Módulos: energia, água e gerador
+
+O Painel (configurador da loja) diz à nuvem quais módulos a loja usa, e o
+**Engemase Pulse liga as telas sozinho** — ninguém precisa mexer na nuvem.
+
+```jsonc
+"nuvem": {
+  "url": "https://engemase-pulse.vercel.app",
+  "token": "pnl_…",
+  "modulos": ["energia", "agua", "gerador"]   // opcional
+}
+```
+
+* **Com `modulos`:** vale exatamente a lista. Serve para ligar o módulo antes de o
+  equipamento existir (a tela do Pulse avisa que está aguardando) ou para deixar um
+  equipamento só na loja.
+* **Sem `modulos`:** vale o que está configurado — energia se houver medidor de
+  energia, água se houver reservatório (`caixa_agua.medidor` ou equipamento do grupo
+  `agua`), gerador se houver grupo gerador (`gerador.medidor` ou grupo `gerador`).
+* A equipe Engemase ainda pode **desligar** um módulo por cliente na administração do
+  Pulse (cliente que não contratou). Ligar, quem liga é a loja.
+
+### Reservatório (módulo Água)
+
+1. Cadastre o CLP do reservatório com um perfil do grupo `agua` (`clp-reservatorio`,
+   só nível; ou `clp-utilidades`, com vazão de entrada, pressão e bomba).
+2. Na seção `caixa_agua`, aponte o equipamento e informe a capacidade:
+
+   ```json
+   "caixa_agua": { "medidor": "reservatorio", "capacidade_litros": 20000, "altura_util_m": 2.5 }
+   ```
+
+   Sem `capacidade_litros` o Pulse mostra o nível, mas não calcula volume, consumo
+   em m³, autonomia nem o aviso de vazamento.
+3. O que o Pulse usa: `nivel` (%), e se existirem `vazao_entrada` (m³/h),
+   `bomba_ligada`, `bomba_falha`, `pressao_recalque`, `boia_baixo`/`boia_alto`.
+   Com a vazão de entrada o consumo é medido; só com o nível, ele é calculado pela
+   descida do reservatório (e estimado enquanto a bomba enche).
+
+### Grupo gerador (módulo Gerador)
+
+1. Cadastre o controlador com um perfil do grupo `gerador` (`gerador-generico`,
+   `dse-8620`, `dse-8620-via-clp`…).
+2. Na seção `gerador`, aponte o equipamento e preencha a instalação:
+
+   ```json
+   "gerador": { "medidor": "gmg", "potencia_nominal_kw": 260, "capacidade_tanque_litros": 500, "consumo_litros_hora": 55 }
+   ```
+
+3. O Pulse mostra o que o motor de indicadores daqui já calcula (`pronto`,
+   `autonomia_h`, `diesel_litros`, `dias_sem_teste`), o `estado`, as falhas
+   (`falha_*`), o diesel, a bateria e a lista de **corridas** (tabela
+   `gerador_corridas`: motivo, resultado, duração, litros, queda da bateria).
+
+O rótulo, a unidade e as casas decimais de cada tag vão junto, então o Pulse escreve
+igual à tela da loja. Tags marcadas como `oculto` e equipamentos de outros grupos
+(subestação, CLP de disjuntor…) ficam só aqui.
+
 ## O que é enviado
 
 | Parte | Quando | De onde |
 | --- | --- | --- |
-| `equipamentos` | a cada 10 s | a última varredura (`ultimo.equipamentos`) + `principal`, `limites.corrente_a.max` e `conexao.unit_id` do config |
+| `equipamentos` | a cada 10 s | a última varredura (`ultimo.equipamentos`) + `principal`, `limites.corrente_a.max` e `conexao.unit_id` do config; em água e gerador, também `parametros` (seções `caixa_agua`/`gerador`) e `tags` (rótulo, unidade, casas) |
 | `alarmes` | a cada 10 s, junto | os alarmes ativos (`ultimo.alarmes`, a lista inteira) |
 | `alarmes_encerrados` | a cada minuto, o que falta | tabela `alarmes`, os já encerrados, pela ordem do `fim` |
-| `resumo_5min` | a cada minuto, o que falta | tabela `resumo_5min`, só janelas antes de `resumo_ate` (fechadas) |
+| `resumo_5min` | a cada minuto, o que falta | tabela `resumo_5min` (energia, água e gerador), só janelas antes de `resumo_ate` (fechadas) |
 | `consumo_horario` | a cada minuto, o que falta | tabela `consumo_horario`, pela ordem do `rowid` |
+| `gerador_corridas` | a cada minuto, o que falta | tabela `gerador_corridas`, pela ordem do `id`; a em andamento vai de novo até terminar |
+| `agente.modulos` | em todo envio | `nuvem.modulos` ou o que existe na configuração (ver Módulos) |
 
 As marcas `nuvem_resumo_ate` e `nuvem_consumo_rowid` (tabela `marcas`) dizem até
 onde a nuvem confirmou. Elas só avançam depois de um HTTP 200. O histórico só
@@ -111,3 +173,9 @@ de novo. A nuvem mostra o horário do último envio na tela da unidade.
 
 `nuvem.estado()` devolve `{ ativa, ultimo_sucesso, erro }`, caso queira mostrar na
 tela de Engenharia.
+
+## Atualizar da versão 2 para a 3
+
+Troque o `src/nuvem.js` pelo deste pacote e reinicie o serviço — o `server.js` não muda.
+Atualize primeiro a nuvem (o Engemase Pulse já em produção aceita a versão 3); a versão 3
+falando com uma nuvem antiga só teria os dados de água e gerador ignorados.

@@ -133,7 +133,13 @@ export const tenantSchema = z.object({
   accentColor: hexColor,
   loginTagline: optionalText(160),
   active: checkbox,
-});
+  /** Ligado = o módulo aparece quando o configurador da loja declarar; desligado = nunca. */
+  module_agua: checkbox,
+  module_gerador: checkbox,
+}).transform(({ module_agua, module_gerador, ...tenant }) => ({
+  ...tenant,
+  modulesOff: [...(module_agua ? [] : ["agua"]), ...(module_gerador ? [] : ["gerador"])],
+}));
 
 export const siteSchema = z.object({
   tenantId: uuid,

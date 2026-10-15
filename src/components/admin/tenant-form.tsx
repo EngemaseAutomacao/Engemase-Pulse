@@ -11,6 +11,7 @@ import { IDLE, type ActionState } from "@/lib/action-state";
 import { BRAND_THEME_CLASS, brandThemeStyle } from "@/lib/color";
 import { cn } from "@/lib/utils";
 import { formatCnpj } from "@/lib/format";
+import { MODULE_INFO, UTILITY_MODULES } from "@/lib/utilities";
 
 type TenantFormValues = {
   name: string;
@@ -20,6 +21,7 @@ type TenantFormValues = {
   accentColor: string;
   loginTagline: string | null;
   active: boolean;
+  modulesOff: string[];
 };
 
 /** Gera um slug a partir do nome: "Indústria Acme S.A." → "industria-acme-s-a". */
@@ -106,6 +108,22 @@ export function TenantForm({
           description="Clientes inativos não conseguem entrar no sistema."
           defaultChecked={tenant?.active ?? true}
         />
+        <fieldset className="grid gap-2">
+          <legend className="mb-1 text-sm font-medium">Módulos</legend>
+          <p className="text-xs text-muted-foreground">
+            Energia está sempre incluída. Água e Gerador aparecem para o cliente quando o configurador da loja declara o
+            módulo (ou envia o equipamento). Desligue o que o cliente não contratou.
+          </p>
+          {UTILITY_MODULES.map((m) => (
+            <SwitchField
+              key={m}
+              name={`module_${m}`}
+              label={MODULE_INFO[m].label}
+              description={MODULE_INFO[m].description}
+              defaultChecked={!(tenant?.modulesOff ?? []).includes(m)}
+            />
+          ))}
+        </fieldset>
         <FormMessage state={state} />
         <SubmitButton className="w-fit">{tenant ? "Salvar alterações" : "Criar cliente"}</SubmitButton>
       </div>

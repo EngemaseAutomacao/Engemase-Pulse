@@ -8,6 +8,8 @@ import {
   BookOpenIcon,
   ChartColumnIcon,
   CircleUserRoundIcon,
+  DropletsIcon,
+  FuelIcon,
   GaugeIcon,
   GitCompareArrowsIcon,
   LayoutDashboardIcon,
@@ -17,6 +19,7 @@ import {
   ReceiptTextIcon,
   RocketIcon,
   SearchIcon,
+  Settings2Icon,
   ShieldIcon,
   StoreIcon,
   TargetIcon,
@@ -44,6 +47,9 @@ const ICONS: Record<HelpIcon, LucideIcon> = {
   tv: TvIcon,
   users: UsersIcon,
   account: CircleUserRoundIcon,
+  water: DropletsIcon,
+  generator: FuelIcon,
+  setup: Settings2Icon,
   admin: ShieldIcon,
 };
 

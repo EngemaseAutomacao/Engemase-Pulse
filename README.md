@@ -40,8 +40,15 @@ Multimedidores ──RS485/Modbus──▶ Painel local (mini PC na loja, SQLite
   projeção passa da meta. **Lojas**: ranking entre as unidades (kWh/m², custo, variação, FP, demanda).
 - **Consumo fora do padrão**: cada hora comparada com a mesma hora da semana nas 4 semanas anteriores;
   duas horas seguidas fora do normal (para cima ou para baixo, ex.: câmara parada) abrem alarme.
-- **Tela de TV** (`/tv/<cliente>`): números grandes, telas que alternam (agora, demanda, alarmes, consumo
-  de hoje), tela sempre acesa; `?tempo=20` muda os segundos por tela.
+- **Módulo Água**: reservatório ao vivo (nível, volume, autonomia sem reposição), bomba de recalque,
+  consumo por dia em m³ (medido pela vazão de entrada ou calculado pelo nível), a hora mais calma da
+  madrugada e alarme de **possível vazamento** (madrugada acima do normal da própria loja).
+- **Módulo Gerador**: pronto para partir / em operação / em falha, diesel e autonomia, bateria (e a queda
+  no arranque), dias desde a última partida, indicadores de 30 dias e a lista de partidas do Painel.
+- **Módulos ligados pelo configurador**: a loja (Painel) declara os módulos que usa e o Pulse mostra as
+  telas; a administração só desliga o que o cliente não contratou. O menu se organiza por módulo.
+- **Tela de TV** (`/tv/<cliente>`): números grandes, telas que alternam (agora, demanda, água e gerador,
+  alarmes, consumo de hoje), tela sempre acesa; `?tempo=20` muda os segundos por tela.
 - **Unifilar** ao vivo: entrada, barramento e setores com disjuntor, potência e **% de carga**.
 - **Comparar** até 3 medidores (da mesma unidade ou de unidades diferentes).
 - **Alarmes**: regras da nuvem (limite de grandeza ou "sem comunicação"), alarmes do **Painel da loja**
@@ -159,7 +166,8 @@ Depois do deploy, abra **Administração → Saúde do sistema**: ela diz o que 
 
 As tarefas periódicas — regras de alarme da nuvem, **loja sem comunicação** (Painel sem enviar há 10 min),
 **demanda acima da contratada**, **consumo fora do padrão** (a cada 15 min), **metas** (a cada hora),
-**escalonamento**, **resumo do mês por e-mail** (dia 1, a partir das 6 h) e limpeza do histórico — rodam
+**escalonamento**, **possível vazamento de água** (a cada hora; a madrugada é julgada depois das 6 h),
+**resumo do mês por e-mail** (dia 1, a partir das 6 h) e limpeza do histórico — rodam
 **de carona** no tráfego: cada envio de
 loja e cada tela aberta pedem uma rodada (no máximo uma por minuto). Com pelo menos uma loja enviando,
 funciona sem nada configurado. O agendador cobre o caso em que **nenhuma** loja envia e ninguém está
@@ -233,7 +241,9 @@ Multimedidores ──RS485/Modbus──▶ Painel (mini PC, SQLite) ──HTTPS,
    O token aparece uma única vez (no banco fica só o SHA-256), já com o trecho do `config.json`.
 2. No Painel, instale o módulo de envio: [`integracoes/painel/`](integracoes/painel/LEIAME.md).
 3. No primeiro envio, os **medidores são criados sozinhos** a partir dos equipamentos de energia
-   do Painel (nome, TAG ISA, entrada geral, disjuntor, endereço Modbus).
+   do Painel (nome, TAG ISA, entrada geral, disjuntor, endereço Modbus); reservatórios e grupos
+   geradores (grupos `agua` e `gerador`) viram os equipamentos dos módulos, com os parâmetros da
+   instalação. O Painel declara os módulos que a loja usa (`agente.modulos`) — ver o LEIAME.
 
 O que a nuvem guarda de cada unidade com Painel local:
 
@@ -242,6 +252,8 @@ O que a nuvem guarda de cada unidade com Painel local:
 | Leitura atual (a cada ~10 s) | Upstash Redis (sem Redis: tabela `site_live_snapshots`) | último envio |
 | Resumo de 5 min (média, mín., máx.) | `meter_readings_5m` | 400 dias |
 | Consumo por hora, já calculado pelo Painel (contador ou estimado pela potência) | `meter_energy_hours` | para sempre |
+| Reservatórios e geradores: resumo de 5 min (nomes de tag do Painel) | `utility_readings_5m` | 400 dias |
+| Corridas do gerador (motivo, resultado, duração, litros, bateria) | `generator_runs` | para sempre |
 
 A energia vem do contador lido corretamente pelo Painel (float32 na ordem CDAB do Siemens 7KT),
 sem os saltos de 1024 kWh de gateways que leem a ordem errada. O formato do envio está em [`src/lib/agent-payload.ts`](src/lib/agent-payload.ts)

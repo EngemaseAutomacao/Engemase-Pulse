@@ -32,6 +32,10 @@ export async function getSiteForEdit(id: string) {
         orderBy: [{ sortOrder: "asc" }, { tag: "asc" }],
         select: { id: true, tag: true, name: true, active: true },
       },
+      utilities: {
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+        select: { id: true, kind: true, tag: true, name: true, profile: true, settings: true },
+      },
     },
   });
   if (!site) return null;

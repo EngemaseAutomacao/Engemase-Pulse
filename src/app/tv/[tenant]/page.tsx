@@ -6,6 +6,7 @@ import { BRAND_THEME_CLASS, brandThemeStyle } from "@/lib/color";
 import { requireTenant } from "@/server/auth/dal";
 import { tenantLogoUrl } from "@/server/branding";
 import { listTenantMeters } from "@/server/queries/meters";
+import { visibleModules } from "@/server/utilities/catalog";
 
 export const metadata: Metadata = { title: "Tela de TV" };
 
@@ -25,7 +26,7 @@ async function Tv({ params, searchParams }: PageProps<"/tv/[tenant]">) {
   const { tenant: slug } = await params;
   const { tempo } = await searchParams;
   const { tenant } = await requireTenant(slug);
-  const { sites, meters } = await listTenantMeters(tenant.id);
+  const [{ sites, meters }, modules] = await Promise.all([listTenantMeters(tenant.id), visibleModules(tenant)]);
   const seconds = Math.min(300, Math.max(5, Number(tempo) || 20));
   return (
     <div className={BRAND_THEME_CLASS} style={brandThemeStyle(tenant.primaryColor, tenant.accentColor)}>
@@ -35,6 +36,7 @@ async function Tv({ params, searchParams }: PageProps<"/tv/[tenant]">) {
         sites={sites}
         meters={meters}
         seconds={seconds}
+        modules={modules}
       />
     </div>
   );

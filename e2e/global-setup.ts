@@ -82,6 +82,13 @@ function values(kw: number, main: boolean) {
   };
 }
 
+/** Reservatório (só nível) e grupo gerador, como o Painel v3 envia (grupos agua e gerador). */
+const TANK = { id: "caixa", nome: "Caixa d'água E2E", tag_isa: "TQ-01", capacidade: 10_000 };
+const GENSET = { id: "gmg", nome: "Gerador E2E", tag_isa: "GMG-01" };
+
+/** Nível do reservatório: desce 0,5 % a cada 5 min e a bomba enche de volta a cada 2 h. */
+const tankLevel = (t: number) => 95 - ((t / WINDOW) % 24) * 1.5;
+
 /** Envios do "Painel": ao vivo (com um alarme), 24 h de resumo de 5 min e consumo por hora. */
 function painelPayloads(now: number) {
   const equipments = [
@@ -91,18 +98,54 @@ function painelPayloads(now: number) {
   const live = {
     versao: 1,
     ts: now,
-    agente: { versao: "e2e", planta: "Loja E2E" },
-    equipamentos: equipments.map((e) => ({
-      id: e.id,
-      nome: e.nome,
-      tag_isa: e.tag_isa,
-      grupo: "energia",
-      principal: "principal" in e ? e.principal : false,
-      disjuntor_a: e.disjuntor_a,
-      online: true,
-      lido_em: now - 1000,
-      valores: values(e.kw, e.id === "geral"),
-    })),
+    agente: { versao: "e2e", planta: "Loja E2E", modulos: ["energia", "agua", "gerador"] },
+    equipamentos: [
+      ...equipments.map((e) => ({
+        id: e.id,
+        nome: e.nome,
+        tag_isa: e.tag_isa,
+        grupo: "energia",
+        principal: "principal" in e ? e.principal : false,
+        disjuntor_a: e.disjuntor_a,
+        online: true,
+        lido_em: now - 1000,
+        valores: values(e.kw, e.id === "geral"),
+      })),
+      {
+        id: TANK.id,
+        nome: TANK.nome,
+        tag_isa: TANK.tag_isa,
+        grupo: "agua",
+        perfil: "clp-reservatorio",
+        parametros: { capacidade_litros: TANK.capacidade, altura_util_m: 2 },
+        tags: [{ nome: "nivel", rotulo: "Nível da caixa d'água", unidade: "%", decimais: 1 }],
+        online: true,
+        lido_em: now - 1000,
+        valores: { nivel: tankLevel(now), sensor_falha: 0 },
+      },
+      {
+        id: GENSET.id,
+        nome: GENSET.nome,
+        tag_isa: GENSET.tag_isa,
+        grupo: "gerador",
+        perfil: "gerador-generico",
+        parametros: { potencia_nominal_kw: 150, capacidade_tanque_litros: 400, consumo_litros_hora: 35 },
+        online: true,
+        lido_em: now - 1000,
+        valores: {
+          estado: 0,
+          pronto: 1,
+          nivel_diesel: 70,
+          diesel_litros: 280,
+          autonomia_h: 8,
+          tensao_bateria: 25.5,
+          dias_sem_teste: 3,
+          rede_presente: 1,
+          potencia: 0,
+          falha_bateria: 0,
+        },
+      },
+    ],
     alarmes: [
       {
         id: 9001,
@@ -127,6 +170,17 @@ function painelPayloads(now: number) {
       });
     }
   }
+  for (let t = Math.floor((now - 24 * HOUR) / WINDOW) * WINDOW; t + WINDOW <= now; t += WINDOW) {
+    const level = tankLevel(t);
+    windows.push({ medidor: TANK.id, ts: t, valores: { nivel: [level, level, level] } });
+    windows.push({ medidor: GENSET.id, ts: t, valores: { nivel_diesel: [70, 70, 70], tensao_bateria: [25.5, 25.4, 25.6], pronto: [1, 1, 1] } });
+  }
+  const runs = [
+    { id: 1, medidor: GENSET.id, inicio: now - 3 * 24 * HOUR, fim: now - 3 * 24 * HOUR + 900_000, motivo: "teste", resultado: "normal",
+      bateria_repouso: 25.6, bateria_minima: 21, duracao_s: 900, litros: 9, kwh: 20 },
+    { id: 2, medidor: GENSET.id, inicio: now - 26 * HOUR, fim: now - 26 * HOUR + 20_000, motivo: "teste", resultado: "falha de partida (bateria)",
+      bateria_repouso: 24.4, bateria_minima: 17.5, duracao_s: 20, litros: 0, kwh: 0 },
+  ];
   const hours = [];
   for (let h = Math.floor((now - 30 * HOUR) / HOUR) * HOUR; h + HOUR <= now; h += HOUR) {
     for (const e of equipments) hours.push({ medidor: e.id, grandeza: "ativa", hora: h, kwh: e.kw, fonte: "contador" });
@@ -135,5 +189,6 @@ function painelPayloads(now: number) {
   for (let i = 0; i < windows.length; i += 2000)
     history.push({ versao: 1, ts: now, resumo_5min: windows.slice(i, i + 2000) });
   history.push({ versao: 1, ts: now, consumo_horario: hours });
+  history.push({ versao: 1, ts: now, gerador_corridas: runs });
   return [live, ...history];
 }

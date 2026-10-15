@@ -3,6 +3,8 @@ import {
   ArrowLeftRightIcon,
   BellIcon,
   ChartColumnIcon,
+  DropletsIcon,
+  FuelIcon,
   GaugeIcon,
   GitCompareArrowsIcon,
   LayoutDashboardIcon,
@@ -24,6 +26,7 @@ import { ROLE_LABEL } from "@/server/auth/permissions";
 import { tenantLogoUrl } from "@/server/branding";
 import { countActiveAlarms } from "@/server/queries/alarms";
 import { getTenantTopology } from "@/server/telemetry/topology";
+import { getUtilityCatalog, visibleModules } from "@/server/utilities/catalog";
 
 /** Área do cliente: barra lateral com a marca e as cores dele. */
 export default function TenantLayout({ children, params }: LayoutProps<"/app/[tenant]">) {
@@ -44,14 +47,31 @@ async function TenantShell({
   const { tenant: slug } = await params;
   const { tenant, user, role } = await requireTenant(slug);
   const base = `/app/${tenant.slug}`;
-  const [activeAlarms, topology] = await Promise.all([countActiveAlarms(tenant.id), getTenantTopology(tenant.id)]);
+  const [activeAlarms, topology, modules, catalog] = await Promise.all([
+    countActiveAlarms(tenant.id),
+    getTenantTopology(tenant.id),
+    visibleModules(tenant),
+    getUtilityCatalog(tenant.id),
+  ]);
   const multiSite = topology.filter((s) => s.meters.length > 0).length > 1;
+  // Energia some só quando nenhuma loja tem medidor nem declara o módulo, mas há outro módulo (loja só de água, p. ex.).
+  const hasEnergy =
+    topology.some((s) => s.meters.length > 0) || catalog.sites.some((s) => s.declared.includes("energia")) || modules.length === 0;
 
   const sections: NavSection[] = [
     {
       label: "Monitoramento",
       items: [
         { label: "Visão geral", href: base, icon: <LayoutDashboardIcon />, exact: true },
+        { label: "Alarmes", href: `${base}/alarmes`, icon: <BellIcon />, badge: activeAlarms },
+        { label: "Tela de TV", href: `/tv/${tenant.slug}`, icon: <TvIcon /> },
+      ],
+    },
+  ];
+  if (hasEnergy) {
+    sections.push({
+      label: "Energia",
+      items: [
         { label: "Medidores", href: `${base}/medidores`, icon: <GaugeIcon /> },
         { label: "Unifilar", href: `${base}/unifilar`, icon: <NetworkIcon /> },
         { label: "Consumo", href: `${base}/consumo`, icon: <ChartColumnIcon /> },
@@ -59,11 +79,18 @@ async function TenantShell({
         { label: "Metas", href: `${base}/metas`, icon: <TargetIcon /> },
         ...(multiSite ? [{ label: "Lojas", href: `${base}/lojas`, icon: <StoreIcon /> }] : []),
         { label: "Comparar", href: `${base}/comparar`, icon: <GitCompareArrowsIcon /> },
-        { label: "Alarmes", href: `${base}/alarmes`, icon: <BellIcon />, badge: activeAlarms },
-        { label: "Tela de TV", href: `/tv/${tenant.slug}`, icon: <TvIcon /> },
       ],
-    },
-  ];
+    });
+  }
+  if (modules.length > 0) {
+    sections.push({
+      label: "Utilidades",
+      items: [
+        ...(modules.includes("agua") ? [{ label: "Água", href: `${base}/agua`, icon: <DropletsIcon /> }] : []),
+        ...(modules.includes("gerador") ? [{ label: "Gerador", href: `${base}/gerador`, icon: <FuelIcon /> }] : []),
+      ],
+    });
+  }
   if (role === "ADMIN") {
     sections.push({
       label: "Gestão",
@@ -91,7 +118,7 @@ async function TenantShell({
           name: tenant.name,
           logoUrl: tenantLogoUrl(tenant.slug, tenant.logoVersion),
           href: base,
-          subtitle: "Monitoramento de energia",
+          subtitle: "Supervisório de utilidades",
         }}
         sections={sections}
         user={{

@@ -132,3 +132,22 @@ test("ajuda: manual e perguntas frequentes com busca", async ({ page }) => {
   await expect(page.getByText("Como recebo os alarmes pelo Telegram?")).toBeVisible();
   await expect(page.getByText("Esqueci a senha.")).toHaveCount(0);
 });
+
+test("água: menu do módulo, reservatório com volume e consumo por dia", async ({ page }) => {
+  await page.goto(`/app/${E2E.slug}`);
+  await page.getByRole("link", { name: "Água", exact: true }).first().click();
+  await expect(page.getByRole("heading", { name: "Água", level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Caixa d'água E2E" })).toBeVisible();
+  await expect(page.getByText("de 10.000 L")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Consumo por dia" })).toBeVisible();
+  await expect(page.getByText("Nível", { exact: true })).toBeVisible();
+});
+
+test("gerador: pronto para partir, indicadores e partidas com a falha", async ({ page }) => {
+  await page.goto(`/app/${E2E.slug}/gerador`);
+  await expect(page.getByRole("heading", { name: "Gerador E2E" })).toBeVisible();
+  await expect(page.getByText("Pronto para partir").first()).toBeVisible();
+  await expect(page.getByText("tanque de 400 L")).toBeVisible();
+  await expect(page.getByRole("cell", { name: /falha de partida/ })).toBeVisible();
+  await expect(page.getByText("1 com falha")).toBeVisible();
+});

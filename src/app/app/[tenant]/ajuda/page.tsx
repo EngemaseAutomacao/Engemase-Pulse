@@ -3,6 +3,7 @@ import { HelpCenter } from "@/components/help/help-center";
 import { PageContainer, PageHeader } from "@/components/shell/page";
 import { FAQ, HELP_SECTIONS } from "@/content/help";
 import { requireTenant } from "@/server/auth/dal";
+import { visibleModules } from "@/server/utilities/catalog";
 
 export const metadata: Metadata = { title: "Ajuda" };
 
@@ -10,12 +11,15 @@ export default async function HelpPage({ params }: PageProps<"/app/[tenant]/ajud
   const { tenant: slug } = await params;
   const { tenant, user } = await requireTenant(slug);
   const admin = user.isPlatformAdmin;
+  const modules: string[] = await visibleModules(tenant);
+  const shown = (item: { adminOnly?: boolean; module?: string }) =>
+    (admin || !item.adminOnly) && (!item.module || modules.includes(item.module));
   return (
     <PageContainer className="max-w-5xl">
       <PageHeader title="Ajuda" description="Manual do usuário e perguntas frequentes sobre cada tela do sistema." />
       <HelpCenter
-        sections={HELP_SECTIONS.filter((s) => admin || !s.adminOnly)}
-        faq={FAQ.filter((f) => admin || !f.adminOnly)}
+        sections={HELP_SECTIONS.filter(shown)}
+        faq={FAQ.filter(shown)}
         base={`/app/${tenant.slug}`}
         tvHref={`/tv/${tenant.slug}`}
       />

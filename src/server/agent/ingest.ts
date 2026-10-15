@@ -10,13 +10,24 @@ import { syncClosedPainelAlarms, syncPainelAlarms, type AlarmSyncResult } from "
 import { writeAgentLive } from "./live-store";
 import { ensureAgentMeters, isEnergyEquipment, loadAgentMeterIndex, type MeterIndex } from "./meters";
 import type { AgentSite } from "./token";
+import {
+  ensureUtilityEquipment,
+  loadUtilityIndex,
+  syncDeclaredModules,
+  upsertGeneratorRuns,
+  upsertUtilityReadings,
+  utilityLiveReadings,
+} from "./utilities";
 
 export type IngestResult = {
   /** Medidores com leitura atual neste envio. */
   leituras: number;
+  /** Reservatórios e geradores com leitura atual neste envio. */
+  leituras_modulos: number;
   resumo_5min: number;
   consumo_horario: number;
-  /** Linhas de equipamentos que não são medidores de energia (ou desconhecidos). */
+  gerador_corridas: number;
+  /** Linhas de equipamentos desconhecidos (nem medidor, nem água, nem gerador). */
   ignorados: number;
   /** Só quando o envio traz a lista de alarmes. */
   alarmes?: AlarmSyncResult | { erro: string };
@@ -27,27 +38,48 @@ export type IngestResult = {
 const SEEN_THROTTLE_MS = 60_000;
 
 export async function ingestAgentPayload(site: AgentSite, payload: AgentPayload): Promise<IngestResult> {
-  const result: IngestResult = { leituras: 0, resumo_5min: 0, consumo_horario: 0, ignorados: 0 };
+  const result: IngestResult = {
+    leituras: 0,
+    leituras_modulos: 0,
+    resumo_5min: 0,
+    consumo_horario: 0,
+    gerador_corridas: 0,
+    ignorados: 0,
+  };
   const receivedAt = Date.now();
 
-  const index = payload.equipamentos
-    ? await ensureAgentMeters(site, payload.equipamentos)
-    : await loadAgentMeterIndex(site.id);
+  const [index, utilities] = await Promise.all([
+    payload.equipamentos ? ensureAgentMeters(site, payload.equipamentos) : loadAgentMeterIndex(site.id),
+    payload.equipamentos ? ensureUtilityEquipment(site, payload.equipamentos) : loadUtilityIndex(site.id),
+    syncDeclaredModules(site, payload.agente?.modulos),
+  ]);
 
   if (payload.equipamentos) {
     const readings = liveReadings(payload, index, receivedAt);
+    const utilityReadings = utilityLiveReadings(payload, utilities, receivedAt);
     result.leituras = Object.keys(readings).length;
-    await writeAgentLive(site.id, { receivedAt: new Date(receivedAt).toISOString(), readings });
+    result.leituras_modulos = Object.keys(utilityReadings).length;
+    await writeAgentLive(site.id, {
+      receivedAt: new Date(receivedAt).toISOString(),
+      readings,
+      utilities: utilityReadings,
+    });
   }
 
   if (payload.resumo_5min?.length) {
+    const utilityWindows = payload.resumo_5min.filter((r) => utilities[r.medidor]);
     const rows = payload.resumo_5min.flatMap((r) => {
       const meterId = index[r.medidor];
       const values = mapPainelSummary(r.valores);
       return meterId && Object.keys(values).length > 0 ? [{ meterId, ts: new Date(r.ts).toISOString(), values }] : [];
     });
-    result.ignorados += payload.resumo_5min.length - rows.length;
-    result.resumo_5min = await upsertReadings5m(rows);
+    result.ignorados += payload.resumo_5min.length - rows.length - utilityWindows.length;
+    const [meters, utility] = await Promise.all([upsertReadings5m(rows), upsertUtilityReadings(utilityWindows, utilities)]);
+    result.resumo_5min = meters + utility;
+  }
+
+  if (payload.gerador_corridas?.length) {
+    result.gerador_corridas = await upsertGeneratorRuns(payload.gerador_corridas, utilities, receivedAt - payload.ts);
   }
 
   if (payload.consumo_horario?.length) {

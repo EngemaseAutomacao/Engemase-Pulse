@@ -6,19 +6,22 @@ import { ActiveAlarmsSummary } from "@/components/alarms/active-alarms-summary";
 import { TenantDashboard } from "@/components/dashboard/tenant-dashboard";
 import { DemandNow } from "@/components/demand/demand-now";
 import { EmptyState, PageContainer, PageHeader } from "@/components/shell/page";
+import { UtilitiesOverview } from "@/components/utilities/utilities-overview";
 import { requireTenant } from "@/server/auth/dal";
 import { countActiveAlarms, listActiveAlarms } from "@/server/queries/alarms";
 import { listTenantMeters } from "@/server/queries/meters";
+import { visibleModules } from "@/server/utilities/catalog";
 
 export const metadata: Metadata = { title: "Visão geral" };
 
 export default async function TenantOverviewPage({ params }: PageProps<"/app/[tenant]">) {
   const { tenant: slug } = await params;
   const { tenant, user } = await requireTenant(slug);
-  const [{ sites, meters }, alarms, alarmCount] = await Promise.all([
+  const [{ sites, meters }, alarms, alarmCount, modules] = await Promise.all([
     listTenantMeters(tenant.id),
     listActiveAlarms(tenant.id, 5),
     countActiveAlarms(tenant.id),
+    visibleModules(tenant),
   ]);
 
   return (
@@ -28,7 +31,8 @@ export default async function TenantOverviewPage({ params }: PageProps<"/app/[te
         description={`${meters.length} ${meters.length === 1 ? "medidor" : "medidores"} em ${sites.length} ${sites.length === 1 ? "unidade" : "unidades"}`}
       />
       <ActiveAlarmsSummary alarms={alarms} total={alarmCount} href={`/app/${tenant.slug}/alarmes`} />
-      {meters.length === 0 ? (
+      <UtilitiesOverview tenantSlug={tenant.slug} modules={modules} />
+      {meters.length === 0 && modules.length > 0 ? null : meters.length === 0 ? (
         <EmptyState
           icon={<GaugeIcon />}
           title="Nenhum medidor cadastrado"

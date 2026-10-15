@@ -24,15 +24,19 @@ import type { SiteDemandNow } from "@/lib/demand-forecast";
 import { fetchJson } from "@/lib/fetcher";
 import { formatNumber } from "@/lib/format";
 import type { LiveMeter, TvResponse } from "@/lib/telemetry-types";
+import type { UtilityModule } from "@/lib/utilities";
+import type { UtilitiesResponse } from "@/lib/utility-types";
 import { cn } from "@/lib/utils";
+import { UtilitiesTvScreen } from "@/components/utilities/utilities-tv";
 
-type ScreenId = "now" | "demand" | "alarms" | "today";
+type ScreenId = "now" | "demand" | "alarms" | "today" | "utilities";
 
 const SCREEN_TITLE: Record<ScreenId, string> = {
   now: "Agora",
   demand: "Demanda",
   alarms: "Alarmes",
   today: "Consumo de hoje",
+  utilities: "Água e gerador",
 };
 
 const SEVERITY = {
@@ -51,11 +55,14 @@ export function TvBoard({
   sites,
   meters,
   seconds,
+  modules = [],
 }: {
   tenant: { slug: string; name: string; logoUrl: string };
   sites: { id: string; name: string }[];
   meters: MeterSummary[];
   seconds: number;
+  /** Módulos de água e gerador do cliente (ganham uma tela). */
+  modules?: UtilityModule[];
 }) {
   const { data: live } = useLive(tenant.slug);
   const { data: demand } = useSWR<{ sites: SiteDemandNow[] }>(`/api/tenants/${tenant.slug}/demand`, fetchJson, {
@@ -66,7 +73,19 @@ export function TvBoard({
     refreshInterval: 60_000,
     keepPreviousData: true,
   });
-  const screens: ScreenId[] = ["now", ...(demand?.sites.length ? (["demand"] as const) : []), "alarms", "today"];
+  const utilityKey = (m: UtilityModule) =>
+    modules.includes(m) ? `/api/tenants/${tenant.slug}/utilities?module=${m}` : null;
+  const swrUtilities = { refreshInterval: 60_000, keepPreviousData: true };
+  const { data: water } = useSWR<UtilitiesResponse>(utilityKey("agua"), fetchJson, swrUtilities);
+  const { data: generators } = useSWR<UtilitiesResponse>(utilityKey("gerador"), fetchJson, swrUtilities);
+  const utilities = [...(water?.sites ?? []), ...(generators?.sites ?? [])].flatMap((s) => s.equipment);
+  const screens: ScreenId[] = [
+    "now",
+    ...(demand?.sites.length ? (["demand"] as const) : []),
+    ...(utilities.length ? (["utilities"] as const) : []),
+    "alarms",
+    "today",
+  ];
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const [controls, setControls] = useState(true);
@@ -152,6 +171,7 @@ export function TvBoard({
         )}
         {screen === "alarms" && <AlarmsScreen data={tv} now={now} />}
         {screen === "today" && <TodayScreen data={tv} />}
+        {screen === "utilities" && <UtilitiesTvScreen equipment={utilities} />}
       </main>
 
       <footer className="flex items-center gap-4">

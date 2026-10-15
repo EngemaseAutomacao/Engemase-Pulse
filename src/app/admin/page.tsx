@@ -21,6 +21,7 @@ const ENTITY_LABEL: Record<string, string> = {
   tenant: "cliente",
   site: "unidade",
   meter: "medidor",
+  "utility-equipment": "equipamento",
   user: "usuário",
   "alarm-rule": "regra de alarme",
   membership: "acesso de",
