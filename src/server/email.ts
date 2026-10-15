@@ -1,5 +1,6 @@
 import "server-only";
 import { APP_NAME, COMPANY_NAME } from "@/config/app";
+import { primaryForLightTheme, readableTextOn } from "@/lib/color";
 import { env } from "@/server/env";
 import { reportCaught } from "@/server/errors";
 
@@ -48,16 +49,32 @@ export async function sendEmail(message: {
 const escapeHtml = (text: string) =>
   text.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
-/** E-mail simples com um botão: funciona nos leitores de e-mail sem CSS externo. */
-export function actionEmail(options: { title: string; intro: string; button: string; url: string; footer: string }) {
+/** Cor padrão do botão (principal Engemase, versão para fundo branco). */
+const DEFAULT_BUTTON = "#007d7a";
+
+/**
+ * E-mail simples com um botão: funciona nos leitores de e-mail sem CSS externo.
+ * `color` é a cor principal do cliente; vai escurecida como no tema claro,
+ * porque o e-mail tem fundo branco.
+ */
+export function actionEmail(options: {
+  title: string;
+  intro: string;
+  button: string;
+  url: string;
+  footer: string;
+  color?: string;
+}) {
   const { title, intro, button, url, footer } = options;
+  const buttonColor = options.color && /^#[0-9a-f]{6}$/i.test(options.color) ? primaryForLightTheme(options.color) : DEFAULT_BUTTON;
+  const buttonText = readableTextOn(buttonColor);
   const html = `<!doctype html><html lang="pt-BR"><body style="margin:0;background:#f3f6f9;font-family:Arial,sans-serif;color:#0c2340">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px">
 <table role="presentation" width="100%" style="max-width:520px;background:#ffffff;border-radius:12px;padding:32px" cellpadding="0" cellspacing="0">
 <tr><td><p style="margin:0 0 4px;font-size:13px;color:#526079">${escapeHtml(APP_NAME)}</p>
 <h1 style="margin:0 0 16px;font-size:20px">${escapeHtml(title)}</h1>
 <p style="margin:0 0 24px;font-size:15px;line-height:1.5">${escapeHtml(intro)}</p>
-<p style="margin:0 0 24px"><a href="${escapeHtml(url)}" style="display:inline-block;background:#007d7a;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:bold">${escapeHtml(button)}</a></p>
+<p style="margin:0 0 24px"><a href="${escapeHtml(url)}" style="display:inline-block;background:${buttonColor};color:${buttonText};text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:bold">${escapeHtml(button)}</a></p>
 <p style="margin:0 0 8px;font-size:13px;color:#526079">${escapeHtml(footer)}</p>
 <p style="margin:0;font-size:12px;color:#526079;word-break:break-all">Se o botão não abrir, copie este endereço: ${escapeHtml(url)}</p>
 </td></tr></table>

@@ -38,3 +38,15 @@ test("tema escolhido fica salvo", async ({ page }) => {
   await page.getByRole("radio", { name: "Automático" }).click();
   await expect(page.locator("html")).not.toHaveClass(/dark/);
 });
+
+test("tema pelo horário segue o relógio, não o aparelho", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.clock.setFixedTime(new Date("2026-10-15T22:30:00-03:00"));
+  await page.goto("/login");
+  await page.getByRole("radio", { name: "Pelo horário" }).click();
+  await expect(page.locator("html")).toHaveClass(/dark/);
+  await page.clock.setFixedTime(new Date("2026-10-16T10:00:00-03:00"));
+  await page.reload();
+  await expect(page.locator("html")).not.toHaveClass(/dark/);
+  await page.getByRole("radio", { name: "Automático" }).click();
+});

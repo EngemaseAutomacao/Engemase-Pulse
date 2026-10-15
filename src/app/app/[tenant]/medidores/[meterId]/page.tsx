@@ -52,18 +52,13 @@ export default async function MeterPage({ params }: PageProps<"/app/[tenant]/med
 
       <MeterLivePanel tenantSlug={tenant.slug} meterId={meter.id} breakerAmps={meter.breakerAmps} />
 
-      <div className="grid gap-6 xl:grid-cols-5">
-        <div className="xl:col-span-3">
-          <HistoryChart
-            tenantSlug={tenant.slug}
-            meterId={meter.id}
-            canExport={hasTenantRole(user, tenant.id, "OPERATOR")}
-          />
-        </div>
-        <div className="xl:col-span-2">
-          <EnergyChart tenantSlug={tenant.slug} meterId={meter.id} />
-        </div>
-      </div>
+      <HistoryChart
+        tenantSlug={tenant.slug}
+        meterId={meter.id}
+        canExport={hasTenantRole(user, tenant.id, "OPERATOR")}
+        breakerAmps={meter.breakerAmps}
+      />
+      <EnergyChart tenantSlug={tenant.slug} meterId={meter.id} />
 
       <section aria-labelledby="info-title" className="surface p-4">
         <h2 id="info-title" className="mb-3 font-semibold">

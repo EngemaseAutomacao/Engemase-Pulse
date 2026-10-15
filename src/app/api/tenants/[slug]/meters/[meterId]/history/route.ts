@@ -33,6 +33,7 @@ export async function GET(
       start: resolved.start.toISOString(),
       stop: resolved.stop.toISOString(),
       every: resolved.every,
+      everyMs: resolved.everyMs,
     },
     { headers: NO_STORE_HEADERS },
   );

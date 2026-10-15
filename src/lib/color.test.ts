@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { primaryForLightTheme, readableTextOn } from "./color";
+import { brandRootCss, primaryForLightTheme, readableTextOn } from "./color";
 
 function luminance(hex: string) {
   const [r, g, b] = [1, 3, 5]
@@ -33,5 +33,21 @@ describe("primaryForLightTheme", () => {
   it("não mexe em cor que já é escura", () => {
     expect(primaryForLightTheme("#0C2340")).toBe("#0c2340");
     expect(primaryForLightTheme("#1d4ed8")).toBe("#1d4ed8");
+  });
+});
+
+describe("brandRootCss", () => {
+  it("põe as cores do cliente na raiz, com a versão para o tema claro", () => {
+    const css = brandRootCss("#5cbdb9", "#38bdf8");
+    expect(css.startsWith("html:root{")).toBe(true);
+    expect(css).toContain("--brand-primary:#5cbdb9");
+    expect(css).toContain("--brand-primary-light:#007d7a");
+    expect(css).toContain("--brand-accent:#38bdf8");
+    expect(css).toContain("--brand-accent-light:#0078a4");
+  });
+
+  it("ignora cor inválida (nada de CSS vindo do cadastro)", () => {
+    expect(brandRootCss("red;}body{display:none", "#38bdf8")).not.toContain("display");
+    expect(brandRootCss("x", "y")).toBe("");
   });
 });

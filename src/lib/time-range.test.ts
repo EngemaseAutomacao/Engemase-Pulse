@@ -29,7 +29,7 @@ describe("períodos", () => {
   });
 
   it("escolhe a menor janela com até 360 pontos", () => {
-    expect(aggregationWindow(3_600_000).every).toBe("10s");
+    expect(aggregationWindow(3_600_000).every).toBe("5m");
     expect(aggregationWindow(30 * 86_400_000).every).toBe("2h");
     expect(aggregationWindow(31 * 86_400_000).every).toBe("3h");
   });

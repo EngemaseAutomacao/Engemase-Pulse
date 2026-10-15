@@ -93,11 +93,23 @@ export async function requestPasswordReset(_previous: ActionState, formData: For
   after(async () => {
     const user = await db.user.findUnique({
       where: { email },
-      select: { id: true, name: true, email: true, active: true },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        active: true,
+        memberships: {
+          where: { tenant: { active: true } },
+          select: { tenant: { select: { name: true, primaryColor: true } } },
+          take: 2,
+        },
+      },
     });
     if (!user?.active) return;
     const path = await createPasswordLink(user.id, "reset");
-    await deliverPasswordLink(user, path, "reset");
+    // Quem é de um cliente só recebe o e-mail com a cor dele.
+    const only = user.memberships.length === 1 ? user.memberships[0].tenant : null;
+    await deliverPasswordLink(user, path, "reset", only ? { tenantName: only.name, color: only.primaryColor } : undefined);
   });
   return { status: "success", message: RESET_SENT };
 }

@@ -113,18 +113,41 @@ export function primaryForLightTheme(hex: string): string {
 /** Classe que recalcula as cores derivadas da marca no elemento (ver globals.css). */
 export const BRAND_THEME_CLASS = "brand-theme";
 
+/** As variáveis --brand-* de um cliente (cores inválidas voltam para o padrão do CSS). */
+function brandVariables(primary: string, accent: string): Record<string, string> {
+  const vars: Record<string, string> = {};
+  if (HEX.test(primary)) {
+    const light = primaryForLightTheme(primary);
+    vars["--brand-primary"] = primary.toLowerCase();
+    vars["--brand-on-primary"] = readableTextOn(primary);
+    vars["--brand-primary-light"] = light;
+    vars["--brand-on-primary-light"] = readableTextOn(light);
+  }
+  if (HEX.test(accent)) {
+    // Mesmo ajuste da principal: destaque claro some sobre o branco.
+    vars["--brand-accent"] = accent.toLowerCase();
+    vars["--brand-accent-light"] = primaryForLightTheme(accent);
+  }
+  return vars;
+}
+
 /**
  * Variáveis CSS com as cores de um cliente. Vão no `style` de um elemento que
  * também tenha a classe BRAND_THEME_CLASS: o CSS escolhe a versão escura ou
  * clara de cada cor conforme o tema e deriva botões, foco e destaques dela.
  */
 export function brandThemeStyle(primary: string, accent: string): CSSProperties {
-  const light = primaryForLightTheme(primary);
-  return {
-    "--brand-primary": primary,
-    "--brand-on-primary": readableTextOn(primary),
-    "--brand-primary-light": light,
-    "--brand-on-primary-light": readableTextOn(light),
-    "--brand-accent": accent,
-  } as CSSProperties;
+  return brandVariables(primary, accent) as CSSProperties;
+}
+
+/**
+ * As mesmas variáveis para a página inteira (`html:root`). Menus, listas,
+ * janelas e a gaveta do celular abrem fora da árvore da página (portal no
+ * <body>) e só herdam a cor do cliente se ela estiver na raiz.
+ */
+export function brandRootCss(primary: string, accent: string): string {
+  const declarations = Object.entries(brandVariables(primary, accent))
+    .map(([name, value]) => `${name}:${value}`)
+    .join(";");
+  return declarations ? `html:root{${declarations}}` : "";
 }

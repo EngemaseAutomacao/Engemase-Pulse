@@ -24,6 +24,8 @@ export type HistoryResponse = {
   start: string;
   stop: string;
   every: string;
+  /** Janela de agregação em ms (pontos alinhados a múltiplos dela). */
+  everyMs: number;
 };
 
 export type EnergyResponse = {

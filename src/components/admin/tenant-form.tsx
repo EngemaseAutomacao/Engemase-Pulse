@@ -161,19 +161,22 @@ function BrandPreview({ name, primary, accent }: { name: string; primary: string
               Tema {theme === "dark" ? "escuro" : "claro"}
             </p>
             <p className="truncate font-heading font-bold text-primary">{name}</p>
-            <div className="rounded-lg border border-primary/20 bg-accent px-3 py-2 text-sm text-primary">Visão geral</div>
+            <div className="h-1 rounded-full bg-linear-to-r from-primary to-brand-accent" aria-hidden />
+            <div className="relative rounded-lg bg-accent px-3 py-2 text-sm font-medium before:absolute before:inset-y-1.5 before:left-0 before:w-[3px] before:rounded-full before:bg-brand-accent">
+              Visão geral
+            </div>
             <div className="px-3 text-sm text-muted-foreground">Medidores</div>
             <div className="flex gap-2 pt-2">
               <span className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground">Botão</span>
-              <span className="rounded-lg border px-3 py-1.5 text-xs" style={{ borderColor: accent, color: accent }}>
-                Destaque
-              </span>
+              <span className="rounded-lg border border-brand-accent px-3 py-1.5 text-xs text-brand-accent">Destaque</span>
             </div>
           </div>
         ))}
       </div>
       <p className="text-xs text-muted-foreground">
-        No tema claro, cores claras são escurecidas automaticamente para o texto continuar legível.
+        A principal vai nos botões, links, nome do cliente e item aberto do menu; a de destaque, na faixa da marca e
+        no marcador do item aberto. No tema claro, cores claras são escurecidas automaticamente para continuarem
+        legíveis.
       </p>
     </aside>
   );

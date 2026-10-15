@@ -61,3 +61,29 @@ test("alarme do Painel aparece marcado e o relatório abre", async ({ page }) =>
   await expect(page.getByRole("heading", { name: /Relatório de energia/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Consumo por setor" })).toBeVisible();
 });
+
+test("histórico: ocultar pena, trocar a cor e comparar com o período anterior", async ({ page }) => {
+  await page.goto(`/app/${E2E.slug}/medidores`);
+  await page.getByRole("link", { name: /Câmaras frias/ }).first().click();
+  const history = page.locator("section[aria-labelledby=history-title]");
+  await expect(history.locator(".recharts-line-curve")).toHaveCount(4);
+
+  await history.getByRole("button", { name: "L2", exact: true }).click();
+  await expect(history.getByRole("button", { name: "L2", exact: true })).toHaveAttribute("aria-pressed", "false");
+  await expect(history.locator(".recharts-line-curve")).toHaveCount(3);
+
+  await history.getByRole("button", { name: "Cor de L1" }).click();
+  await page.getByRole("radio", { name: "Rosa" }).click();
+  await page.keyboard.press("Escape");
+  await expect(history.locator(".recharts-line-curve").first()).toHaveAttribute("stroke", "#d6457f");
+
+  // Fica salvo neste navegador.
+  await page.reload();
+  await expect(history.locator(".recharts-line-curve")).toHaveCount(3);
+  await history.getByRole("button", { name: "Mostrar todas" }).click();
+  await history.getByRole("button", { name: "Cores padrão" }).click();
+
+  await expect(history.getByRole("columnheader", { name: "Máximo" })).toBeVisible();
+  await history.getByRole("button", { name: "Comparar com anterior" }).click();
+  await expect(history.getByRole("columnheader", { name: "Média anterior" })).toBeVisible();
+});

@@ -22,7 +22,7 @@ import { db } from "@/server/db";
 
 export class MemberRuleError extends Error {}
 
-type Tenant = { id: string; name: string };
+type Tenant = { id: string; name: string; primaryColor?: string };
 
 export function listTenantMembers(tenantId: string) {
   return db.membership.findMany({
@@ -96,7 +96,7 @@ export async function inviteMember(
     details: { name: input.name, email: input.email, tenantId: tenant.id, role: input.role, invited: true },
   });
   const path = await createPasswordLink(user.id, "invite");
-  return { existing: false, delivery: await deliverPasswordLink(user, path, "invite", { tenantName: tenant.name }) };
+  return { existing: false, delivery: await deliverPasswordLink(user, path, "invite", { tenantName: tenant.name, color: tenant.primaryColor }) };
 }
 
 async function assertCanChange(actor: AuthUser, tenantId: string, userId: string, losingAdmin: boolean) {
@@ -169,5 +169,5 @@ export async function newAccessLink(actor: AuthUser, tenant: Tenant, userId: str
     entityId: user.id,
     details: { email: user.email, link: purpose },
   });
-  return deliverPasswordLink(user, path, purpose, { tenantName: tenant.name });
+  return deliverPasswordLink(user, path, purpose, { tenantName: tenant.name, color: tenant.primaryColor });
 }

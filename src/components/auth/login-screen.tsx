@@ -3,6 +3,7 @@ import { ActivityIcon, BarChart3Icon, Building2Icon } from "lucide-react";
 import { APP_NAME, BRAND, COMPANY_NAME } from "@/config/app";
 import { ThemeSwitcher } from "@/components/theme/theme-switcher";
 import { BRAND_THEME_CLASS, brandThemeStyle } from "@/lib/color";
+import { BrandRootStyle } from "@/components/shell/brand-root-style";
 import { cn } from "@/lib/utils";
 
 export type LoginBrand = {
@@ -46,6 +47,7 @@ export function LoginScreen({
       className={cn("grid min-h-dvh lg:grid-cols-[1.1fr_1fr]", BRAND_THEME_CLASS)}
       style={brandThemeStyle(brand.primaryColor, brand.accentColor)}
     >
+      <BrandRootStyle primary={brand.primaryColor} accent={brand.accentColor} />
       <section className="relative hidden overflow-hidden bg-sidebar p-12 lg:flex lg:flex-col lg:justify-between">
         {brand.backgroundUrl ? (
           <>

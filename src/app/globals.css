@@ -34,7 +34,7 @@
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-info: var(--info);
-  --color-brand-accent: var(--brand-accent);
+  --color-brand-accent: var(--highlight);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -70,6 +70,7 @@
   --brand-primary-light: #007d7a;
   --brand-on-primary-light: #ffffff;
   --brand-accent: #38bdf8;
+  --brand-accent-light: #0078a4;
 }
 
 /* Tema claro (.light força o claro num trecho, ex.: prévia de cores). */
@@ -160,18 +161,22 @@
   --sidebar-primary-foreground: var(--primary-foreground);
   --sidebar-accent: color-mix(in oklab, var(--primary) 12%, transparent);
   --sidebar-ring: var(--ring);
+  /* Cor de destaque do cliente: faixa da marca e marcador do item aberto no menu. */
+  --highlight: var(--brand-accent-light);
 }
 
 .dark,
 .dark .brand-theme {
   --primary: var(--brand-primary);
   --primary-foreground: var(--brand-on-primary);
+  --highlight: var(--brand-accent);
 }
 
 .light.brand-theme,
 .light .brand-theme {
   --primary: var(--brand-primary-light);
   --primary-foreground: var(--brand-on-primary-light);
+  --highlight: var(--brand-accent-light);
 }
 
 @layer base {
@@ -194,6 +199,11 @@
   h4 {
     font-family: var(--font-heading);
     letter-spacing: -0.01em;
+  }
+  /* Gráfico focado pelo clique/arraste: sem contorno (pelo teclado continua). */
+  .recharts-wrapper:focus:not(:focus-visible),
+  .recharts-surface:focus:not(:focus-visible) {
+    outline: none;
   }
   button:not(:disabled),
   [role="button"]:not(:disabled) {

@@ -26,19 +26,33 @@ export function SeriesLegend({ items, className }: { items: LegendItem[]; classN
 /** Caixa do tooltip compartilhada pelos gráficos. */
 export function TooltipBox({
   title,
+  subtitle,
   rows,
 }: {
   title: string;
-  rows: { key: string; label: string; value: string; color?: string }[];
+  subtitle?: string;
+  /** dashed: traço tracejado (ex.: período anterior). */
+  rows: { key: string; label: string; value: string; color?: string; dashed?: boolean }[];
 }) {
   return (
     <div className="min-w-44 rounded-lg border bg-popover px-3 py-2 text-xs shadow-lg">
-      <p className="mb-1.5 font-medium text-foreground">{title}</p>
-      <ul className="space-y-1">
+      <p className="font-medium text-foreground">{title}</p>
+      {subtitle && <p className="text-muted-foreground">{subtitle}</p>}
+      <ul className="mt-1.5 space-y-1">
         {rows.map((row) => (
           <li key={row.key} className="flex items-center justify-between gap-4">
             <span className="flex items-center gap-1.5 text-muted-foreground">
-              {row.color && <span aria-hidden className="h-0.5 w-3 rounded-full" style={{ backgroundColor: row.color }} />}
+              {row.color && (
+                <span
+                  aria-hidden
+                  className="w-3 shrink-0"
+                  style={
+                    row.dashed
+                      ? { borderTop: `2px dashed ${row.color}` }
+                      : { height: 2, borderRadius: 999, backgroundColor: row.color }
+                  }
+                />
+              )}
               {row.label}
             </span>
             <span className="tabular font-medium text-foreground">{row.value}</span>

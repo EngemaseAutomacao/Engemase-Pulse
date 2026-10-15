@@ -18,8 +18,11 @@ Multimedidores ──RS485/Modbus──▶ Painel local (mini PC na loja, SQLite
 ## O que tem
 
 - **Painel do cliente**: potência, FP global, medidores online, cartões ao vivo (atualiza a cada 10 s).
-- **Detalhe do medidor**: tabela por fase (V, A, kW, kVA, kVAr, FP), THD, neutro e demanda, histórico
-  com período e grandeza selecionáveis, consumo por hora/dia/mês (no fuso da unidade) e CSV para Excel.
+- **Detalhe do medidor**: tabela por fase (V, A, kW, kVA, kVAr, FP), THD, neutro e demanda, consumo por
+  hora/dia/mês (no fuso da unidade) e CSV para Excel. **Histórico** (tendência) com grandeza e período
+  rápido ou personalizado, setas para voltar/avançar, zoom arrastando, **comparação com o período
+  anterior**, linhas de limite (faixa normal, disjuntor), mínimo/média/máximo por pena e modo ampliado.
+  Cada **pena** pode ser ocultada e ter a cor trocada (fica salvo no navegador).
 - **Consumo por setor**: no dia, hora a hora (pico, maior setor, participação); no mês, dia a dia com
   custo em R$ por setor e comparação com o mês anterior e o mesmo mês do ano anterior. Sempre com o
   **não medido** (entrada geral menos a soma dos alimentadores). Planilha para Excel.
@@ -33,11 +36,13 @@ Multimedidores ──RS485/Modbus──▶ Painel local (mini PC na loja, SQLite
   contratada** automáticos, com **notificação push** no celular/computador.
 - **Usuários**: o administrador do cliente convida a equipe dele (papéis), sem depender da Engemase;
   **esqueci minha senha** por e-mail (opcional).
-- **Administração** (equipe da plataforma): clientes com logo, cores e imagem de fundo no login próprio
-  em `/login/<slug>`, unidades com o token do Painel e a tarifa, medidores (criados pelo Painel), usuários
+- **Administração** (equipe da plataforma): clientes com logo, cores (principal: botões, links, menu;
+  destaque: faixa da marca e item aberto do menu — valem também em menus, janelas e no e-mail) e imagem
+  de fundo no login próprio em `/login/<slug>`, unidades com o token do Painel e a tarifa, medidores (criados pelo Painel), usuários
   e a tela **Saúde do sistema** (o que falta configurar, lojas sem envio, erros recentes).
 - **PWA**: instalável no Android, iOS e desktop; página offline; aviso de "sem conexão".
-- **Responsivo** do celular ao monitor grande; tema **claro, escuro ou automático** (segue o aparelho).
+- **Responsivo** do celular ao monitor grande; tema **claro, escuro, automático** (segue o aparelho)
+  ou **pelo horário** (claro das 6h às 18h).
 - **Painel local**: o supervisório instalado na loja lê o Modbus e envia as leituras para a nuvem,
   sem porta aberta na loja. Ver [Painel local](#painel-local-supervisório-da-loja).
 

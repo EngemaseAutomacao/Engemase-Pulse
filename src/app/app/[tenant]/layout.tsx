@@ -14,6 +14,7 @@ import {
 import { AppShell, type NavSection } from "@/components/shell/app-shell";
 import { ShellSkeleton } from "@/components/shell/shell-skeleton";
 import { BRAND_THEME_CLASS, brandThemeStyle } from "@/lib/color";
+import { BrandRootStyle } from "@/components/shell/brand-root-style";
 import { requireTenant } from "@/server/auth/dal";
 import { ROLE_LABEL } from "@/server/auth/permissions";
 import { tenantLogoUrl } from "@/server/branding";
@@ -71,6 +72,7 @@ async function TenantShell({
 
   return (
     <div className={BRAND_THEME_CLASS} style={brandThemeStyle(tenant.primaryColor, tenant.accentColor)}>
+      <BrandRootStyle primary={tenant.primaryColor} accent={tenant.accentColor} />
       <AppShell
         brand={{
           name: tenant.name,

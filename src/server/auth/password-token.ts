@@ -80,7 +80,8 @@ export async function deliverPasswordLink(
   user: { name: string; email: string },
   path: string,
   purpose: PasswordTokenPurpose,
-  context?: { tenantName?: string },
+  /** Cliente do convite ou o único cliente da pessoa: nome no texto, cor no botão. */
+  context?: { tenantName?: string; color?: string },
 ): Promise<{ emailed: boolean; url: string | null }> {
   const base = appUrl();
   const url = base ? `${base}${path}` : null;
@@ -95,6 +96,7 @@ export async function deliverPasswordLink(
           }. Para entrar, defina a sua senha.`,
           button: "Definir minha senha",
           url,
+          color: context?.color,
           footer: `O link vale por ${PASSWORD_LINK_VALIDITY.invite} e só pode ser usado uma vez.`,
         })
       : actionEmail({
@@ -102,6 +104,7 @@ export async function deliverPasswordLink(
           intro: `Olá, ${firstName}! Recebemos um pedido para redefinir a sua senha. Se não foi você, ignore este e-mail.`,
           button: "Criar nova senha",
           url,
+          color: context?.color,
           footer: `O link vale por ${PASSWORD_LINK_VALIDITY.reset} e só pode ser usado uma vez.`,
         });
   const emailed = await sendEmail({

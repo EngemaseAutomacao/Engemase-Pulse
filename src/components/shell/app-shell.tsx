@@ -47,6 +47,10 @@ export type NavItem = {
 
 export type NavSection = { label: string; items: NavItem[] };
 
+/** Item aberto: marcador na cor de destaque do cliente e ícone na cor principal. */
+const ACTIVE_MARKER =
+  "relative before:absolute before:inset-y-1.5 before:left-0 before:w-[3px] before:rounded-full before:bg-brand-accent before:opacity-0 data-active:before:opacity-100 data-active:[&_svg]:text-sidebar-primary";
+
 export type ShellUser = { name: string; email: string; subtitle: string };
 
 export function AppShell({
@@ -95,6 +99,8 @@ function ShellLayout({
   return (
     <>
       <Sidebar collapsible="icon">
+        {/* Faixa da marca: cor principal para a de destaque do cliente. */}
+        <div aria-hidden className="h-1 shrink-0 bg-linear-to-r from-sidebar-primary to-brand-accent" />
         <SidebarHeader className="p-3">
           <Link href={brand.href} className="flex items-center gap-3 rounded-lg p-1 outline-none">
             {/* eslint-disable-next-line @next/next/no-img-element -- logo do cliente vem do banco */}
@@ -118,7 +124,12 @@ function ShellLayout({
                 <SidebarMenu>
                   {section.items.map((item) => (
                     <SidebarMenuItem key={item.href}>
-                      <SidebarMenuButton asChild isActive={isActive(item)} tooltip={item.label}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive(item)}
+                        tooltip={item.label}
+                        className={ACTIVE_MARKER}
+                      >
                         <Link href={item.href} onClick={closeMobile}>
                           {item.icon}
                           <span>{item.label}</span>
@@ -199,9 +210,10 @@ function ShellLayout({
       </Sidebar>
 
       <SidebarInset className="min-w-0">
-        <header className="sticky top-0 z-20 flex min-h-12 items-center gap-2 border-b bg-background/80 px-3 pt-[env(safe-area-inset-top)] backdrop-blur md:hidden">
+        <header className="sticky top-0 z-20 flex min-h-12 items-center gap-2 bg-background/80 px-3 pt-[env(safe-area-inset-top)] backdrop-blur md:hidden">
           <SidebarTrigger />
           <span className="truncate font-heading text-sm font-semibold">{brand.name}</span>
+          <span aria-hidden className="absolute inset-x-0 bottom-0 h-0.5 bg-linear-to-r from-primary to-brand-accent" />
         </header>
         {children}
       </SidebarInset>

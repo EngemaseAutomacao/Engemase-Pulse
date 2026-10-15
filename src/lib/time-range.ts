@@ -19,12 +19,14 @@ export const HISTORY_RANGE_IDS = HISTORY_RANGES.map((r) => r.id) as [HistoryRang
 /** Maior intervalo que uma consulta personalizada pode cobrir. */
 export const MAX_HISTORY_SPAN_MS = 366 * 86_400_000;
 
-/** Janelas de agregação possíveis, da menor para a maior. */
+/** Menor intervalo de zoom/período personalizado (6 pontos de 5 min). */
+export const MIN_HISTORY_SPAN_MS = 30 * 60_000;
+
+/**
+ * Janelas de agregação possíveis, da menor para a maior. A menor é 5 min
+ * porque é a resolução guardada (resumo de 5 min do Painel).
+ */
 const WINDOW_LADDER: { every: string; ms: number }[] = [
-  { every: "10s", ms: 10_000 },
-  { every: "30s", ms: 30_000 },
-  { every: "1m", ms: 60_000 },
-  { every: "2m", ms: 120_000 },
   { every: "5m", ms: 300_000 },
   { every: "10m", ms: 600_000 },
   { every: "15m", ms: 900_000 },
