@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { ADMIN, login } from "./fixtures";
+import { ADMIN, E2E, login } from "./fixtures";
 
 test("senha errada mostra o erro e a certa entra na administração", async ({ page }) => {
   await page.goto("/login");
@@ -46,4 +46,12 @@ test("escuro é preto, e o automático segue o aparelho", async ({ page }) => {
   await expect(page.locator("body")).toHaveCSS("background-color", "rgb(0, 0, 0)");
   await page.emulateMedia({ colorScheme: "light" });
   await expect(page.locator("html")).not.toHaveClass(/dark/);
+});
+
+test("no automático, o menu diz em que modo o navegador está", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "dark" });
+  await login(page);
+  await page.goto(`/app/${E2E.slug}`);
+  await page.getByRole("button", { name: /Equipe da plataforma|Administrador/ }).last().click();
+  await expect(page.getByText(/Seguindo o navegador, que está em modo/)).toContainText("escuro");
 });

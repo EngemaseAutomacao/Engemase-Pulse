@@ -10,9 +10,18 @@ const ICON: Record<ThemePreference, typeof SunIcon> = { system: MonitorIcon, lig
 
 const THEME_NAME = { light: "claro", dark: "escuro" } as const;
 
+/**
+ * O Automático só enxerga o que o navegador informa (prefers-color-scheme).
+ * Chrome e Edge têm configuração própria de aparência — e uma opção de forçar
+ * escuro nos sites — que passam por cima do Windows; por isso a tela mostra o
+ * que o navegador está dizendo e onde mudar.
+ */
+const BROWSER_FIX =
+  "Chrome: ⋮ › Configurações › Aparência › Modo: Dispositivo. Edge: ⋯ › Configurações › Aparência › Aparência geral: Padrão do sistema. Confira também se não há “modo escuro forçado” para sites. No app instalado, feche e abra de novo depois de mudar.";
+
 /** Escolha do tema dentro do menu do usuário. */
 export function ThemeMenuItems() {
-  const { preference } = useTheme();
+  const { preference, device } = useTheme();
   return (
     <>
       <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">Tema</DropdownMenuLabel>
@@ -30,6 +39,12 @@ export function ThemeMenuItems() {
           );
         })}
       </DropdownMenuRadioGroup>
+      {preference === "system" && device && (
+        <p className="max-w-56 px-2 pt-0.5 pb-1.5 text-xs text-muted-foreground" title={BROWSER_FIX}>
+          Seguindo o navegador, que está em modo <span className="font-medium text-foreground">{THEME_NAME[device]}</span>.
+          {device === "dark" && " Se o Windows está no claro, veja Minha conta › Aparência."}
+        </p>
+      )}
     </>
   );
 }
@@ -82,12 +97,12 @@ export function ThemeStatus() {
     return (
       <div className="space-y-1 text-sm text-muted-foreground">
         <p>
-          Automático acompanha o aparelho, que agora informa tema{" "}
+          Automático segue o que o navegador informa, e agora ele está em modo{" "}
           <span className="font-medium text-foreground">{THEME_NAME[device]}</span>.
         </p>
         <p className="text-xs">
-          Se não trocar sozinho, confira o tema do navegador (no Chrome: Configurações › Aparência › Modo deve
-          estar em &ldquo;Dispositivo&rdquo;) e o do sistema. Para fixar um tema, escolha Claro ou Escuro.
+          Se o Windows está em outro tema, o navegador está passando por cima dele. {BROWSER_FIX} Para fixar um
+          tema aqui, independente do navegador, escolha Claro ou Escuro.
         </p>
       </div>
     );

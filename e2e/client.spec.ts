@@ -122,3 +122,13 @@ test("usuários: escalonamento e avisos por pessoa", async ({ page }) => {
   await expect(page.getByText("Escalonamento após 15 min sem reconhecimento.")).toBeVisible();
   await page.getByLabel("Prazo do escalonamento").selectOption("0");
 });
+
+test("ajuda: manual e perguntas frequentes com busca", async ({ page }) => {
+  await page.goto(`/app/${E2E.slug}`);
+  await page.getByRole("link", { name: "Ajuda" }).click();
+  await expect(page.getByRole("heading", { name: "Perguntas frequentes" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Manual do usuário" })).toBeVisible();
+  await page.getByLabel("Buscar na ajuda").fill("telegram");
+  await expect(page.getByText("Como recebo os alarmes pelo Telegram?")).toBeVisible();
+  await expect(page.getByText("Esqueci a senha.")).toHaveCount(0);
+});

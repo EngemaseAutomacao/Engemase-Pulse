@@ -6,6 +6,7 @@ import {
   GaugeIcon,
   GitCompareArrowsIcon,
   LayoutDashboardIcon,
+  LifeBuoyIcon,
   NetworkIcon,
   ReceiptTextIcon,
   ShieldIcon,
@@ -69,6 +70,10 @@ async function TenantShell({
       items: [{ label: "Usuários", href: `${base}/usuarios`, icon: <UsersIcon /> }],
     });
   }
+  sections.push({
+    label: "Suporte",
+    items: [{ label: "Ajuda", href: `${base}/ajuda`, icon: <LifeBuoyIcon /> }],
+  });
   if (user.isPlatformAdmin) {
     sections.push({
       label: "Plataforma",

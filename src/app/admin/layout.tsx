@@ -5,6 +5,7 @@ import {
   HeartPulseIcon,
   LayoutDashboardIcon,
   MapPinIcon,
+  LifeBuoyIcon,
   MonitorIcon,
   UsersIcon,
 } from "lucide-react";
@@ -27,7 +28,10 @@ const SECTIONS: NavSection[] = [
   },
   {
     label: "Monitoramento",
-    items: [{ label: "Painéis dos clientes", href: "/app", icon: <MonitorIcon /> }],
+    items: [
+      { label: "Painéis dos clientes", href: "/app", icon: <MonitorIcon /> },
+      { label: "Ajuda", href: "/admin/ajuda", icon: <LifeBuoyIcon /> },
+    ],
   },
 ];
 
