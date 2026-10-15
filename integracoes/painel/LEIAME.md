@@ -1,4 +1,4 @@
-# Painel local → Monitor de Energia (nuvem)
+# Painel local → Engemase Pulse (nuvem)
 
 O Painel (supervisório da loja) continua fazendo tudo o que já faz: lê o Modbus,
 guarda o histórico em SQLite, calcula alarmes e consumo e funciona sem internet.

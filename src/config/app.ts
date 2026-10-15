@@ -1,12 +1,13 @@
 /**
- * Identidade da plataforma. O nome é provisório: troque aqui e ele muda em
- * todas as telas, títulos, notificações e no app instalado (PWA).
+ * Identidade da plataforma: trocando aqui, o nome muda em todas as telas,
+ * títulos, e-mails e no app instalado (PWA).
  */
-export const APP_NAME = "Monitor de Energia";
+export const APP_NAME = "Engemase Pulse";
 /** Nome curto sob o ícone do app instalado (celular). */
-export const APP_SHORT_NAME = "Energia";
-export const APP_DESCRIPTION = "Monitoramento de multimedidores de energia em tempo real";
-export const COMPANY_NAME = "Engemase";
+export const APP_SHORT_NAME = "Pulse";
+/** Linha de apoio do produto (login e rodapé dos e-mails). */
+export const APP_TAGLINE = "Supervisório de utilidades";
+export const APP_DESCRIPTION = "Supervisório de utilidades em tempo real";
 
 export const BRAND = {
   logo: "/brand/engemase-logo.png",

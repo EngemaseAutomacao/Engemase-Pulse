@@ -1,10 +1,11 @@
-# Monitor de Energia
+# Engemase Pulse
 
-Plataforma multi-cliente para monitorar **multimedidores de energia** em tempo real.
+Supervisório de utilidades da Engemase: plataforma multi-cliente que acompanha em tempo real os
+**multimedidores de energia** das lojas (água e gerador são os próximos módulos).
 Cada cliente tem seu login, sua marca (logo e cores) e suas unidades; cada unidade recebe as
 leituras do **Painel local**, o supervisório instalado na loja.
 
-> O nome é provisório: troque em [`src/config/app.ts`](src/config/app.ts).
+> Nome, nome curto e linha de apoio ficam em [`src/config/app.ts`](src/config/app.ts).
 
 ```
 Multimedidores ──RS485/Modbus──▶ Painel local (mini PC na loja, SQLite)

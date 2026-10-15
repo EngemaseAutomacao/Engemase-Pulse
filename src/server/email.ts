@@ -1,5 +1,5 @@
 import "server-only";
-import { APP_NAME, COMPANY_NAME } from "@/config/app";
+import { APP_NAME, APP_TAGLINE } from "@/config/app";
 import { primaryForLightTheme, readableTextOn } from "@/lib/color";
 import { env } from "@/server/env";
 import { reportCaught } from "@/server/errors";
@@ -78,7 +78,7 @@ ${content}
 <p style="margin:0 0 8px;font-size:13px;color:#526079">${escapeHtml(footer)}</p>
 <p style="margin:0;font-size:12px;color:#526079;word-break:break-all">Se o botão não abrir, copie este endereço: ${escapeHtml(url)}</p>
 </td></tr></table>
-<p style="font-size:12px;color:#526079">${escapeHtml(APP_NAME)} · ${escapeHtml(COMPANY_NAME)}</p>
+<p style="font-size:12px;color:#526079">${escapeHtml(APP_NAME)} · ${escapeHtml(APP_TAGLINE)}</p>
 </td></tr></table></body></html>`;
 }
 

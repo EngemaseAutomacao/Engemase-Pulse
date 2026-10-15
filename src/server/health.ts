@@ -140,7 +140,7 @@ export async function getSystemHealth() {
           detail: appUrl()
             ? "Desativado: “Esqueci minha senha” não funciona e os convites mostram um link para repassar à pessoa."
             : "Desativado, e sem o endereço público do sistema os links de senha e convite não podem ser gerados.",
-          fix: "Crie uma conta no Resend, verifique o domínio de envio e cadastre RESEND_API_KEY e EMAIL_FROM (ex.: Monitor de Energia <nao-responda@seudominio.com.br>) na Vercel. Se usar domínio próprio, cadastre também APP_URL.",
+          fix: "Crie uma conta no Resend, verifique o domínio de envio e cadastre RESEND_API_KEY e EMAIL_FROM (ex.: Engemase Pulse <nao-responda@seudominio.com.br>) na Vercel. Se usar domínio próprio, cadastre também APP_URL.",
         },
     isTelegramConfigured()
       ? {

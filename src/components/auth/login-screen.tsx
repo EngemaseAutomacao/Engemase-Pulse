@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { ActivityIcon, BarChart3Icon, Building2Icon } from "lucide-react";
-import { APP_NAME, BRAND, COMPANY_NAME } from "@/config/app";
+import { APP_NAME, APP_TAGLINE, BRAND } from "@/config/app";
 import { ThemeSwitcher } from "@/components/theme/theme-switcher";
 import { BRAND_THEME_CLASS, brandThemeStyle } from "@/lib/color";
 import { BrandRootStyle } from "@/components/shell/brand-root-style";
@@ -96,7 +96,7 @@ export function LoginScreen({
         </div>
 
         <div className="relative max-w-md space-y-8">
-          <h1 className="text-4xl leading-tight font-bold">Energia sob controle, em tempo real.</h1>
+          <h1 className="text-4xl leading-tight font-bold">Sua instalação sob controle, em tempo real.</h1>
           <p className="text-lg text-muted-foreground">{brand.tagline}</p>
           <ul className="space-y-3">
             {FEATURES.map(({ icon: Icon, text }) => (
@@ -111,7 +111,7 @@ export function LoginScreen({
         </div>
 
         <p className="relative text-xs text-muted-foreground">
-          {APP_NAME} · {COMPANY_NAME}
+          {APP_NAME} · {APP_TAGLINE}
         </p>
       </section>
 

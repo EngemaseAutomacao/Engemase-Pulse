@@ -1,5 +1,5 @@
 /**
- * Envio para a nuvem (Monitor de Energia) — vai em src/nuvem.js do Painel.
+ * Envio para a nuvem (Engemase Pulse) — vai em src/nuvem.js do Painel.
  *
  * O supervisório continua sendo a referência na loja: lê o Modbus, guarda o
  * histórico, calcula alarmes e consumo, e funciona sem internet. Este módulo só
