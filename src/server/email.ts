@@ -50,7 +50,7 @@ const escapeHtml = (text: string) =>
   text.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
 /** Cor padrão do botão (principal Engemase, versão para fundo branco). */
-const DEFAULT_BUTTON = "#007d7a";
+const DEFAULT_BUTTON = "#1874b3";
 
 function buttonColors(color: string | undefined) {
   const background = color && /^#[0-9a-f]{6}$/i.test(color) ? primaryForLightTheme(color) : DEFAULT_BUTTON;

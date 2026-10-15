@@ -64,10 +64,10 @@
 :root {
   --radius: 0.75rem;
 
-  /* Cor do cliente (padrão Engemase). No tema claro vai a versão escurecida. */
-  --brand-primary: #5cbdb9;
+  /* Cor do cliente (padrão: azul Engemase). No tema claro vai a versão escurecida. */
+  --brand-primary: #4a9ee0;
   --brand-on-primary: #0c2340;
-  --brand-primary-light: #007d7a;
+  --brand-primary-light: #1874b3;
   --brand-on-primary-light: #ffffff;
   --brand-accent: #38bdf8;
   --brand-accent-light: #0078a4;

@@ -32,7 +32,7 @@ model Tenant {
   /// CNPJ (somente dígitos).
   document     String?
   active       Boolean  @default(true)
-  primaryColor String   @default("#5cbdb9") @map("primary_color")
+  primaryColor String   @default("#4a9ee0") @map("primary_color")
   accentColor  String   @default("#38bdf8") @map("accent_color")
   loginTagline String?  @map("login_tagline")
   /// Minutos sem reconhecimento até avisar o escalonamento (null = não escalona).

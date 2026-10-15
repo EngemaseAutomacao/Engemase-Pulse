@@ -26,7 +26,7 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
           <p style={{ opacity: 0.7 }}>Recarregue a página. Se continuar, contate o suporte.</p>
           <button
             onClick={reset}
-            style={{ marginTop: 16, padding: "10px 18px", borderRadius: 10, border: 0, background: "#5cbdb9", color: "#0c2340", fontWeight: 600 }}
+            style={{ marginTop: 16, padding: "10px 18px", borderRadius: 10, border: 0, background: "#4a9ee0", color: "#0c2340", fontWeight: 600 }}
           >
             Tentar de novo
           </button>

@@ -12,7 +12,7 @@ export const APP_DESCRIPTION = "Supervisório de utilidades em tempo real";
 export const BRAND = {
   logo: "/brand/engemase-logo.png",
   watermark: "/brand/engemase-watermark.png",
-  primaryColor: "#5cbdb9",
+  primaryColor: "#4a9ee0",
   accentColor: "#38bdf8",
 } as const;
 
