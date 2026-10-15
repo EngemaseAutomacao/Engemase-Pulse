@@ -23,6 +23,12 @@ Configurador ── HTTPS, só de saída, 10 s ──▶   POST /api/ingest
 
 ## Instalar (no código do Pulse Configurador)
 
+O código do configurador fica em
+[EngemaseAutomacao/Pulse-Configurador](https://github.com/EngemaseAutomacao/Pulse-Configurador),
+já com este módulo ligado no `server.js` e com a ligação pela interface (o técnico cola o
+endereço e o token; ver o `NUVEM.md` de lá). Esta pasta guarda uma cópia do `nuvem.js` como
+referência do formato do envio. Numa cópia antiga do configurador, sem o módulo:
+
 1. Copie `nuvem.js` para `src/nuvem.js` do configurador.
 2. No `server.js`, quatro linhas:
 
@@ -43,7 +49,7 @@ Configurador ── HTTPS, só de saída, 10 s ──▶   POST /api/ingest
    `() => config` (e não `config`) é proposital: quando a Engenharia aplica uma
    configuração nova, o módulo já enxerga a lista nova de equipamentos.
 
-3. No `config.json` do gateway:
+3. No `config.json` do gateway (no configurador novo, também dá pela interface):
 
    ```json
    "nuvem": { "url": "https://engemase-pulse.vercel.app", "token": "pnl_…" }

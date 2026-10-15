@@ -239,7 +239,7 @@ Multimedidores ──RS485/Modbus──▶ Gateway (Pulse Configurador, SQLite) 
 
 1. Em **Administração → Unidades**, crie a unidade e clique em **Gerar token**.
    O token aparece uma única vez (no banco fica só o SHA-256), já com o trecho do `config.json`.
-2. No Pulse Configurador, instale o módulo de envio: [`integracoes/painel/`](integracoes/painel/LEIAME.md).
+2. No Pulse Configurador, instale o módulo de envio: [`integracoes/pulse-configurador/`](integracoes/pulse-configurador/LEIAME.md).
 3. No primeiro envio, os **medidores são criados sozinhos** a partir dos equipamentos de energia
    do configurador (nome, TAG ISA, entrada geral, disjuntor, endereço Modbus); reservatórios e grupos
    geradores (grupos `agua` e `gerador`) viram os equipamentos dos módulos, com os parâmetros da
@@ -296,7 +296,7 @@ src/
   lib/                  código compartilhado: campos do medidor, validação, períodos, alarmes
   server/               só servidor: auth (DAL), banco, cripto, gateway (agent), telemetria, push
 public/sw.js            service worker (push + offline)
-integracoes/painel/     módulo de envio (vai no Pulse Configurador, no gateway da unidade)
+integracoes/pulse-configurador/  módulo de envio (vai no Pulse Configurador, no gateway da unidade)
 ```
 
 Princípios: verificação de acesso perto dos dados (DAL em `src/server/auth/dal.ts`), toda entrada

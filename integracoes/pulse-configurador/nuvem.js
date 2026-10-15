@@ -33,7 +33,10 @@
  *    foram (a que está em andamento vai de novo a cada minuto até terminar).
  * Internet caiu: quando voltar, o atraso vai em lotes, sem intervenção.
  *
- * Configuração (config.json do gateway):
+ * Ligação: na interface (Engenharia → Nuvem), o técnico cola o endereço e o
+ * token gerado no Pulse; eles ficam em dados/nuvem-<configuração>.json (fora do
+ * config.json e do Git) e valem por cima da seção da configuração. Também dá
+ * para pôr direto no config.json do gateway:
  *   "nuvem": { "url": "https://engemase-pulse.vercel.app", "token": "pnl_…" }
  * Opcionais: "intervalo_s": 10, "historico_inicial_dias": 7 (quanto do resumo de
  * 5 min já gravado sobe no primeiro envio; o consumo por hora sobe inteiro) e
@@ -41,6 +44,9 @@
  *
  * Sem dependências: só Node 20+ (fetch nativo). Ligação no server.js: LEIAME.md.
  */
+
+import fs from 'node:fs';
+import path from 'node:path';
 
 const PRAZO_MS = 15000;
 const J = 300000;                 // janela do resumo (5 min)
@@ -52,17 +58,85 @@ const LOTE_CORRIDAS = 200;
 const MODULOS = ['energia', 'agua', 'gerador'];
 /** Grupos de equipamento que a nuvem entende; os demais (subestação, CLP…) ficam só aqui. */
 const GRUPOS_NA_NUVEM = new Set(MODULOS);
+const TOKEN = /pnl_[A-Za-z0-9_-]{20,190}/;
 /** Parâmetros da instalação que a nuvem usa (seções caixa_agua e gerador). */
 const PARAMETROS = {
   caixa_agua: ['capacidade_litros', 'altura_util_m', 'formato'],
   gerador: ['potencia_nominal_kw', 'capacidade_tanque_litros', 'consumo_litros_hora'],
 };
 
+/**
+ * Ligação gravada pela interface: { url, token, modulos? } num arquivo só do
+ * gateway (dados/), com permissão só para o dono. Lida uma vez e guardada.
+ */
+export class LigacaoNuvem {
+  constructor(arquivo) {
+    this.arquivo = arquivo;
+    this.memoria = undefined;
+  }
+
+  ler() {
+    if (this.memoria === undefined) {
+      try { this.memoria = JSON.parse(fs.readFileSync(this.arquivo, 'utf8')); } catch { this.memoria = null; }
+    }
+    return this.memoria;
+  }
+
+  gravar(dados) {
+    fs.mkdirSync(path.dirname(this.arquivo), { recursive: true });
+    const temporario = `${this.arquivo}.tmp`;
+    fs.writeFileSync(temporario, `${JSON.stringify(dados, null, 2)}\n`, { mode: 0o600 });
+    fs.renameSync(temporario, this.arquivo);
+    this.memoria = dados;
+  }
+
+  apagar() {
+    fs.rmSync(this.arquivo, { force: true });
+    this.memoria = null;
+  }
+}
+
+/**
+ * Confere o que veio da tela. O token pode vir colado com aspas ou com o trecho
+ * inteiro do config.json: vale o `pnl_…` de dentro. Token em branco mantém o
+ * atual (para trocar só o endereço ou os módulos).
+ * @returns {{ ok: true, dados: object } | { ok: false, erros: string[] }}
+ */
+export function validarLigacao(entrada, atual = {}) {
+  const erros = [];
+  let url = null;
+  try {
+    const u = new URL(String(entrada?.url || '').trim());
+    const local = ['localhost', '127.0.0.1', '[::1]'].includes(u.hostname);
+    if (u.protocol !== 'https:' && !(u.protocol === 'http:' && local)) erros.push('o endereço precisa começar com https://');
+    else url = u.origin;
+  } catch {
+    erros.push('endereço inválido (ex.: https://engemase-pulse.vercel.app)');
+  }
+
+  const colado = String(entrada?.token || '').trim();
+  const token = colado ? colado.match(TOKEN)?.[0] : atual.token;
+  if (colado && !token) erros.push('token inválido: cole o token gerado no Pulse (começa com pnl_)');
+  else if (!token) erros.push('cole o token gerado no Pulse (Administração › Unidades › Gerar token)');
+
+  let modulos;
+  if (entrada?.modulos !== undefined && entrada.modulos !== null) {
+    if (!Array.isArray(entrada.modulos) || entrada.modulos.some((m) => !MODULOS.includes(m))) {
+      erros.push(`módulos inválidos (use ${MODULOS.join(', ')})`);
+    } else {
+      modulos = MODULOS.filter((m) => entrada.modulos.includes(m));
+    }
+  }
+
+  if (erros.length) return { ok: false, erros };
+  return { ok: true, dados: { url, token, ...(modulos ? { modulos } : {}) } };
+}
+
 export class Nuvem {
   /**
    * @param {() => object} lerConfig  devolve a configuração atual (ela muda quando a Engenharia aplica)
    * @param {object} banco            instância de Banco (src/db.js)
-   * @param {{ versao?: string }} [info]
+   * @param {{ versao?: string, ligacao?: LigacaoNuvem }} [info]  ligacao: o que a interface gravou
    */
   constructor(lerConfig, banco, info = {}) {
     this.lerConfig = lerConfig;
@@ -86,7 +160,9 @@ export class Nuvem {
   }
 
   get conf() {
-    return this.lerConfig().nuvem || {};
+    const base = this.lerConfig().nuvem || {};
+    const local = this.info.ligacao?.ler();
+    return local ? { ...base, ...local } : base;
   }
 
   get ativa() {
@@ -97,6 +173,38 @@ export class Nuvem {
   /** Para a tela de Engenharia ou o log: está enviando? */
   estado() {
     return { ativa: this.ativa, ultimo_sucesso: this.ultimoSucesso, erro: this.ultimoErro };
+  }
+
+  /** O que a tela Nuvem mostra. O token nunca volta inteiro: só os 4 últimos caracteres. */
+  resumo() {
+    const { url, token, modulos } = this.conf;
+    return {
+      url: url || null,
+      token_final: token ? String(token).slice(-4) : null,
+      modulos: Array.isArray(modulos) ? modulos : null,
+      modulos_em_uso: this.modulos(),
+      origem: this.info.ligacao?.ler() ? 'interface' : token ? 'configuracao' : null,
+      ...this.estado(),
+    };
+  }
+
+  /**
+   * Endereço ou token novo: esquece o recuo e o estado da ligação anterior e
+   * tenta já. Com `historico`, as marcas voltam ao começo e o histórico sobe de
+   * novo (token de outra unidade; o que a nuvem já tinha é só regravado).
+   */
+  reiniciar({ historico = false } = {}) {
+    if (historico) {
+      for (const nome of ['nuvem_resumo_ate', 'nuvem_consumo_rowid', 'nuvem_alarmes_fim', 'nuvem_alarmes_id', 'nuvem_corridas_id']) {
+        this.banco.gravarMarca(nome, null);
+      }
+    }
+    this.falhas = 0;
+    this.esperaAte = 0;
+    this.ultimoErro = null;
+    this.ultimoSucesso = null;
+    this.ultimoAoVivo = 0;
+    this.equipamentosAceitos = false;
   }
 
   parar() {
@@ -169,7 +277,8 @@ export class Nuvem {
   /** Módulos que esta unidade usa: os da configuração ou, sem ela, os que existem aqui. */
   modulos() {
     const config = this.lerConfig();
-    if (Array.isArray(config.nuvem?.modulos)) return MODULOS.filter((m) => config.nuvem.modulos.includes(m));
+    const { modulos } = this.conf;
+    if (Array.isArray(modulos)) return MODULOS.filter((m) => modulos.includes(m));
     const grupos = new Set((config.medidores || []).map((m) => m.grupo || 'energia'));
     return MODULOS.filter((m) =>
       m === 'agua' ? grupos.has('agua') || Boolean(config.caixa_agua?.medidor)
@@ -408,7 +517,7 @@ export class Nuvem {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
-          'User-Agent': `painel/${this.info.versao || '?'}`,
+          'User-Agent': `pulse-configurador/${this.info.versao || '?'}`,
         },
         body: JSON.stringify(corpo),
         signal: AbortSignal.timeout(PRAZO_MS),
