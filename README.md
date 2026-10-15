@@ -41,8 +41,7 @@ Multimedidores ──RS485/Modbus──▶ Painel local (mini PC na loja, SQLite
   de fundo no login próprio em `/login/<slug>`, unidades com o token do Painel e a tarifa, medidores (criados pelo Painel), usuários
   e a tela **Saúde do sistema** (o que falta configurar, lojas sem envio, erros recentes).
 - **PWA**: instalável no Android, iOS e desktop; página offline; aviso de "sem conexão".
-- **Responsivo** do celular ao monitor grande; tema **claro, escuro, automático** (segue o aparelho)
-  ou **pelo horário** (claro das 6h às 18h).
+- **Responsivo** do celular ao monitor grande; tema **claro, escuro (preto) ou automático** (segue o aparelho).
 - **Painel local**: o supervisório instalado na loja lê o Modbus e envia as leituras para a nuvem,
   sem porta aberta na loja. Ver [Painel local](#painel-local-supervisório-da-loja).
 

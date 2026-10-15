@@ -39,14 +39,11 @@ test("tema escolhido fica salvo", async ({ page }) => {
   await expect(page.locator("html")).not.toHaveClass(/dark/);
 });
 
-test("tema pelo horário segue o relógio, não o aparelho", async ({ page }) => {
-  await page.emulateMedia({ colorScheme: "light" });
-  await page.clock.setFixedTime(new Date("2026-10-15T22:30:00-03:00"));
+test("escuro é preto, e o automático segue o aparelho", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "dark" });
   await page.goto("/login");
-  await page.getByRole("radio", { name: "Pelo horário" }).click();
   await expect(page.locator("html")).toHaveClass(/dark/);
-  await page.clock.setFixedTime(new Date("2026-10-16T10:00:00-03:00"));
-  await page.reload();
+  await expect(page.locator("body")).toHaveCSS("background-color", "rgb(0, 0, 0)");
+  await page.emulateMedia({ colorScheme: "light" });
   await expect(page.locator("html")).not.toHaveClass(/dark/);
-  await page.getByRole("radio", { name: "Automático" }).click();
 });

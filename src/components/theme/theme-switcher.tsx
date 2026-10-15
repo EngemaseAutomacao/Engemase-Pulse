@@ -1,17 +1,12 @@
 "use client";
 
-import { MonitorIcon, MoonIcon, SunIcon, SunMoonIcon } from "lucide-react";
+import { MonitorIcon, MoonIcon, SunIcon } from "lucide-react";
 import { DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { THEME_OPTIONS, isThemePreference, type ThemePreference } from "@/lib/theme";
 import { setThemePreference, useTheme } from "./use-theme";
 
-const ICON: Record<ThemePreference, typeof SunIcon> = {
-  system: MonitorIcon,
-  schedule: SunMoonIcon,
-  light: SunIcon,
-  dark: MoonIcon,
-};
+const ICON: Record<ThemePreference, typeof SunIcon> = { system: MonitorIcon, light: SunIcon, dark: MoonIcon };
 
 const THEME_NAME = { light: "claro", dark: "escuro" } as const;
 
@@ -40,8 +35,8 @@ export function ThemeMenuItems() {
 }
 
 /**
- * Seletor Automático / Pelo horário / Claro / Escuro em botões. `compact`
- * mostra só os ícones (o nome fica no title e para leitores de tela).
+ * Seletor Automático / Claro / Escuro em botões. `compact` mostra só os
+ * ícones (o nome fica no title e para leitores de tela).
  */
 export function ThemeSwitcher({ compact = false, className }: { compact?: boolean; className?: string }) {
   const { preference } = useTheme();
@@ -92,8 +87,7 @@ export function ThemeStatus() {
         </p>
         <p className="text-xs">
           Se não trocar sozinho, confira o tema do navegador (no Chrome: Configurações › Aparência › Modo deve
-          estar em &ldquo;Dispositivo&rdquo;) e o do sistema. Para trocar pela hora do dia, use &ldquo;Pelo
-          horário&rdquo;.
+          estar em &ldquo;Dispositivo&rdquo;) e o do sistema. Para fixar um tema, escolha Claro ou Escuro.
         </p>
       </div>
     );

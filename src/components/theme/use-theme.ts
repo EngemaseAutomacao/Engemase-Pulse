@@ -4,7 +4,6 @@ import { useEffect, useSyncExternalStore } from "react";
 import {
   THEME_COLOR,
   THEME_STORAGE_KEY,
-  isNightHour,
   isThemePreference,
   type ResolvedTheme,
   type ThemePreference,
@@ -27,9 +26,7 @@ function deviceTheme(): ResolvedTheme {
 }
 
 function resolve(preference: ThemePreference): ResolvedTheme {
-  if (preference === "system") return deviceTheme();
-  if (preference === "schedule") return isNightHour(new Date().getHours()) ? "dark" : "light";
-  return preference;
+  return preference === "system" ? deviceTheme() : preference;
 }
 
 /** Aplica o tema no <html> e na barra do navegador (mesma regra do THEME_INIT_SCRIPT). */
@@ -45,9 +42,9 @@ function applyTheme(preference: ThemePreference) {
 
 /**
  * Avisa quando o tema efetivo pode ter mudado: escolha nesta ou em outra aba,
- * troca do tema do aparelho, volta para a aba (celular congela abas em segundo
- * plano e pode perder o aviso do sistema) e, a cada minuto, o relógio do
- * "Pelo horário". O snapshot é texto: sem mudança real, nada re-renderiza.
+ * troca do tema do aparelho e volta para a aba (celular congela abas em
+ * segundo plano e pode perder o aviso do sistema). O snapshot é texto: sem
+ * mudança real, nada re-renderiza.
  */
 function subscribe(onChange: () => void) {
   const media = window.matchMedia(DARK_QUERY);
@@ -58,7 +55,6 @@ function subscribe(onChange: () => void) {
   window.addEventListener("pageshow", onChange);
   document.addEventListener("visibilitychange", onVisible);
   media.addEventListener("change", onChange);
-  const clock = window.setInterval(onChange, 60_000);
   return () => {
     window.removeEventListener(CHANGE_EVENT, onChange);
     window.removeEventListener("storage", onChange);
@@ -66,7 +62,6 @@ function subscribe(onChange: () => void) {
     window.removeEventListener("pageshow", onChange);
     document.removeEventListener("visibilitychange", onVisible);
     media.removeEventListener("change", onChange);
-    window.clearInterval(clock);
   };
 }
 
@@ -107,9 +102,8 @@ export function useTheme(): ThemeState {
 }
 
 /**
- * Mantém o <html> em dia quando o sistema troca de tema (Automático), o
- * horário vira (Pelo horário) ou a escolha muda em outra aba. Montado uma vez
- * no layout raiz.
+ * Mantém o <html> em dia quando o sistema troca de tema (Automático) ou a
+ * escolha muda em outra aba. Montado uma vez no layout raiz.
  */
 export function ThemeSync() {
   const { preference, theme } = useTheme();

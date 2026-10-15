@@ -4,7 +4,7 @@
  * Não guarda dados de medição em cache: leituras precisam ser sempre atuais.
  */
 
-const CACHE = "em-shell-v1";
+const CACHE = "em-shell-v2";
 const OFFLINE_URL = "/offline.html";
 const PRECACHE = [OFFLINE_URL, "/icons/icon-192.png", "/icons/badge-96.png"];
 

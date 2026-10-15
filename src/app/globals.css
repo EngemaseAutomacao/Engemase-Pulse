@@ -5,8 +5,8 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Tema "Ocean Deep" (identidade Engemase): azul-marinho e destaque turquesa.
- * Claro e escuro: o <html> leva a classe .dark no escuro. Quem escolhe é a
+ * Tema claro (identidade Engemase: texto azul-marinho, destaque turquesa) e
+ * escuro em preto. O <html> leva a classe .dark no escuro. Quem escolhe é a
  * pessoa (Automático segue o sistema) — ver src/lib/theme.ts.
  * As cores do cliente entram por --brand-* (ver brandThemeStyle).
  */
@@ -112,36 +112,37 @@
   --sidebar-border: rgb(12 35 64 / 0.1);
 }
 
+/* Escuro: preto neutro (cartões cinza bem escuros), sem o azul-marinho. */
 .dark {
-  --background: #0a1c33;
-  --foreground: #e6f1f5;
-  --card: #0f2743;
-  --card-foreground: #e6f1f5;
-  --popover: #10294a;
-  --popover-foreground: #e6f1f5;
-  --secondary: rgb(255 255 255 / 0.06);
-  --secondary-foreground: #e6f1f5;
+  --background: #000000;
+  --foreground: #f2f2f2;
+  --card: #111111;
+  --card-foreground: #f2f2f2;
+  --popover: #1a1a1a;
+  --popover-foreground: #f2f2f2;
+  --secondary: rgb(255 255 255 / 0.07);
+  --secondary-foreground: #f2f2f2;
   --muted: rgb(255 255 255 / 0.05);
-  --muted-foreground: rgb(230 241 245 / 0.6);
-  --accent-foreground: #eaf7f6;
+  --muted-foreground: rgb(242 242 242 / 0.6);
+  --accent-foreground: #f2f2f2;
   --destructive: #ff6b6b;
   --success: #34d399;
   --warning: #fbbf24;
   --info: #38bdf8;
-  --border: rgb(255 255 255 / 0.08);
-  --input: rgb(255 255 255 / 0.12);
-  --surface-shadow: 0 6px 24px -12px rgb(0 0 0 / 0.55);
+  --border: rgb(255 255 255 / 0.1);
+  --input: rgb(255 255 255 / 0.14);
+  --surface-shadow: 0 6px 24px -12px rgb(0 0 0 / 0.9);
 
-  /* Mesmas séries, passos validados contra o cartão escuro #0f2743. */
+  /* Mesmas séries, passos validados contra o cartão escuro #111111. */
   --chart-1: #3987e5;
   --chart-2: #d95926;
   --chart-3: #199e70;
   --chart-4: #c98500;
   --chart-5: #9085e9;
 
-  --sidebar: #0c2340;
-  --sidebar-foreground: #e6f1f5;
-  --sidebar-accent-foreground: #eaf7f6;
+  --sidebar: #0a0a0a;
+  --sidebar-foreground: #f2f2f2;
+  --sidebar-accent-foreground: #f2f2f2;
   --sidebar-border: rgb(255 255 255 / 0.08);
 }
 
