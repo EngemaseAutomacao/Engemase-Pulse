@@ -86,9 +86,16 @@ async function safely<T>(operation: () => Promise<T>, fallback: T): Promise<T> {
   try {
     return await operation();
   } catch (error) {
-    console.error("[cache] Redis indisponível:", error instanceof Error ? error.message : error);
+    // Fim de um pré-render do Next: ele cancela as buscas pendentes de propósito; não é falha do Redis.
+    if (!isPrerenderCancel(error)) {
+      console.error("[cache] Redis indisponível:", error instanceof Error ? error.message : error);
+    }
     return fallback;
   }
+}
+
+function isPrerenderCancel(error: unknown): boolean {
+  return typeof error === "object" && error !== null && (error as { digest?: unknown }).digest === "HANGING_PROMISE_REJECTION";
 }
 
 // No globalThis: o Next pode carregar cópias deste módulo em pacotes diferentes
