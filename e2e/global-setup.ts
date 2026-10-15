@@ -20,7 +20,7 @@ export default async function globalSetup(config: FullConfig) {
     await db.query(`DELETE FROM tenants WHERE slug = $1`, [E2E.slug]);
     const tenant = await db.query<{ id: string }>(
       `INSERT INTO tenants (id, slug, name, primary_color, accent_color, updated_at)
-       VALUES (gen_random_uuid(), $1, $2, '#5cbdb9', '#38bdf8', now()) RETURNING id`,
+       VALUES (gen_random_uuid(), $1, $2, '#4a9ee0', '#38bdf8', now()) RETURNING id`,
       [E2E.slug, E2E.tenantName],
     );
     const site = await db.query<{ id: string }>(
