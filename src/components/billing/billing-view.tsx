@@ -1,12 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import useSWR from "swr";
 import { Bar, BarChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { TooltipContentProps } from "recharts";
-import { ActivityIcon, FileTextIcon, GaugeIcon, ReceiptTextIcon, SunsetIcon, TriangleAlertIcon } from "lucide-react";
+import { ActivityIcon, CalculatorIcon, FileTextIcon, GaugeIcon, ReceiptTextIcon, SunsetIcon, TriangleAlertIcon } from "lucide-react";
 import { AXIS_TICK, ChartMessage, GRID_STROKE, TooltipBox } from "@/components/charts/chart-parts";
 import { MonthNav, localMonth } from "@/components/consumption/month-consumption";
+import { DemandNow } from "@/components/demand/demand-now";
+import { CapacitorCard } from "./capacitor-card";
 import { StatTile } from "@/components/dashboard/stat-tile";
 import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/forms/native-select";
@@ -64,12 +67,20 @@ export function BillingView({ tenantSlug, sites }: { tenantSlug: string; sites: 
           </NativeSelect>
         )}
         <MonthNav month={month} current={current} onChange={(m) => setChosen(m >= current ? null : m)} />
-        <Button asChild variant="outline" size="sm" className="sm:ml-auto">
-          <a href={`/relatorio/${tenantSlug}?unidade=${site.id}&mes=${month}`} target="_blank" rel="noopener">
-            <FileTextIcon />
-            Relatório do mês
-          </a>
-        </Button>
+        <div className="flex flex-wrap gap-2 sm:ml-auto">
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/app/${tenantSlug}/fatura/simulador?unidade=${site.id}`}>
+              <CalculatorIcon />
+              Simular tarifa e demanda
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <a href={`/relatorio/${tenantSlug}?unidade=${site.id}&mes=${month}`} target="_blank" rel="noopener">
+              <FileTextIcon />
+              Relatório do mês
+            </a>
+          </Button>
+        </div>
       </div>
 
       {failure && (
@@ -96,7 +107,9 @@ export function BillingView({ tenantSlug, sites }: { tenantSlug: string; sites: 
         </div>
       ) : data ? (
         <div className={cn("space-y-6 transition-opacity", isLoading && "opacity-60")}>
+          {month === current && <DemandNow tenantSlug={tenantSlug} siteId={site.id} />}
           <Bill data={data as BillingResponse} inProgress={month === current} />
+          <CapacitorCard tenantSlug={tenantSlug} siteId={site.id} />
         </div>
       ) : null}
     </div>

@@ -224,3 +224,23 @@
 @utility tabular {
   font-variant-numeric: tabular-nums;
 }
+
+/* Tela de TV: barra que enche durante o tempo de cada tela. */
+@keyframes tv-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.tv-progress {
+  animation-name: tv-progress;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tv-progress {
+    animation: none;
+  }
+}

@@ -12,6 +12,9 @@ import { deleteUserSessions } from "./session";
 
 export type PasswordTokenPurpose = "reset" | "invite";
 
+/** Só estes servem para definir a senha (a tabela também guarda o código de vínculo do Telegram). */
+const PASSWORD_PURPOSES: string[] = ["reset", "invite"];
+
 const VALID_FOR_MS: Record<PasswordTokenPurpose, number> = {
   reset: 60 * 60_000,
   invite: 7 * 86_400_000,
@@ -26,7 +29,7 @@ export const PASSWORD_LINK_VALIDITY: Record<PasswordTokenPurpose, string> = {
 export async function createPasswordLink(userId: string, purpose: PasswordTokenPurpose): Promise<string> {
   const token = generateSessionToken();
   await db.$transaction([
-    db.passwordToken.deleteMany({ where: { userId, usedAt: null } }),
+    db.passwordToken.deleteMany({ where: { userId, usedAt: null, purpose: { in: PASSWORD_PURPOSES } } }),
     db.passwordToken.create({
       data: {
         userId,
@@ -52,7 +55,8 @@ export async function findValidPasswordToken(token: string) {
       user: { select: { id: true, name: true, email: true, active: true } },
     },
   });
-  if (!row || row.usedAt || row.expiresAt < new Date() || !row.user.active) return null;
+  if (!row || !PASSWORD_PURPOSES.includes(row.purpose)) return null;
+  if (row.usedAt || row.expiresAt < new Date() || !row.user.active) return null;
   return row;
 }
 
@@ -67,7 +71,9 @@ export async function consumePasswordToken(token: string, newPassword: string): 
   });
   if (count === 0) return false;
   await db.user.update({ where: { id: row.user.id }, data: { passwordHash: await hashPassword(newPassword) } });
-  await db.passwordToken.deleteMany({ where: { userId: row.user.id, usedAt: null } });
+  await db.passwordToken.deleteMany({
+    where: { userId: row.user.id, usedAt: null, purpose: { in: PASSWORD_PURPOSES } },
+  });
   await deleteUserSessions(row.user.id);
   return true;
 }

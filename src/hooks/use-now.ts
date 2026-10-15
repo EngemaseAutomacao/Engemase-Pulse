@@ -3,36 +3,32 @@
 import { useSyncExternalStore } from "react";
 
 /**
- * Relógio compartilhado por todos os componentes (um único setInterval).
- * No servidor e na hidratação devolve null, evitando diferença de conteúdo.
+ * Hora atual, atualizada a cada segundo. No servidor (e na hidratação) é
+ * null: assim o HTML pré-renderizado não carrega a hora do servidor (fuso e
+ * minuto diferentes do aparelho) e a tela troca para a hora local logo depois.
  */
-const TICK_MS = 5_000;
+let current = Date.now();
 const listeners = new Set<() => void>();
-let now = Date.now();
-let timer: ReturnType<typeof setInterval> | undefined;
+let timer: ReturnType<typeof setInterval> | null = null;
 
-function subscribe(listener: () => void) {
-  listeners.add(listener);
+function subscribe(onChange: () => void) {
+  listeners.add(onChange);
   if (!timer) {
-    now = Date.now();
+    current = Date.now();
     timer = setInterval(() => {
-      now = Date.now();
-      listeners.forEach((l) => l());
-    }, TICK_MS);
+      current = Date.now();
+      for (const listener of listeners) listener();
+    }, 1000);
   }
   return () => {
-    listeners.delete(listener);
-    if (listeners.size === 0) {
+    listeners.delete(onChange);
+    if (listeners.size === 0 && timer) {
       clearInterval(timer);
-      timer = undefined;
+      timer = null;
     }
   };
 }
 
 export function useNow(): number | null {
-  return useSyncExternalStore(
-    subscribe,
-    () => now,
-    () => null,
-  );
+  return useSyncExternalStore(subscribe, () => current, () => null);
 }

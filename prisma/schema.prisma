@@ -35,6 +35,8 @@ model Tenant {
   primaryColor String   @default("#5cbdb9") @map("primary_color")
   accentColor  String   @default("#38bdf8") @map("accent_color")
   loginTagline String?  @map("login_tagline")
+  /// Minutos sem reconhecimento até avisar o escalonamento (null = não escalona).
+  escalationMinutes Int? @map("escalation_minutes")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
@@ -44,6 +46,7 @@ model Tenant {
   memberships     Membership[]
   alarmRules      AlarmRule[]
   alarms          Alarm[]
+  reportDeliveries MonthlyReportDelivery[]
 
   @@map("tenants")
 }
@@ -85,6 +88,8 @@ model Site {
   state    String?
   /// Fuso usado para agrupar consumo por hora/dia.
   timezone String  @default("America/Sao_Paulo")
+  /// Área construída (m²), para comparar lojas em kWh/m².
+  areaM2   Float?  @map("area_m2")
 
   /// SHA-256 do token do Painel local. O token em si só é mostrado ao ser gerado.
   agentTokenHash  String?   @unique @map("agent_token_hash")
@@ -101,6 +106,7 @@ model Site {
   liveSnapshot SiteLiveSnapshot?
   alarms       Alarm[]
   tariff       SiteTariff?
+  targets      EnergyTarget[]
 
   @@unique([tenantId, name])
   @@map("sites")
@@ -156,6 +162,7 @@ model Meter {
   alarms       Alarm[]
   readings5m   MeterReading5m[]
   energyHours  MeterEnergyHour[]
+  targets      EnergyTarget[]
 
   @@unique([siteId, tag])
   @@unique([siteId, externalId])
@@ -219,6 +226,8 @@ model User {
   /// Equipe da plataforma: acesso a todos os clientes e à administração.
   isPlatformAdmin Boolean   @default(false) @map("is_platform_admin")
   active          Boolean   @default(true)
+  /// Conversa do Telegram vinculada pelo bot (recebe alarmes por lá).
+  telegramChatId  String?   @unique @map("telegram_chat_id")
   lastLoginAt     DateTime? @map("last_login_at")
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
@@ -236,6 +245,12 @@ model Membership {
   userId    String   @map("user_id") @db.Uuid
   tenantId  String   @map("tenant_id") @db.Uuid
   role      Role     @default(VIEWER)
+  /// Recebe os alarmes de Atenção e Crítico por e-mail (além do push).
+  alarmEmail    Boolean @default(false) @map("alarm_email")
+  /// Recebe o resumo do mês por e-mail no dia 1.
+  monthlyReport Boolean @default(false) @map("monthly_report")
+  /// É avisado quando um alarme não é reconhecido no prazo do cliente.
+  escalation    Boolean @default(false)
   createdAt DateTime @default(now()) @map("created_at")
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -381,6 +396,8 @@ model Alarm {
   clearedAt        DateTime?     @map("cleared_at")
   acknowledgedAt   DateTime?     @map("acknowledged_at")
   acknowledgedById String?       @map("acknowledged_by_id") @db.Uuid
+  /// Quando o escalonamento foi avisado (ninguém reconheceu no prazo).
+  escalatedAt      DateTime?     @map("escalated_at")
   /// "regra:medidor" (ou "painel:unidade:id" nos do Painel) enquanto o alarme está
   /// aberto; null ao normalizar. A unicidade garante no máximo um alarme aberto por
   /// chave, mesmo com avaliações simultâneas.
@@ -478,4 +495,42 @@ model SiteTariff {
   site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
   @@map("site_tariffs")
+}
+
+// ---------------------------------------------------------------------------
+// Metas de consumo e relatório mensal por e-mail
+// ---------------------------------------------------------------------------
+
+/// Meta mensal de consumo da unidade (sem medidor) ou de um setor (medidor).
+model EnergyTarget {
+  id        String   @id @default(uuid()) @db.Uuid
+  /// "unidade:<id>" ou "medidor:<id>": uma meta por escopo.
+  scope     String   @unique
+  siteId    String   @map("site_id") @db.Uuid
+  meterId   String?  @map("meter_id") @db.Uuid
+  /// kWh por mês.
+  kwh       Float?
+  /// R$ por mês (com impostos, pela tarifa da unidade).
+  cost      Float?
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  site  Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  meter Meter? @relation(fields: [meterId], references: [id], onDelete: Cascade)
+
+  @@index([siteId])
+  @@map("energy_targets")
+}
+
+/// Resumo mensal já enviado por e-mail (um por cliente e mês).
+model MonthlyReportDelivery {
+  tenantId   String   @map("tenant_id") @db.Uuid
+  /// AAAA-MM do mês resumido.
+  month      String
+  recipients Int      @default(0)
+  sentAt     DateTime @default(now()) @map("sent_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([tenantId, month])
+  @@map("monthly_report_deliveries")
 }

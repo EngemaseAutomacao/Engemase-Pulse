@@ -1,6 +1,6 @@
 import "server-only";
 import { db } from "@/server/db";
-import { RENOTIFY_AFTER_MS, pushAlarms } from "./notify";
+import { RENOTIFY_AFTER_MS, notifyAlarms } from "./notify";
 
 /**
  * Loja sem comunicação: o Painel da unidade parou de enviar. Não precisa de
@@ -81,7 +81,7 @@ export async function checkSiteHeartbeats(now = Date.now()): Promise<HeartbeatRe
   await Promise.all(
     created
       .filter((a) => !quiet.has(a.siteId))
-      .map((a) => pushAlarms(bySite.get(a.siteId!)!.tenant, [{ ...a, tag: a.openKey! }])),
+      .map((a) => notifyAlarms(bySite.get(a.siteId!)!.tenant, [{ ...a, tag: a.openKey! }])),
   );
   return { offline: offline.length, opened: created.length, cleared: toClear.length };
 }

@@ -58,6 +58,7 @@ export default async function SitePage({ params }: PageProps<"/admin/unidades/[i
             city: site.city,
             state: site.state,
             timezone: site.timezone,
+            areaM2: site.areaM2,
             agent: agentStatus(site),
           }}
         />

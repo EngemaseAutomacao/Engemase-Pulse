@@ -4,6 +4,7 @@ import { GaugeIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ActiveAlarmsSummary } from "@/components/alarms/active-alarms-summary";
 import { TenantDashboard } from "@/components/dashboard/tenant-dashboard";
+import { DemandNow } from "@/components/demand/demand-now";
 import { EmptyState, PageContainer, PageHeader } from "@/components/shell/page";
 import { requireTenant } from "@/server/auth/dal";
 import { countActiveAlarms, listActiveAlarms } from "@/server/queries/alarms";
@@ -41,7 +42,10 @@ export default async function TenantOverviewPage({ params }: PageProps<"/app/[te
           }
         />
       ) : (
-        <TenantDashboard tenantSlug={tenant.slug} sites={sites} meters={meters} />
+        <>
+          <DemandNow tenantSlug={tenant.slug} />
+          <TenantDashboard tenantSlug={tenant.slug} sites={sites} meters={meters} />
+        </>
       )}
     </PageContainer>
   );

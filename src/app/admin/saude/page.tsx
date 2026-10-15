@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { CircleCheckIcon, TriangleAlertIcon } from "lucide-react";
+import { CircleCheckIcon, CircleDashedIcon, TriangleAlertIcon } from "lucide-react";
 import { RelativeTime } from "@/components/meters/relative-time";
 import { PageContainer, PageHeader } from "@/components/shell/page";
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,8 @@ export default async function HealthPage() {
           <div key={check.key} className="flex gap-3 px-4 py-3">
             {check.status === "ok" ? (
               <CircleCheckIcon className="mt-0.5 size-4 shrink-0 text-success" aria-label="OK" />
+            ) : check.status === "off" ? (
+              <CircleDashedIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-label="Opcional, desligado" />
             ) : (
               <TriangleAlertIcon className="mt-0.5 size-4 shrink-0 text-warning" aria-label="Atenção" />
             )}

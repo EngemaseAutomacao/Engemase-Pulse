@@ -24,6 +24,8 @@ const schema = z.object({
   /** E-mail pelo Resend (opcional: sem isso, links de senha são entregues pela tela). */
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().optional(),
+  /** Bot do Telegram (opcional): alarmes para quem conectar a conta em "Minha conta". */
+  TELEGRAM_BOT_TOKEN: z.preprocess((v) => (v === "" ? undefined : v), z.string().optional()),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 });
 

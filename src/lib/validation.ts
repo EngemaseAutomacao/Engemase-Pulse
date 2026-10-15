@@ -148,6 +148,12 @@ export const siteSchema = z.object({
     .transform((v) => v || null)
     .refine((v) => v === null || /^[A-Z]{2}$/.test(v), "UF com 2 letras"),
   timezone: z.string().trim().refine(isValidTimeZone, "Fuso horário inválido"),
+  /** Área construída (m²) para comparar lojas; "1.200" vale 1200. */
+  areaM2: z
+    .unknown()
+    .optional()
+    .transform((v) => parseDecimal(v, true))
+    .refine((v) => v === null || (!Number.isNaN(v) && v > 0 && v <= 10_000_000), "Área em m² (número positivo)"),
 });
 
 /** Edição de um medidor (eles são criados pelo Painel local; a unidade não muda). */

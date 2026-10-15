@@ -4,7 +4,7 @@ import { demandCharges, hasDemand, maxDemand } from "@/lib/tariff";
 import { getCache } from "@/server/cache";
 import { db } from "@/server/db";
 import { demandWindows, monthWindow, toTariff } from "@/server/queries/billing";
-import { pushAlarms } from "./notify";
+import { notifyAlarms } from "./notify";
 
 /**
  * Ultrapassagem de demanda: a maior média de 15 min do mês passou da
@@ -80,7 +80,7 @@ export async function checkDemandOverruns(now = new Date()): Promise<{ opened: n
     });
     opened += created.length;
     if (created.length > 0)
-      await pushAlarms(
+      await notifyAlarms(
         site.tenant,
         created.map((a) => ({ ...a, tag: a.openKey! })),
       );

@@ -29,11 +29,26 @@ Multimedidores ──RS485/Modbus──▶ Painel local (mini PC na loja, SQLite
 - **Fatura estimada**: pela tarifa da unidade (convencional, branca, verde ou azul): energia por posto
   (ponta só em dias úteis, sem feriados nacionais), demanda faturada contra a contratada, ultrapassagem,
   excedente de reativo, impostos e projeção do mês. **Relatório mensal** pronto para imprimir/salvar em PDF.
+- **Demanda agora**: a média projetada da janela de 15 min em andamento contra a contratada, com
+  **aviso antes de estourar** (alarme no meio da janela, a tempo de desligar carga).
+- **Simulador de tarifa**: com os últimos 12 meses medidos, quanto custaria cada modalidade (verde × azul,
+  convencional × branca) e a **demanda contratada ideal**.
+- **Fator de potência**: kVAr de capacitor recomendados (banco automático, cobre 95 % do tempo) e a
+  economia estimada no excedente de reativo.
+- **Metas** de consumo (kWh) e custo (R$) por unidade e setor, com a projeção do mês e alarme quando a
+  projeção passa da meta. **Lojas**: ranking entre as unidades (kWh/m², custo, variação, FP, demanda).
+- **Consumo fora do padrão**: cada hora comparada com a mesma hora da semana nas 4 semanas anteriores;
+  duas horas seguidas fora do normal (para cima ou para baixo, ex.: câmara parada) abrem alarme.
+- **Tela de TV** (`/tv/<cliente>`): números grandes, telas que alternam (agora, demanda, alarmes, consumo
+  de hoje), tela sempre acesa; `?tempo=20` muda os segundos por tela.
 - **Unifilar** ao vivo: entrada, barramento e setores com disjuntor, potência e **% de carga**.
 - **Comparar** até 3 medidores (da mesma unidade ou de unidades diferentes).
 - **Alarmes**: regras da nuvem (limite de grandeza ou "sem comunicação"), alarmes do **Painel da loja**
   (abrem, fecham e são reconhecidos dos dois lados), **loja sem comunicação** e **demanda acima da
-  contratada** automáticos, com **notificação push** no celular/computador.
+  contratada** automáticos, com **notificação push**, **e-mail** e **Telegram** (cada pessoa escolhe em
+  *Minha conta → Avisos*) e **escalonamento**: alarme sem reconhecimento no prazo vai para as pessoas
+  marcadas pelo administrador do cliente (*Usuários*).
+- **Resumo do mês por e-mail** no dia 1 (consumo, custo, demanda e alarmes do mês anterior), para quem marcar.
 - **Usuários**: o administrador do cliente convida a equipe dele (papéis), sem depender da Engemase;
   **esqueci minha senha** por e-mail (opcional).
 - **Administração** (equipe da plataforma): clientes com logo, cores (principal: botões, links, menu;
@@ -117,6 +132,9 @@ gere o token e rode o Painel em modo demonstração (`npm run demo` no Painel) a
    - `CRON_SECRET` — texto aleatório longo (protege o agendador, ver abaixo).
    - `RESEND_API_KEY` e `EMAIL_FROM` (opcionais) — e-mail de "esqueci minha senha" e dos convites.
      Sem elas, os convites mostram um link para o administrador repassar.
+   - `TELEGRAM_BOT_TOKEN` (opcional) — alarmes pelo Telegram: crie um bot com o @BotFather (`/newbot`) e
+     cole o token. O sistema aponta o bot para `/api/telegram/webhook` sozinho na primeira conexão;
+     cada pessoa conecta a conta em *Minha conta → Avisos*.
    - `APP_URL` (opcional) — endereço público, se usar domínio próprio. Sem ele, os links usam o domínio de
      produção da Vercel. Nunca vem do cabeçalho `Host` (evita links de senha apontando para outro site).
    - `SESSION_TTL_DAYS` (opcional, padrão 7).
@@ -139,7 +157,9 @@ Depois do deploy, abra **Administração → Saúde do sistema**: ela diz o que 
 ### Agendador (alarmes e lojas sem comunicação)
 
 As tarefas periódicas — regras de alarme da nuvem, **loja sem comunicação** (Painel sem enviar há 10 min),
-**demanda acima da contratada** e limpeza do histórico — rodam **de carona** no tráfego: cada envio de
+**demanda acima da contratada**, **consumo fora do padrão** (a cada 15 min), **metas** (a cada hora),
+**escalonamento**, **resumo do mês por e-mail** (dia 1, a partir das 6 h) e limpeza do histórico — rodam
+**de carona** no tráfego: cada envio de
 loja e cada tela aberta pedem uma rodada (no máximo uma por minuto). Com pelo menos uma loja enviando,
 funciona sem nada configurado. O agendador cobre o caso em que **nenhuma** loja envia e ninguém está
 olhando (ex.: a única loja caiu de madrugada).
@@ -232,7 +252,8 @@ e a tradução das grandezas em [`src/lib/painel-fields.ts`](src/lib/painel-fiel
 - **iPhone/iPad (iOS 16.4+)**: só depois de instalar — Safari → Compartilhar → *Adicionar à Tela de Início*,
   abrir pelo ícone e ativar em *Minha conta*.
 - Exigem HTTPS (na Vercel já é). Localmente, `localhost` também é aceito pelos navegadores.
-- Alarmes de severidade **Atenção** e **Crítico** geram push; **Informativo** fica só no sistema.
+- Alarmes de severidade **Atenção** e **Crítico** geram push (e e-mail/Telegram para quem ativou);
+  **Informativo** fica só no sistema.
 
 ## Scripts
 

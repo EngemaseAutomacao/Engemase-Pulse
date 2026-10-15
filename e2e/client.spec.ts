@@ -87,3 +87,38 @@ test("histórico: ocultar pena, trocar a cor e comparar com o período anterior"
   await history.getByRole("button", { name: "Comparar com anterior" }).click();
   await expect(history.getByRole("columnheader", { name: "Média anterior" })).toBeVisible();
 });
+
+test("metas: o administrador define a meta e vê a projeção", async ({ page }) => {
+  await page.goto(`/app/${E2E.slug}/metas`);
+  const row = page.locator("li", { hasText: "Unidade inteira" }).first();
+  await expect(row).toBeVisible();
+  await row.getByLabel("Meta kWh/mês").fill("1.000");
+  await row.getByRole("button", { name: "Salvar" }).click();
+  await expect(page.getByText(/Meta de Unidade inteira salva/)).toBeVisible();
+  await page.reload();
+  await expect(page.locator("li", { hasText: "Unidade inteira" }).first().getByText("Meta 1.000 kWh")).toBeVisible();
+});
+
+test("fatura: simulador de tarifa e recomendação de capacitores", async ({ page }) => {
+  await page.goto(`/app/${E2E.slug}/fatura`);
+  await expect(page.getByRole("heading", { name: "Fator de potência e capacitores" })).toBeVisible();
+  await page.getByRole("link", { name: "Simular tarifa e demanda" }).click();
+  await expect(page.getByRole("heading", { name: "Quanto custaria" })).toBeVisible();
+  await expect(page.getByLabel("Contratada hoje (kW)")).toHaveValue("120");
+});
+
+test("tela de TV alterna entre agora, alarmes e consumo", async ({ page }) => {
+  await page.goto(`/tv/${E2E.slug}`);
+  await expect(page.getByText("Potência total")).toBeVisible();
+  await page.getByRole("button", { name: "Alarmes", exact: true }).click();
+  await expect(page.getByText("Fator de potência abaixo do mínimo").first()).toBeVisible();
+  await page.getByRole("button", { name: "Consumo de hoje", exact: true }).click();
+  await expect(page.getByText("kWh hoje").first()).toBeVisible();
+});
+
+test("usuários: escalonamento e avisos por pessoa", async ({ page }) => {
+  await page.goto(`/app/${E2E.slug}/usuarios`);
+  await page.getByLabel("Prazo do escalonamento").selectOption("15");
+  await expect(page.getByText("Escalonamento após 15 min sem reconhecimento.")).toBeVisible();
+  await page.getByLabel("Prazo do escalonamento").selectOption("0");
+});

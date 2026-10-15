@@ -38,7 +38,11 @@ const mocks = vi.hoisted(() => {
       updateMany: vi.fn(async () => ({ count: 1 })),
       findMany: vi.fn(async () => []),
     },
-    membership: { findMany: vi.fn(async () => [{ userId: "u1" }]) },
+    membership: {
+      findMany: vi.fn(async () => [
+        { userId: "u1", alarmEmail: false, user: { email: "u1@example.com", telegramChatId: null } },
+      ]),
+    },
     session: { deleteMany: vi.fn(async () => ({ count: 0 })) },
   };
   return { state, db, push: vi.fn(async () => ({ sent: 1, failed: 0 })) };

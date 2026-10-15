@@ -2,10 +2,22 @@ import { PageContainer, PageHeader } from "@/components/shell/page";
 import { ROLE_LABEL, type AuthUser } from "@/server/auth/permissions";
 import { NotificationSettings } from "@/components/pwa/notification-settings";
 import { ThemeStatus, ThemeSwitcher } from "@/components/theme/theme-switcher";
+import { db } from "@/server/db";
+import { isEmailConfigured } from "@/server/email";
+import { isTelegramConfigured } from "@/server/telegram";
+import { AlertPreferences } from "./alert-preferences";
 import { ChangePasswordForm } from "./change-password-form";
 
 /** Conteúdo de "Minha conta", usado na área do cliente e na administração. */
-export function AccountPage({ user }: { user: AuthUser }) {
+export async function AccountPage({ user }: { user: AuthUser }) {
+  const [memberships, row] = await Promise.all([
+    db.membership.findMany({
+      where: { userId: user.id, tenant: { active: true } },
+      orderBy: { tenant: { name: "asc" } },
+      select: { tenantId: true, alarmEmail: true, monthlyReport: true, tenant: { select: { name: true } } },
+    }),
+    db.user.findUnique({ where: { id: user.id }, select: { telegramChatId: true } }),
+  ]);
   return (
     <PageContainer className="max-w-3xl">
       <PageHeader title="Minha conta" description="Seus dados de acesso." />
@@ -37,6 +49,19 @@ export function AccountPage({ user }: { user: AuthUser }) {
       <section className="surface space-y-4 p-5" id="notificacoes">
         <h2 className="font-semibold">Notificações no celular e no computador</h2>
         <NotificationSettings />
+      </section>
+      <section className="surface space-y-4 p-5" id="avisos">
+        <h2 className="font-semibold">Avisos por e-mail e Telegram</h2>
+        <AlertPreferences
+          memberships={memberships.map((m) => ({
+            tenantId: m.tenantId,
+            tenantName: m.tenant.name,
+            alarmEmail: m.alarmEmail,
+            monthlyReport: m.monthlyReport,
+          }))}
+          emailConfigured={isEmailConfigured()}
+          telegram={{ configured: isTelegramConfigured(), connected: Boolean(row?.telegramChatId) }}
+        />
       </section>
       <section className="surface space-y-4 p-5">
         <h2 className="font-semibold">Alterar senha</h2>

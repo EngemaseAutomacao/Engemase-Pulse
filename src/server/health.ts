@@ -6,10 +6,12 @@ import { db } from "@/server/db";
 import { getSchedulerLastRun } from "@/server/housekeeping";
 import { appUrl, isEmailConfigured } from "@/server/email";
 import { isPushConfigured } from "@/server/push";
+import { isTelegramConfigured } from "@/server/telegram";
 
 /** Situação do sistema para a tela "Saúde do sistema" e o resumo da administração. */
 
-export type CheckStatus = "ok" | "warn";
+/** off: recurso opcional não configurado (não conta como problema). */
+export type CheckStatus = "ok" | "warn" | "off";
 
 export type HealthCheck = {
   key: string;
@@ -40,7 +42,7 @@ const STORE_LATE_MS = 2 * 60_000;
 
 export async function getSystemHealth() {
   const now = Date.now();
-  const [schedulerLastRun, evaluator, sites, subscriptions, errors24h] = await Promise.all([
+  const [schedulerLastRun, evaluator, sites, subscriptions, errors24h, telegramUsers] = await Promise.all([
     getSchedulerLastRun(),
     getEvaluatorHealth(),
     db.site.findMany({
@@ -50,6 +52,7 @@ export async function getSystemHealth() {
     }),
     db.pushSubscription.count(),
     db.errorLog.count({ where: { lastSeenAt: { gte: new Date(now - 86_400_000) } } }),
+    db.user.count({ where: { telegramChatId: { not: null } } }),
   ]);
 
   const stores: StoreHealth[] = sites.map((s) => {
@@ -139,6 +142,20 @@ export async function getSystemHealth() {
             : "Desativado, e sem o endereço público do sistema os links de senha e convite não podem ser gerados.",
           fix: "Crie uma conta no Resend, verifique o domínio de envio e cadastre RESEND_API_KEY e EMAIL_FROM (ex.: Monitor de Energia <nao-responda@seudominio.com.br>) na Vercel. Se usar domínio próprio, cadastre também APP_URL.",
         },
+    isTelegramConfigured()
+      ? {
+          key: "telegram",
+          label: "Telegram (opcional)",
+          status: "ok",
+          detail: `Ativo · ${telegramUsers} pessoa(s) conectada(s)`,
+        }
+      : {
+          key: "telegram",
+          label: "Telegram (opcional)",
+          status: "off",
+          detail: "Não configurado: os alarmes chegam por push e e-mail.",
+          fix: "No Telegram, fale com o @BotFather, crie um bot (/newbot) e cadastre o token em TELEGRAM_BOT_TOKEN na Vercel; depois, um novo deploy. Cada pessoa conecta a conta em Minha conta → Avisos.",
+        },
     errors24h === 0
       ? { key: "errors", label: "Erros nas últimas 24 h", status: "ok", detail: "Nenhum" }
       : {
@@ -149,7 +166,7 @@ export async function getSystemHealth() {
         },
   ];
 
-  const problems = checks.filter((c) => c.status !== "ok").length + stores.filter((s) => s.state === "offline").length;
+  const problems = checks.filter((c) => c.status === "warn").length + stores.filter((s) => s.state === "offline").length;
   return { checks, stores, problems };
 }
 

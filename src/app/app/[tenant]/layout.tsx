@@ -9,6 +9,9 @@ import {
   NetworkIcon,
   ReceiptTextIcon,
   ShieldIcon,
+  StoreIcon,
+  TargetIcon,
+  TvIcon,
   UsersIcon,
 } from "lucide-react";
 import { AppShell, type NavSection } from "@/components/shell/app-shell";
@@ -19,6 +22,7 @@ import { requireTenant } from "@/server/auth/dal";
 import { ROLE_LABEL } from "@/server/auth/permissions";
 import { tenantLogoUrl } from "@/server/branding";
 import { countActiveAlarms } from "@/server/queries/alarms";
+import { getTenantTopology } from "@/server/telemetry/topology";
 
 /** Área do cliente: barra lateral com a marca e as cores dele. */
 export default function TenantLayout({ children, params }: LayoutProps<"/app/[tenant]">) {
@@ -39,7 +43,8 @@ async function TenantShell({
   const { tenant: slug } = await params;
   const { tenant, user, role } = await requireTenant(slug);
   const base = `/app/${tenant.slug}`;
-  const activeAlarms = await countActiveAlarms(tenant.id);
+  const [activeAlarms, topology] = await Promise.all([countActiveAlarms(tenant.id), getTenantTopology(tenant.id)]);
+  const multiSite = topology.filter((s) => s.meters.length > 0).length > 1;
 
   const sections: NavSection[] = [
     {
@@ -50,8 +55,11 @@ async function TenantShell({
         { label: "Unifilar", href: `${base}/unifilar`, icon: <NetworkIcon /> },
         { label: "Consumo", href: `${base}/consumo`, icon: <ChartColumnIcon /> },
         { label: "Fatura", href: `${base}/fatura`, icon: <ReceiptTextIcon /> },
+        { label: "Metas", href: `${base}/metas`, icon: <TargetIcon /> },
+        ...(multiSite ? [{ label: "Lojas", href: `${base}/lojas`, icon: <StoreIcon /> }] : []),
         { label: "Comparar", href: `${base}/comparar`, icon: <GitCompareArrowsIcon /> },
         { label: "Alarmes", href: `${base}/alarmes`, icon: <BellIcon />, badge: activeAlarms },
+        { label: "Tela de TV", href: `/tv/${tenant.slug}`, icon: <TvIcon /> },
       ],
     },
   ];

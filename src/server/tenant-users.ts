@@ -31,6 +31,9 @@ export function listTenantMembers(tenantId: string) {
     select: {
       role: true,
       createdAt: true,
+      alarmEmail: true,
+      monthlyReport: true,
+      escalation: true,
       user: {
         select: {
           id: true,
@@ -39,6 +42,7 @@ export function listTenantMembers(tenantId: string) {
           active: true,
           isPlatformAdmin: true,
           lastLoginAt: true,
+          telegramChatId: true,
           _count: { select: { memberships: true } },
         },
       },
@@ -67,7 +71,9 @@ export async function inviteMember(
     if (existing.isPlatformAdmin) throw new MemberRuleError("Esta pessoa é da equipe Engemase e já tem acesso.");
     if (!existing.active) throw new MemberRuleError("Este usuário está desativado. Fale com a Engemase.");
     if (existing.memberships.length > 0) throw new MemberRuleError("Esta pessoa já tem acesso a este cliente.");
-    await db.membership.create({ data: { userId: existing.id, tenantId: tenant.id, role: input.role as Role } });
+    await db.membership.create({
+      data: { userId: existing.id, tenantId: tenant.id, role: input.role as Role, monthlyReport: input.role === "ADMIN" },
+    });
     await audit({
       actorId: actor.id,
       action: "create",
@@ -85,7 +91,8 @@ export async function inviteMember(
       email: input.email,
       // Senha impossível de adivinhar; a pessoa define a dela pelo link do convite.
       passwordHash: await hashPassword(randomBytes(32).toString("base64url")),
-      memberships: { create: { tenantId: tenant.id, role: input.role as Role } },
+      // Administrador do cliente já sai recebendo o resumo do mês (dá para desligar em Minha conta).
+      memberships: { create: { tenantId: tenant.id, role: input.role as Role, monthlyReport: input.role === "ADMIN" } },
     },
   });
   await audit({

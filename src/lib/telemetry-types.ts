@@ -116,3 +116,18 @@ export type BillingResponse = {
   noMainMeter: boolean;
   error: string | null;
 };
+
+/** Resposta de /api/tenants/<slug>/tv: alarmes abertos e consumo de hoje por unidade. */
+export type TvResponse = {
+  alarms: {
+    id: string;
+    severity: "INFO" | "WARNING" | "CRITICAL";
+    title: string;
+    message: string;
+    startedAt: string;
+    acknowledged: boolean;
+  }[];
+  alarmCount: number;
+  today: { siteId: string; siteName: string; total: number; sectors: { id: string; label: string; kwh: number }[] }[];
+  fetchedAt: string;
+};

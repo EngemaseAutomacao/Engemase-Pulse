@@ -29,6 +29,7 @@ type SiteFormValues = {
   city: string | null;
   state: string | null;
   timezone: string;
+  areaM2: number | null;
   agent: AgentStatus;
 };
 
@@ -94,6 +95,13 @@ export function SiteForm({
                 </option>
               ))}
             </NativeSelect>
+          </Field>
+          <Field label="Área (m²)" htmlFor="areaM2" error={error("areaM2")} hint="Para comparar lojas em kWh/m² (opcional).">
+            <Input
+              {...fieldProps(state, "areaM2", site?.areaM2 ? String(site.areaM2).replace(".", ",") : "")}
+              inputMode="decimal"
+              placeholder="Ex.: 2.400"
+            />
           </Field>
         </div>
       </fieldset>

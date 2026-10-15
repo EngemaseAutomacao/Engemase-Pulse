@@ -6,7 +6,7 @@ import { db } from "@/server/db";
 import { getSiteLive } from "@/server/telemetry/live";
 import { statusOf } from "@/server/telemetry/service";
 import { getTenantTopology } from "@/server/telemetry/topology";
-import { RENOTIFY_AFTER_MS, pushAlarms } from "./notify";
+import { RENOTIFY_AFTER_MS, notifyAlarms } from "./notify";
 import { getAlarmState, listTenantsWithRules, openKeyOf, saveAlarmState } from "./state";
 /** Quantos clientes avaliar ao mesmo tempo. */
 const CONCURRENCY = 6;
@@ -191,7 +191,7 @@ async function notifyNewAlarms(
     select: { ruleId: true, meterId: true },
   });
   const quiet = new Set(recentlyCleared.map((a) => `${a.ruleId}:${a.meterId}`));
-  return pushAlarms(
+  return notifyAlarms(
     tenant,
     alarms
       .filter((alarm) => !quiet.has(`${alarm.ruleId}:${alarm.meterId}`))

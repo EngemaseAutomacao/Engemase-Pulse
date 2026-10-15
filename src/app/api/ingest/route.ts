@@ -1,6 +1,7 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { after, NextResponse, type NextRequest } from "next/server";
 import { agentPayloadSchema } from "@/lib/agent-payload";
 import { ingestAgentPayload } from "@/server/agent/ingest";
+import { checkDemandForecast } from "@/server/demand-now";
 import { scheduleHousekeeping } from "@/server/housekeeping";
 import { findSiteByAgentToken } from "@/server/agent/token";
 
@@ -44,5 +45,7 @@ export async function POST(request: NextRequest) {
 
   const result = await ingestAgentPayload(site, parsed.data);
   scheduleHousekeeping();
+  // Leitura ao vivo nova: confere se a demanda da janela de 15 min vai passar da contratada.
+  if (parsed.data.equipamentos) after(() => checkDemandForecast(site.id));
   return reply(200, { ok: true, ...result });
 }

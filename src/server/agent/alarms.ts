@@ -3,7 +3,7 @@ import type { Severity } from "@/lib/alarms";
 import type { AgentAlarm, AgentClosedAlarm, AgentEquipment } from "@/lib/agent-payload";
 import { getCache } from "@/server/cache";
 import { db } from "@/server/db";
-import { RENOTIFY_AFTER_MS, pushAlarms } from "@/server/alarms/notify";
+import { RENOTIFY_AFTER_MS, notifyAlarms } from "@/server/alarms/notify";
 import type { MeterIndex } from "./meters";
 import type { AgentSite } from "./token";
 
@@ -245,7 +245,7 @@ async function notify(
     select: { title: true },
   });
   const quiet = new Set(recent.map((a) => a.title));
-  await pushAlarms(
+  await notifyAlarms(
     tenant,
     fresh.filter((a) => !quiet.has(a.title)).map((a) => ({ ...a, tag: a.openKey ?? a.title })),
   );

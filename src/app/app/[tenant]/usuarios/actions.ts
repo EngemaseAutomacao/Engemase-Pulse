@@ -5,6 +5,8 @@ import { errorState, validationError, type ActionState } from "@/lib/action-stat
 import { ROLES, inviteMemberSchema } from "@/lib/validation";
 import { getTenantAccess } from "@/server/auth/dal";
 import { MemberRuleError, changeMemberRole, inviteMember, newAccessLink, removeMember } from "@/server/tenant-users";
+import { audit } from "@/server/audit";
+import { db } from "@/server/db";
 
 /** Usuários do cliente: tudo exige o papel de Administrador neste cliente. */
 async function adminOf(slug: string) {
@@ -93,4 +95,43 @@ export async function accessLinkAction(
     if (error instanceof MemberRuleError) return { error: error.message };
     throw error;
   }
+}
+
+export type MemberNotice = "alarmEmail" | "monthlyReport" | "escalation";
+const MEMBER_NOTICES: MemberNotice[] = ["alarmEmail", "monthlyReport", "escalation"];
+
+/** Avisos de uma pessoa do cliente: alarmes por e-mail, resumo do mês e escalonamento. */
+export async function setMemberNoticeAction(
+  slug: string,
+  userId: string,
+  notice: MemberNotice,
+  value: boolean,
+): Promise<{ error?: string }> {
+  const { tenant, user } = await adminOf(slug);
+  if (!MEMBER_NOTICES.includes(notice)) return { error: "Opção inválida" };
+  const { count } = await db.membership.updateMany({
+    where: { tenantId: tenant.id, userId },
+    data: { [notice]: value === true },
+  });
+  if (count === 0) return { error: "Usuário não encontrado neste cliente" };
+  await audit({
+    actorId: user.id,
+    action: "update",
+    entityType: "membership",
+    entityId: `${tenant.id}:${userId}`,
+    details: { [notice]: value === true },
+  });
+  revalidatePath(`/app/${slug}/usuarios`);
+  return {};
+}
+
+/** Prazo do escalonamento (minutos sem reconhecimento); 0 desliga. */
+export async function setEscalationMinutesAction(slug: string, minutes: number): Promise<{ error?: string }> {
+  const { tenant, user } = await adminOf(slug);
+  const value = Number.isInteger(minutes) && minutes > 0 && minutes <= 24 * 60 ? minutes : null;
+  if (minutes !== 0 && value === null) return { error: "Prazo inválido" };
+  await db.tenant.update({ where: { id: tenant.id }, data: { escalationMinutes: value } });
+  await audit({ actorId: user.id, action: "update", entityType: "tenant", entityId: tenant.id, details: { escalationMinutes: value } });
+  revalidatePath(`/app/${slug}/usuarios`);
+  return {};
 }
