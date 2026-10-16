@@ -118,10 +118,15 @@ function painelPayloads(now: number) {
         grupo: "agua",
         perfil: "clp-reservatorio",
         parametros: { capacidade_litros: TANK.capacidade, altura_util_m: 2 },
+        marcas: [
+          { valor: 97, rotulo: "alto", prioridade: "media" },
+          { valor: 60, rotulo: "partida da bomba", prioridade: "info" },
+          { valor: 15, rotulo: "crítico", prioridade: "alta" },
+        ],
         tags: [{ nome: "nivel", rotulo: "Nível da caixa d'água", unidade: "%", decimais: 1 }],
         online: true,
         lido_em: now - 1000,
-        valores: { nivel: tankLevel(now), sensor_falha: 0 },
+        valores: { nivel: tankLevel(now), sensor_falha: 0, modo_automatico: 1, bomba_ligada: 0, horas_bomba: 1234 },
       },
       {
         id: GENSET.id,
@@ -130,6 +135,12 @@ function painelPayloads(now: number) {
         grupo: "gerador",
         perfil: "gerador-generico",
         parametros: { potencia_nominal_kw: 150, capacidade_tanque_litros: 400, consumo_litros_hora: 35 },
+        tags: [
+          { nome: "temperatura", rotulo: "Temperatura da água", unidade: "°C", decimais: 0 },
+          { nome: "falha_partida", rotulo: "Falha de partida" },
+          { nome: "falha_pressao_oleo", rotulo: "Baixa pressão do óleo" },
+          { nome: "falha_bateria", rotulo: "Bateria fraca" },
+        ],
         online: true,
         lido_em: now - 1000,
         valores: {
@@ -142,6 +153,10 @@ function painelPayloads(now: number) {
           dias_sem_teste: 3,
           rede_presente: 1,
           potencia: 0,
+          rotacao: 0,
+          temperatura: 32,
+          falha_partida: 0,
+          falha_pressao_oleo: 0,
           falha_bateria: 0,
         },
       },
@@ -183,7 +198,10 @@ function painelPayloads(now: number) {
   ];
   const hours = [];
   for (let h = Math.floor((now - 30 * HOUR) / HOUR) * HOUR; h + HOUR <= now; h += HOUR) {
-    for (const e of equipments) hours.push({ medidor: e.id, grandeza: "ativa", hora: h, kwh: e.kw, fonte: "contador" });
+    for (const e of equipments) {
+      hours.push({ medidor: e.id, grandeza: "ativa", hora: h, kwh: e.kw, fonte: "contador" });
+      hours.push({ medidor: e.id, grandeza: "aparente", hora: h, kwh: e.kw * 1.06, fonte: "contador" });
+    }
   }
   const history = [];
   for (let i = 0; i < windows.length; i += 2000)

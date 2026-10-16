@@ -53,6 +53,9 @@ export type ConsumptionResponse = {
   siteId: string;
   /** AAAA-MM-DD no calendário local da unidade. */
   date: string;
+  /** Energia ativa (kWh) ou aparente (kVAh). Os campos `kwh` vêm nesta unidade. */
+  quantity: "ACTIVE" | "APPARENT";
+  unit: "kWh" | "kVAh";
   timeZone: string;
   /** Início de cada hora do dia (epoch ms). */
   hours: number[];
@@ -62,7 +65,10 @@ export type ConsumptionResponse = {
    * `fromMain` diz qual dos dois.
    */
   entrance: { kwh: (number | null)[]; estimated: boolean[]; total: number; fromMain: boolean };
-  /** Entrada geral menos a soma dos alimentadores; null sem entrada geral ou sem alimentadores. */
+  /**
+   * Entrada geral menos a soma dos alimentadores; null sem entrada geral, sem
+   * alimentadores ou na energia aparente (que não se soma entre setores).
+   */
   unmeasured: { kwh: (number | null)[]; total: number } | null;
   error: string | null;
 };

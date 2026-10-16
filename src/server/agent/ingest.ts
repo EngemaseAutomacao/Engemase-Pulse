@@ -7,12 +7,13 @@ import { db } from "@/server/db";
 import { reportCaught } from "@/server/errors";
 import type { Reading } from "@/server/telemetry/types";
 import { syncClosedPainelAlarms, syncPainelAlarms, type AlarmSyncResult } from "./alarms";
-import { writeAgentLive } from "./live-store";
+import { readAgentLive, writeAgentLive } from "./live-store";
 import { ensureAgentMeters, isEnergyEquipment, loadAgentMeterIndex, type MeterIndex } from "./meters";
 import type { AgentSite } from "./token";
 import {
   ensureUtilityEquipment,
   loadUtilityIndex,
+  needsPreviousLive,
   syncDeclaredModules,
   upsertGeneratorRuns,
   upsertUtilityReadings,
@@ -56,7 +57,10 @@ export async function ingestAgentPayload(site: AgentSite, payload: AgentPayload)
 
   if (payload.equipamentos) {
     const readings = liveReadings(payload, index, receivedAt);
-    const utilityReadings = utilityLiveReadings(payload, utilities, receivedAt);
+    // A leitura anterior só serve para saber desde quando cada falha está ligada:
+    // sem falha ligada (nem equipamento sem comunicação), nem é lida.
+    const previous = needsPreviousLive(payload, utilities) ? ((await readAgentLive(site.id))?.utilities ?? null) : null;
+    const utilityReadings = utilityLiveReadings(payload, utilities, receivedAt, previous);
     result.leituras = Object.keys(readings).length;
     result.leituras_modulos = Object.keys(utilityReadings).length;
     await writeAgentLive(site.id, {

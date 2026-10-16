@@ -64,8 +64,9 @@ export class AgentSource implements TelemetrySource {
   }
 
   /**
-   * Consumo agrupado por hora, dia ou mês do calendário local da unidade.
-   * Só horas fechadas: a hora em andamento entra quando o gateway a consolida.
+   * Consumo agrupado por hora, dia ou mês do calendário local da unidade (em
+   * kWh, ou kVAh com `quantity: "APPARENT"`). Só horas fechadas: a hora em
+   * andamento entra quando o gateway a consolida.
    */
   async energy(meter: MeterRef, window: EnergyWindow): Promise<EnergyBucket[]> {
     const unit = INTERVAL_UNIT[window.interval];
@@ -76,7 +77,7 @@ export class AgentSource implements TelemetrySource {
              bool_or(source = 'POWER') AS estimated
         FROM meter_energy_hours
        WHERE meter_id = ${meter.id}::uuid
-         AND quantity = 'ACTIVE'
+         AND quantity = ${window.quantity ?? "ACTIVE"}::"EnergyQuantity"
          AND hour >= ${window.start.toISOString()}::timestamp
          AND hour < ${window.stop.toISOString()}::timestamp
        GROUP BY 1

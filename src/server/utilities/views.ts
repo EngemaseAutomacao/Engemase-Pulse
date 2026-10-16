@@ -1,16 +1,29 @@
 import "server-only";
-import type { GeneratorRunView, GeneratorView, UtilitiesResponse, UtilityLive, UtilitySiteView, WaterView } from "@/lib/utility-types";
+import type {
+  EngineReading,
+  GeneratorRunView,
+  GeneratorView,
+  UtilitiesResponse,
+  UtilityLive,
+  UtilitySiteView,
+  WaterView,
+} from "@/lib/utility-types";
 import {
+  ENGINE_TAGS,
   activeFaults,
+  annunciator,
   generatorRunning,
   generatorStateLabel,
   generatorStats,
   leakCheck,
+  levelMarks,
   recentUsageRate,
   reservoirAutonomyHours,
   runFailed,
   runTripped,
+  tagInfo,
   waterDays,
+  waterSignals,
   waterUsage,
   type GeneratorRunLite,
   type UtilityModule,
@@ -132,6 +145,10 @@ async function waterView(ref: UtilityEquipmentRef, live: AgentLive | null, now: 
     pumpOn: bool(values.bomba_ligada),
     pressure: num(values.pressao_recalque),
     inflow: num(values.vazao_entrada),
+    columnM: num(values.coluna),
+    pumpHours: num(values.horas_bomba),
+    marks: levelMarks(ref.settings.marcas),
+    signals: current?.online ? waterSignals(values, ref.tagInfo) : [],
     days: days.slice(-15),
     leak: { ...leakCheck(days, leakDay), day: days.some((d) => d.day === leakDay) ? leakDay : null },
   };
@@ -219,10 +236,22 @@ async function generatorView(ref: UtilityEquipmentRef, live: AgentLive | null, n
     mainsPresent: bool(values.rede_presente),
     breakerClosed: bool(values.disjuntor_fechado),
     hourMeter: num(values.horimetro),
+    engine: current?.online ? engineReadings(ref, values) : [],
+    annunciator: annunciator(current?.online ? values : {}, "GENERATOR", ref.tagInfo, live?.utilities?.[ref.id]?.faultsSince),
+    marks: levelMarks(ref.settings.marcas),
     stats30: generatorStats(history.runs, now - 30 * DAY),
     readiness30: history.readiness30,
     runs: history.runs.slice(0, 20).map(runView),
   };
+}
+
+function engineReadings(ref: UtilityEquipmentRef, values: Record<string, number>): EngineReading[] {
+  return ENGINE_TAGS.flatMap((name) => {
+    const value = num(values[name]);
+    if (value === null) return [];
+    const info = tagInfo(name, "GENERATOR", ref.tagInfo);
+    return [{ name, label: info.label, unit: info.unit ?? null, decimals: info.decimals ?? 1, value }];
+  });
 }
 
 function base(ref: UtilityEquipmentRef, live: UtilityLive | null) {

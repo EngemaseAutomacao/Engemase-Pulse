@@ -8,6 +8,7 @@ import {
   CircleCheckIcon,
   CircleDashedIcon,
   CircleXIcon,
+  CogIcon,
   FuelIcon,
   LoaderCircleIcon,
   OctagonAlertIcon,
@@ -24,10 +25,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { fetchJson } from "@/lib/fetcher";
 import { formatNumber } from "@/lib/format";
 import { DAYS_WITHOUT_RUN_ALERT, DAYS_WITHOUT_RUN_WARN } from "@/lib/utilities";
+import type { AnnunciatorWindow } from "@/lib/utilities";
 import type { GeneratorRunView, GeneratorView, UtilitiesResponse } from "@/lib/utility-types";
 import { cn } from "@/lib/utils";
 import { SitePicker, UtilitiesLoading, liveStatus } from "./shared";
-import { TankFigure } from "./tank-figure";
+import { LevelMarksLegend, TankFigure } from "./tank-figure";
 import { TrendRangePicker, UtilityTrend, type TrendRange } from "./utility-trend";
 
 /** Tela do módulo Gerador: grupos geradores de cada unidade. */
@@ -150,8 +152,9 @@ function GeneratorSection({ tenantSlug, gen, range }: { tenantSlug: string; gen:
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[auto_minmax(0,1fr)]">
-        <div className="surface flex items-center justify-center p-4">
-          <TankFigure levelPct={gen.dieselPct} label="Diesel no tanque" low={30} fluid="diesel" />
+        <div className="surface flex flex-col items-center justify-center gap-3 p-4">
+          <TankFigure levelPct={gen.dieselPct} label="Diesel no tanque" low={30} marks={gen.marks} fluid="diesel" />
+          <LevelMarksLegend marks={gen.marks} className="w-full max-w-48" />
         </div>
         <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-3">
           <StatTile
@@ -197,6 +200,11 @@ function GeneratorSection({ tenantSlug, gen, range }: { tenantSlug: string; gen:
             detail="horas de motor"
           />
         </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <EngineCard gen={gen} />
+        <Annunciator gen={gen} />
       </div>
 
       <div className="surface space-y-3 p-4">
@@ -255,6 +263,103 @@ function GeneratorSection({ tenantSlug, gen, range }: { tenantSlug: string; gen:
         />
       </div>
     </section>
+  );
+}
+
+/** Leituras do motor e do alternador, ao vivo. */
+function EngineCard({ gen }: { gen: GeneratorView }) {
+  return (
+    <div className="surface space-y-3 p-4">
+      <div className="flex items-center gap-2">
+        <CogIcon className="size-4 text-primary" aria-hidden />
+        <h3 className="font-semibold">Motor e alternador</h3>
+      </div>
+      {!gen.live?.online ? (
+        <p className="text-sm text-muted-foreground">Sem leitura recente do controlador.</p>
+      ) : gen.engine.length === 0 ? (
+        <p className="text-sm text-muted-foreground">O controlador deste grupo não informa as leituras do motor.</p>
+      ) : (
+        <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+          {gen.engine.map((r) => (
+            <Indicator
+              key={r.name}
+              label={r.label}
+              value={`${formatNumber(r.value, r.decimals)}${r.unit ? ` ${r.unit}` : ""}`}
+            />
+          ))}
+        </dl>
+      )}
+    </div>
+  );
+}
+
+const WINDOW_TONE = {
+  critical: "border-destructive/60 bg-destructive/15 text-foreground [&_svg]:text-destructive",
+  warning: "border-warning/60 bg-warning/15 text-foreground [&_svg]:text-warning",
+} as const;
+
+/**
+ * Anunciador de falhas, como o painel do grupo: uma janela por falha que o
+ * controlador informa. A que acendeu primeiro fica marcada como 1ª falha — é a
+ * causa provável quando várias acendem juntas.
+ */
+function Annunciator({ gen }: { gen: GeneratorView }) {
+  const windows = gen.annunciator;
+  const active = windows.filter((w) => w.active);
+  const first = windows.find((w) => w.first) ?? null;
+  const at = (iso: string) =>
+    new Date(iso).toLocaleString("pt-BR", { timeZone: gen.timeZone, day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+
+  return (
+    <div className="surface space-y-3 p-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <h3 className="font-semibold">Anunciador de falhas</h3>
+        <p className="text-xs text-muted-foreground" aria-live="polite">
+          {!gen.live?.online
+            ? "sem leitura recente"
+            : active.length === 0
+              ? "nenhuma falha ligada"
+              : `${active.length} ${active.length === 1 ? "falha ligada" : "falhas ligadas"}`}
+        </p>
+      </div>
+      {first && active.length > 1 && (
+        <p className="text-sm">
+          <span className="font-medium">1ª falha:</span> {first.label}
+          {first.since && <span className="text-muted-foreground"> · desde {at(first.since)}</span>}
+        </p>
+      )}
+      {windows.length === 0 ? (
+        <p className="text-sm text-muted-foreground">O controlador deste grupo não informa as falhas uma a uma.</p>
+      ) : (
+        <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {windows.map((w) => (
+            <AnnunciatorCell key={w.name} w={w} showFirst={active.length > 1} at={at} />
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function AnnunciatorCell({ w, showFirst, at }: { w: AnnunciatorWindow; showFirst: boolean; at: (iso: string) => string }) {
+  const Icon = w.tone === "critical" ? OctagonAlertIcon : TriangleAlertIcon;
+  const first = showFirst && w.first;
+  return (
+    <li
+      aria-label={`${w.label}: ${w.active ? (first ? "ligada, 1ª falha" : "ligada") : "normal"}`}
+      className={cn(
+        "flex min-h-14 flex-col justify-center gap-0.5 rounded-lg border px-2.5 py-2 text-sm",
+        w.active ? WINDOW_TONE[w.tone] : "border-border bg-muted/40 text-muted-foreground",
+        first && "ring-2 ring-destructive ring-offset-1 ring-offset-background",
+      )}
+    >
+      {first && <span className="text-[11px] font-semibold uppercase tracking-wide text-destructive">1ª falha</span>}
+      <span className={cn("flex items-start gap-1.5 leading-tight", w.active && "font-medium")}>
+        {w.active && <Icon className="mt-0.5 size-3.5 shrink-0" aria-hidden />}
+        {w.label}
+      </span>
+      {w.active && w.since && <span className="text-[11px] text-muted-foreground tabular">desde {at(w.since)}</span>}
+    </li>
   );
 }
 

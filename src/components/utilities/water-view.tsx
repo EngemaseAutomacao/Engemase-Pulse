@@ -12,11 +12,11 @@ import { StatusBadge } from "@/components/meters/status-badge";
 import { EmptyState } from "@/components/shell/page";
 import { fetchJson } from "@/lib/fetcher";
 import { formatNumber } from "@/lib/format";
-import { LEAK_FACTOR, type WaterDay } from "@/lib/utilities";
+import { LEAK_FACTOR, type SignalTone, type WaterDay } from "@/lib/utilities";
 import type { UtilitiesResponse, WaterView as Water } from "@/lib/utility-types";
 import { cn } from "@/lib/utils";
 import { SitePicker, UtilitiesLoading, liveStatus } from "./shared";
-import { TankFigure } from "./tank-figure";
+import { LevelMarksLegend, TankFigure } from "./tank-figure";
 import { TrendRangePicker, UtilityTrend, type TrendRange } from "./utility-trend";
 
 const m3 = (liters: number | null | undefined, digits = 1) =>
@@ -64,6 +64,22 @@ export function WaterModuleView({ tenantSlug }: { tenantSlug: string }) {
   );
 }
 
+const SIGNAL_TONE: Record<SignalTone, string> = {
+  critical: "border-destructive/50 bg-destructive/10",
+  warning: "border-warning/50 bg-warning/10",
+  info: "border-info/40 bg-info/10",
+  ok: "border-border",
+  muted: "border-border bg-muted/40",
+};
+
+const SIGNAL_DOT: Record<SignalTone, string> = {
+  critical: "bg-destructive",
+  warning: "bg-warning",
+  info: "bg-info",
+  ok: "bg-success",
+  muted: "bg-muted-foreground/50",
+};
+
 function TankSection({ tenantSlug, tank, range }: { tenantSlug: string; tank: Water; range: TrendRange }) {
   const status = liveStatus(tank.live);
   const today = tank.days.at(-1) ?? null;
@@ -98,8 +114,9 @@ function TankSection({ tenantSlug, tank, range }: { tenantSlug: string; tank: Wa
       )}
 
       <div className="grid gap-4 lg:grid-cols-[auto_minmax(0,1fr)]">
-        <div className="surface flex items-center justify-center p-4">
-          <TankFigure levelPct={tank.levelPct} label={`Nível de ${tank.name}`} low={20} />
+        <div className="surface flex flex-col items-center justify-center gap-3 p-4">
+          <TankFigure levelPct={tank.levelPct} label={`Nível de ${tank.name}`} low={20} marks={tank.marks} />
+          <LevelMarksLegend marks={tank.marks} className="w-full max-w-48" />
         </div>
         <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-3">
           <StatTile
@@ -107,7 +124,12 @@ function TankSection({ tenantSlug, tank, range }: { tenantSlug: string; tank: Wa
             value={tank.volumeL === null ? "—" : formatNumber(tank.volumeL, 0)}
             unit="L"
             icon={<DropletsIcon />}
-            detail={tank.capacityL ? `de ${formatNumber(tank.capacityL, 0)} L` : "capacidade não informada"}
+            detail={[
+              tank.capacityL ? `de ${formatNumber(tank.capacityL, 0)} L` : "capacidade não informada",
+              tank.columnM !== null ? `coluna ${formatNumber(tank.columnM, 2)} m` : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
           />
           <StatTile
             label="Consumo hoje"
@@ -147,8 +169,34 @@ function TankSection({ tenantSlug, tank, range }: { tenantSlug: string; tank: Wa
                 .join(" · ")}
             />
           )}
+          {tank.pumpHours !== null && (
+            <StatTile
+              label="Horímetro da bomba"
+              value={formatNumber(tank.pumpHours, 0)}
+              unit="h"
+              icon={<TimerIcon />}
+              detail="horas de funcionamento"
+            />
+          )}
         </div>
       </div>
+
+      {tank.signals.length > 0 && (
+        <div className="surface space-y-3 p-4">
+          <h3 className="font-semibold">Sinais do reservatório</h3>
+          <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
+            {tank.signals.map((sig) => (
+              <li key={sig.name} className={cn("rounded-lg border px-3 py-2", SIGNAL_TONE[sig.tone])}>
+                <p className="text-xs text-muted-foreground">{sig.label}</p>
+                <p className="flex items-center gap-1.5 text-sm font-medium">
+                  <span className={cn("size-2 shrink-0 rounded-full", SIGNAL_DOT[sig.tone])} aria-hidden />
+                  {sig.state}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {!noCapacity && (
         <div className="grid gap-4 lg:grid-cols-2">

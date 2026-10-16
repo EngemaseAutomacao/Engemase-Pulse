@@ -1,4 +1,13 @@
-import type { GeneratorStats, LeakCheck, TagInfo, UtilityModule, WaterDay } from "@/lib/utilities";
+import type {
+  AnnunciatorWindow,
+  GeneratorStats,
+  LeakCheck,
+  LevelMark,
+  TagInfo,
+  UtilityModule,
+  WaterDay,
+  WaterSignal,
+} from "@/lib/utilities";
 
 /** Respostas das rotas dos módulos Água e Gerador (as telas consomem estes tipos). */
 
@@ -36,6 +45,14 @@ export type WaterView = EquipmentBase & {
   pumpOn: boolean | null;
   pressure: number | null;
   inflow: number | null;
+  /** Coluna d'água (m), quando o CLP informa. */
+  columnM: number | null;
+  /** Horímetro da bomba de recalque (h). */
+  pumpHours: number | null;
+  /** Linhas de nível do gateway (alto, partida da bomba, baixo, crítico), de cima para baixo. */
+  marks: LevelMark[];
+  /** Boias, bomba em automático, falhas da bomba e do sensor. */
+  signals: WaterSignal[];
   /** Dias (fuso da unidade), do mais antigo ao de hoje. */
   days: WaterDay[];
   /** Madrugada mais recente já completa (0h–5h). */
@@ -56,6 +73,8 @@ export type GeneratorRunView = {
   startSeconds: number | null;
 };
 
+export type EngineReading = { name: string; label: string; unit: string | null; decimals: number; value: number };
+
 export type GeneratorView = EquipmentBase & {
   kind: "GENERATOR";
   state: string | null;
@@ -72,6 +91,12 @@ export type GeneratorView = EquipmentBase & {
   mainsPresent: boolean | null;
   breakerClosed: boolean | null;
   hourMeter: number | null;
+  /** Leituras do motor e do alternador que o controlador informa. */
+  engine: EngineReading[];
+  /** Janelas do anunciador de falhas, com a 1ª falha marcada. */
+  annunciator: AnnunciatorWindow[];
+  /** Linhas de nível do tanque de diesel. */
+  marks: LevelMark[];
   /** Corridas dos últimos 30 dias. */
   stats30: GeneratorStats;
   /** Fração do tempo pronto para partir nos últimos 30 dias (0–1). */

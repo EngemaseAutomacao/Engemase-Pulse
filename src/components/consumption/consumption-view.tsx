@@ -37,9 +37,12 @@ export function ConsumptionView({ tenantSlug, sites }: { tenantSlug: string; sit
   const [sameScale, setSameScale] = useState(true);
   const [showTable, setShowTable] = useState(false);
   const [mode, setMode] = useState<"day" | "month">("day");
+  const [quantity, setQuantity] = useState<"ativa" | "aparente">("ativa");
 
   const { data, error, isLoading } = useSWR<ConsumptionResponse>(
-    mode === "day" ? `/api/tenants/${tenantSlug}/consumption?site=${site.id}&date=${day}` : null,
+    mode === "day"
+      ? `/api/tenants/${tenantSlug}/consumption?site=${site.id}&date=${day}${quantity === "aparente" ? "&grandeza=aparente" : ""}`
+      : null,
     fetchJson,
     { refreshInterval: day === today ? 300_000 : 0, keepPreviousData: true },
   );
@@ -118,6 +121,29 @@ export function ConsumptionView({ tenantSlug, sites }: { tenantSlug: string; sit
               className="w-40"
             />
             <span className="text-sm text-muted-foreground first-letter:uppercase">{longDate(day)}</span>
+            <div role="radiogroup" aria-label="Energia" className="flex rounded-lg border p-0.5 sm:ml-auto">
+              {(
+                [
+                  ["ativa", "Ativa · kWh", "Energia ativa: a que gira o motor, aquece e ilumina"],
+                  ["aparente", "Aparente · kVAh", "Energia aparente: a ativa somada à reativa; a diferença é o efeito do fator de potência"],
+                ] as const
+              ).map(([value, label, title]) => (
+                <button
+                  key={value}
+                  type="button"
+                  role="radio"
+                  aria-checked={quantity === value}
+                  onClick={() => setQuantity(value)}
+                  title={title}
+                  className={cn(
+                    "min-h-8 rounded-md px-3 text-xs font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground",
+                    quantity === value && "bg-secondary text-foreground",
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </>
         )}
       </div>
@@ -163,7 +189,8 @@ export function ConsumptionView({ tenantSlug, sites }: { tenantSlug: string; sit
 // ---------------------------------------------------------------------------
 
 function Summary({ data }: { data: ConsumptionResponse }) {
-  const { entrance, unmeasured, timeZone, hours } = data;
+  const { entrance, unmeasured, timeZone, hours, unit } = data;
+  const apparent = data.quantity === "APPARENT";
   const peak = peakIndex(entrance.kwh);
   const sectors = feedersOf(data);
   const biggest = [...sectors].sort((a, b) => b.total - a.total)[0];
@@ -174,9 +201,9 @@ function Summary({ data }: { data: ConsumptionResponse }) {
   return (
     <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
       <StatTile
-        label="Consumo do dia"
+        label={apparent ? "Energia aparente do dia" : "Consumo do dia"}
         value={formatNumber(entrance.total, 0)}
-        unit="kWh"
+        unit={unit}
         icon={<ZapIcon />}
         detail={entrance.fromMain ? "Medidor da entrada geral" : "Soma dos medidores (sem entrada geral cadastrada)"}
       />
@@ -184,28 +211,32 @@ function Summary({ data }: { data: ConsumptionResponse }) {
         label="Hora de pico"
         value={peak === null ? "—" : hourRange(hours[peak], timeZone)}
         icon={<ClockIcon />}
-        detail={peak === null ? "Sem consumo registrado" : `${formatNumber(entrance.kwh[peak], 0)} kWh ${where}`}
+        detail={peak === null ? "Sem consumo registrado" : `${formatNumber(entrance.kwh[peak], 0)} ${unit} ${where}`}
       />
       <StatTile
         label="Maior setor"
         value={biggest && biggest.total > 0 ? biggest.name : "—"}
         icon={<FactoryIcon />}
         detail={
-          biggest && biggest.total > 0 ? `${formatNumber(biggest.total, 0)} kWh · ${share(biggest.total)}` : undefined
+          biggest && biggest.total > 0 ? `${formatNumber(biggest.total, 0)} ${unit} · ${share(biggest.total)}` : undefined
         }
       />
       {unmeasured ? (
         <StatTile
           label="Não medido"
           value={formatNumber(unmeasured.total, 0)}
-          unit="kWh"
+          unit={unit}
           detail={`${share(unmeasured.total)} — entrada geral menos a soma dos setores`}
         />
       ) : (
         <StatTile
           label="Setores medidos"
           value={String(sectors.length)}
-          detail="Cadastre a entrada geral para ver o consumo não medido"
+          detail={
+            apparent
+              ? "O não medido sai só na energia ativa: a aparente não se soma entre setores"
+              : "Cadastre a entrada geral para ver o consumo não medido"
+          }
         />
       )}
     </div>
@@ -301,13 +332,16 @@ function HourByHour({
           <div>
             <div className="mb-1 flex items-baseline justify-between gap-2 text-sm">
               <span className="font-medium">{entrance.fromMain ? "Entrada geral" : "Total (soma dos medidores)"}</span>
-              <span className="text-muted-foreground tabular">{formatNumber(entrance.total, 0)} kWh</span>
+              <span className="text-muted-foreground tabular">
+                {formatNumber(entrance.total, 0)} {data.unit}
+              </span>
             </div>
             <HourlyBars
               hours={hours}
               kwh={entrance.kwh}
               estimated={entrance.estimated}
               timeZone={timeZone}
+              unit={data.unit}
               height={220}
             />
           </div>
@@ -320,13 +354,16 @@ function HourByHour({
                       <span className="mr-1.5 font-mono text-xs text-muted-foreground">{s.tag}</span>
                       {s.name}
                     </span>
-                    <span className="shrink-0 text-muted-foreground tabular">{formatNumber(s.total, 0)} kWh</span>
+                    <span className="shrink-0 text-muted-foreground tabular">
+                      {formatNumber(s.total, 0)} {data.unit}
+                    </span>
                   </div>
                   <HourlyBars
                     hours={hours}
                     kwh={s.kwh}
                     estimated={s.estimated}
                     timeZone={timeZone}
+                    unit={data.unit}
                     height={130}
                     yMax={sameScale ? niceCeil(sectorMax) : undefined}
                     compact
@@ -346,6 +383,7 @@ function HourlyBars({
   kwh,
   estimated,
   timeZone,
+  unit,
   height,
   yMax,
   compact = false,
@@ -354,6 +392,7 @@ function HourlyBars({
   kwh: (number | null)[];
   estimated: boolean[];
   timeZone: string;
+  unit: string;
   height: number;
   yMax?: number;
   compact?: boolean;
@@ -386,7 +425,7 @@ function HourlyBars({
           />
           <Tooltip
             cursor={{ fill: "var(--muted)" }}
-            content={(props: TooltipContentProps) => <HourTooltip {...props} timeZone={timeZone} />}
+            content={(props: TooltipContentProps) => <HourTooltip {...props} timeZone={timeZone} unit={unit} />}
           />
           <Bar dataKey="kwh" radius={[4, 4, 0, 0]} maxBarSize={20} isAnimationActive={false}>
             {rows.map((row) => (
@@ -399,7 +438,7 @@ function HourlyBars({
   );
 }
 
-function HourTooltip({ active, payload, timeZone }: TooltipContentProps & { timeZone: string }) {
+function HourTooltip({ active, payload, timeZone, unit }: TooltipContentProps & { timeZone: string; unit: string }) {
   const row = payload?.[0]?.payload as { start: number; kwh: number | null; estimated: boolean } | undefined;
   if (!active || !row) return null;
   return (
@@ -409,7 +448,7 @@ function HourTooltip({ active, payload, timeZone }: TooltipContentProps & { time
         {
           key: "kwh",
           label: row.estimated ? "Consumo (estimado pela potência)" : "Consumo",
-          value: row.kwh === null ? "sem registro" : `${formatNumber(row.kwh, 1)} kWh`,
+          value: row.kwh === null ? "sem registro" : `${formatNumber(row.kwh, 1)} ${unit}`,
         },
       ]}
     />
@@ -455,7 +494,7 @@ function HourlyTable({ data }: { data: ConsumptionResponse }) {
             </TableRow>
           ))}
           <TableRow className="bg-muted/50 font-medium">
-            <TableCell>Total (kWh)</TableCell>
+            <TableCell>Total ({data.unit})</TableCell>
             {columns.map((c) => (
               <TableCell key={c.key} className="text-right tabular">
                 {formatNumber(c.total, 1)}
@@ -503,7 +542,7 @@ function Share({ data }: { data: ConsumptionResponse }) {
               />
             </span>
             <span className="text-right text-xs text-muted-foreground tabular">
-              {formatNumber(r.value, 0)} kWh · {formatNumber((r.value / total) * 100, 1)} %
+              {formatNumber(r.value, 0)} {data.unit} · {formatNumber((r.value / total) * 100, 1)} %
             </span>
           </li>
         ))}

@@ -78,6 +78,7 @@ export const WATER_TAGS: Record<string, TagInfo> = {
   boia_baixo: { label: "Boia de nível baixo" },
   boia_alto: { label: "Boia de nível alto" },
   sensor_falha: { label: "Falha do sensor de nível" },
+  modo_automatico: { label: "Bomba em automático" },
 };
 
 export const GENERATOR_TAGS: Record<string, TagInfo> = {
@@ -90,6 +91,11 @@ export const GENERATOR_TAGS: Record<string, TagInfo> = {
   corrente_c: { label: "Corrente I3", unit: "A", decimals: 0 },
   frequencia: { label: "Frequência", unit: "Hz", decimals: 1 },
   rotacao: { label: "Rotação", unit: "rpm", decimals: 0 },
+  carga_pct: { label: "Carga", unit: "%", decimals: 0 },
+  fator_potencia: { label: "Fator de potência", decimals: 2 },
+  potencia_rede: { label: "Potência da rede", unit: "kW", decimals: 0 },
+  temperatura_oleo: { label: "Temperatura do óleo", unit: "°C", decimals: 0 },
+  partidas: { label: "Partidas (contador)", decimals: 0 },
   tensao_bateria: { label: "Bateria", unit: "V", decimals: 1 },
   pressao_oleo: { label: "Pressão do óleo", unit: "bar", decimals: 1 },
   temperatura: { label: "Temperatura da água", unit: "°C", decimals: 0 },
@@ -115,6 +121,9 @@ function humanize(name: string): string {
 
 const isOn = (v: number | null | undefined) => v !== null && v !== undefined && Number.isFinite(v) && v >= 0.5;
 
+/** Tag de falha: `falha_*` (gerador) ou `*_falha` (bomba e sensor do reservatório). */
+export const isFaultTag = (name: string) => name.startsWith("falha_") || name.endsWith("_falha");
+
 /** Falhas ligadas agora (tags `falha_*`, mais a da bomba e a do sensor no reservatório). */
 export function activeFaults(
   values: Record<string, number | null>,
@@ -122,8 +131,163 @@ export function activeFaults(
   fromPainel?: Record<string, TagInfo> | null,
 ): { name: string; label: string }[] {
   return Object.entries(values)
-    .filter(([name, v]) => (name.startsWith("falha_") || name.endsWith("_falha")) && isOn(v))
+    .filter(([name, v]) => isFaultTag(name) && isOn(v))
     .map(([name]) => ({ name, label: tagInfo(name, kind, fromPainel).label }));
+}
+
+export type SignalTone = "critical" | "warning" | "info" | "ok" | "muted";
+
+// ---------------------------------------------------------------------------
+// Linhas de nível (limites do reservatório e do tanque de diesel)
+// ---------------------------------------------------------------------------
+
+/** Linha de nível vinda do gateway: "alto 97 %", "partida da bomba 60 %", "crítico 15 %". */
+export type LevelMark = { value: number; label: string; tone: "critical" | "warning" | "info" };
+
+const MARK_TONE: Record<string, LevelMark["tone"]> = { alta: "critical", media: "warning", média: "warning" };
+
+/** Linhas válidas, de cima para baixo (o gateway manda em `marcas`; ficam em `settings.marcas`). */
+export function levelMarks(input: unknown): LevelMark[] {
+  if (!Array.isArray(input)) return [];
+  return input
+    .flatMap((m) => {
+      if (!m || typeof m !== "object") return [];
+      const { valor, rotulo, prioridade } = m as Record<string, unknown>;
+      if (typeof valor !== "number" || !Number.isFinite(valor) || valor < 0 || valor > 100) return [];
+      if (typeof rotulo !== "string" || !rotulo.trim()) return [];
+      const tone = MARK_TONE[typeof prioridade === "string" ? prioridade : ""] ?? "info";
+      return [{ value: valor, label: rotulo.trim().slice(0, 40), tone }];
+    })
+    .slice(0, 8)
+    .sort((a, b) => b.value - a.value);
+}
+
+/** Nível abaixo de uma linha crítica (para a cor do valor). */
+export function belowCritical(levelPct: number | null, marks: LevelMark[]): boolean {
+  return levelPct !== null && marks.some((m) => m.tone === "critical" && levelPct < m.value);
+}
+
+// ---------------------------------------------------------------------------
+// Anunciador de falhas do gerador (com a 1ª falha)
+// ---------------------------------------------------------------------------
+
+/** Leituras do motor e do alternador, na ordem da tela (só aparecem as que o controlador tem). */
+export const ENGINE_TAGS = [
+  "rotacao",
+  "frequencia",
+  "tensao_ab",
+  "tensao_bc",
+  "tensao_ca",
+  "corrente_a",
+  "corrente_b",
+  "corrente_c",
+  "carga_pct",
+  "fator_potencia",
+  "pressao_oleo",
+  "temperatura",
+  "temperatura_oleo",
+  "potencia_rede",
+  "partidas",
+] as const;
+
+/** Falhas que não param o grupo (bateria, carregador): atenção, não crítico. */
+const WARNING_FAULTS = new Set(["falha_bateria", "falha_carregador"]);
+
+export type AnnunciatorWindow = {
+  name: string;
+  label: string;
+  tone: "critical" | "warning";
+  active: boolean;
+  /** Desde quando está ligada (ISO), se ligada. */
+  since: string | null;
+  /** Acendeu primeiro entre as ligadas (a 1ª falha do anunciador). */
+  first: boolean;
+};
+
+/**
+ * Janelas do anunciador: todas as falhas que o controlador informa, ligadas ou
+ * não, na ordem do cadastro. A 1ª falha é a ligada há mais tempo — como no
+ * anunciador físico, é ela que diz o que causou a parada quando várias acendem
+ * juntas. Empate (acenderam na mesma leitura): vale a ordem do cadastro.
+ */
+export function annunciator(
+  values: Record<string, number | null>,
+  kind: UtilityKind,
+  fromPainel: Record<string, TagInfo> | null | undefined,
+  since: Record<string, string> | null | undefined,
+): AnnunciatorWindow[] {
+  const names = [...new Set([...Object.keys(fromPainel ?? {}), ...Object.keys(values)])].filter(isFaultTag);
+  const windows = names.map((name) => {
+    const active = isOn(values[name]);
+    return {
+      name,
+      label: tagInfo(name, kind, fromPainel).label,
+      tone: WARNING_FAULTS.has(name) ? ("warning" as const) : ("critical" as const),
+      active,
+      since: active ? (since?.[name] ?? null) : null,
+      first: false,
+    };
+  });
+  let first: AnnunciatorWindow | null = null;
+  for (const w of windows) {
+    if (!w.active) continue;
+    const t = w.since ? Date.parse(w.since) : Infinity;
+    const best = first?.since ? Date.parse(first.since) : Infinity;
+    if (!first || t < best) first = w;
+  }
+  if (first) first.first = true;
+  return windows;
+}
+
+/**
+ * Desde quando cada falha está ligada, de uma leitura ao vivo para a próxima:
+ * a que continua ligada guarda o horário; a nova recebe o do alarme do gateway
+ * (exato) ou o da leitura. Sem comunicação, fica como estava.
+ */
+export function trackFaultOnsets(
+  values: Record<string, number>,
+  online: boolean,
+  readAt: string | null,
+  previous: Record<string, string> | null | undefined,
+  alarmStarts: Record<string, string> = {},
+): Record<string, string> {
+  if (!online) return { ...(previous ?? {}) };
+  const out: Record<string, string> = {};
+  for (const [name, v] of Object.entries(values)) {
+    if (!isFaultTag(name) || !isOn(v)) continue;
+    const at = alarmStarts[name] ?? previous?.[name] ?? readAt;
+    if (at) out[name] = at;
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// Sinais do reservatório (boias, bomba, sensor)
+// ---------------------------------------------------------------------------
+
+export type WaterSignal = { name: string; label: string; state: string; tone: SignalTone };
+
+/** Como cada sinal digital do reservatório aparece: texto ligado/desligado e o tom quando ligado. */
+const WATER_SIGNALS: { name: string; on: string; off: string; onTone: SignalTone; offTone: SignalTone }[] = [
+  { name: "bomba_ligada", on: "Ligada", off: "Desligada", onTone: "info", offTone: "muted" },
+  { name: "modo_automatico", on: "Automático", off: "Manual", onTone: "ok", offTone: "warning" },
+  { name: "boia_alto", on: "Atuada", off: "Normal", onTone: "info", offTone: "muted" },
+  { name: "boia_baixo", on: "Atuada", off: "Normal", onTone: "warning", offTone: "muted" },
+  { name: "bomba_falha", on: "Em falha", off: "Normal", onTone: "critical", offTone: "ok" },
+  { name: "sensor_falha", on: "Em falha", off: "Normal", onTone: "critical", offTone: "ok" },
+];
+
+/** Sinais digitais que o CLP do reservatório informa, na ordem da tela. */
+export function waterSignals(values: Record<string, number | null>, fromPainel?: Record<string, TagInfo> | null): WaterSignal[] {
+  return WATER_SIGNALS.filter((s) => finite(values[s.name])).map((s) => {
+    const on = isOn(values[s.name]);
+    return {
+      name: s.name,
+      label: tagInfo(s.name, "WATER", fromPainel).label,
+      state: on ? s.on : s.off,
+      tone: on ? s.onTone : s.offTone,
+    };
+  });
 }
 
 // ---------------------------------------------------------------------------
