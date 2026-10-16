@@ -24,6 +24,7 @@ import { formatNumber } from "@/lib/format";
 import type { ConsumptionResponse } from "@/lib/telemetry-types";
 import { cn } from "@/lib/utils";
 import { MonthConsumption } from "./month-consumption";
+import { plantTag } from "@/lib/meter-label";
 
 type SiteOption = { id: string; name: string; timezone: string };
 
@@ -351,7 +352,9 @@ function HourByHour({
                 <div key={s.id} className="rounded-lg border p-3">
                   <div className="mb-1 flex items-baseline justify-between gap-2 text-sm">
                     <span className="truncate font-medium" title={s.name}>
-                      <span className="mr-1.5 font-mono text-xs text-muted-foreground">{s.tag}</span>
+                      {plantTag(s.tag) && (
+                        <span className="mr-1.5 font-mono text-xs text-muted-foreground">{plantTag(s.tag)}</span>
+                      )}
                       {s.name}
                     </span>
                     <span className="shrink-0 text-muted-foreground tabular">

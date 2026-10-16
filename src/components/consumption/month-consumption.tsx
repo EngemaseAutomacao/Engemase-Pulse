@@ -22,6 +22,7 @@ import { fetchJson } from "@/lib/fetcher";
 import { formatChange, formatMoney, formatNumber } from "@/lib/format";
 import type { MonthConsumptionResponse } from "@/lib/telemetry-types";
 import { cn } from "@/lib/utils";
+import { plantTag } from "@/lib/meter-label";
 
 /** AAAA-MM do instante no relógio da unidade. */
 export function localMonth(date: Date, timeZone: string): string {
@@ -301,7 +302,9 @@ function SectorTable({ data }: { data: MonthConsumptionResponse }) {
           {rows.map((s) => (
             <TableRow key={s.id}>
               <TableCell className="pl-4">
-                <span className="mr-2 font-mono text-xs text-muted-foreground">{s.tag}</span>
+                {plantTag(s.tag) && (
+                  <span className="mr-2 font-mono text-xs text-muted-foreground">{plantTag(s.tag)}</span>
+                )}
                 {s.name}
               </TableCell>
               <TableCell className="text-right tabular">{formatNumber(s.total, 0)}</TableCell>

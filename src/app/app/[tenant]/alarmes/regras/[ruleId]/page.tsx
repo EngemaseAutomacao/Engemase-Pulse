@@ -8,6 +8,7 @@ import { requireTenant } from "@/server/auth/dal";
 import { getAlarmRule } from "@/server/queries/alarms";
 import { listTenantMeters } from "@/server/queries/meters";
 import { deleteAlarmRule, saveAlarmRule } from "../../actions";
+import { meterLabel } from "@/lib/meter-label";
 
 export const metadata: Metadata = { title: "Regra de alarme" };
 
@@ -24,7 +25,7 @@ export default async function AlarmRulePage({ params }: PageProps<"/app/[tenant]
       <div className="surface p-5">
         <AlarmRuleForm
           action={saveAlarmRule.bind(null, tenant.slug, rule.id)}
-          meters={meters.map((m) => ({ id: m.id, label: `${m.tag} — ${m.name} (${m.siteName})` }))}
+          meters={meters.map((m) => ({ id: m.id, label: `${meterLabel(m)} (${m.siteName})` }))}
           rule={rule}
         />
       </div>

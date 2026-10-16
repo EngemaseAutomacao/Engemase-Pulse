@@ -15,6 +15,7 @@ import { tenantLogoUrl } from "@/server/branding";
 import { db } from "@/server/db";
 import { getSiteBilling, getSiteMonthConsumption, monthWindow } from "@/server/queries/billing";
 import { getTenantTopology } from "@/server/telemetry/topology";
+import { plantTag } from "@/lib/meter-label";
 
 export const metadata: Metadata = { title: "Relatório mensal" };
 
@@ -209,7 +210,9 @@ async function Report({ params, searchParams }: PageProps<"/relatorio/[tenant]">
                 .map((s) => (
                   <tr key={s.id}>
                     <td className="py-1.5">
-                      <span className="mr-2 font-mono text-xs text-muted-foreground">{s.tag}</span>
+                      {plantTag(s.tag) && (
+                        <span className="mr-2 font-mono text-xs text-muted-foreground">{plantTag(s.tag)}</span>
+                      )}
                       {s.name}
                     </td>
                     <td className="py-1.5 text-right tabular">{formatNumber(s.total, 0)}</td>

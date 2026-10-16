@@ -4,6 +4,7 @@ import { authorizeTenantApi, NO_STORE_HEADERS } from "@/server/http";
 import { countActiveAlarms, listActiveAlarms } from "@/server/queries/alarms";
 import { getSiteDayConsumption } from "@/server/queries/consumption";
 import { getTenantTopology } from "@/server/telemetry/topology";
+import { meterLabel } from "@/lib/meter-label";
 
 /** Dados da tela de TV que mudam devagar: alarmes abertos e o consumo de hoje por setor. */
 export async function GET(_request: Request, ctx: RouteContext<"/api/tenants/[slug]/tv">) {
@@ -44,7 +45,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/tenants/[sl
         .filter((s) => !s.isMain && s.total > 0)
         .sort((a, b) => b.total - a.total)
         .slice(0, 8)
-        .map((s) => ({ id: s.id, label: `${s.tag} ${s.name}`, kwh: s.total })),
+        .map((s) => ({ id: s.id, label: meterLabel(s), kwh: s.total })),
     })),
     fetchedAt: now.toISOString(),
   };

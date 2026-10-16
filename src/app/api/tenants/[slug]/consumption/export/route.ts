@@ -5,6 +5,7 @@ import { tableToCsv } from "@/server/csv-export";
 import { authorizeTenantApi, jsonError } from "@/server/http";
 import { getSiteMonthConsumption } from "@/server/queries/billing";
 import { getTenantTopology } from "@/server/telemetry/topology";
+import { meterLabel } from "@/lib/meter-label";
 
 const params = z.object({ site: z.uuid(), month: calendarMonth });
 
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest, ctx: RouteContext<"/api/tenants/
   const dateFormat = new Intl.DateTimeFormat("pt-BR", { timeZone: data.timeZone, dateStyle: "short" });
   const headers = [
     "Data",
-    ...feeders.map((s) => `${s.tag} ${s.name} (kWh)`),
+    ...feeders.map((s) => `${meterLabel(s)} (kWh)`),
     ...(data.unmeasured ? ["Não medido (kWh)"] : []),
     data.entrance.fromMain ? "Entrada geral (kWh)" : "Total (kWh)",
   ];

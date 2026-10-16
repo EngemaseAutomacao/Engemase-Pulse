@@ -6,6 +6,7 @@ import { db } from "@/server/db";
 import { RENOTIFY_AFTER_MS, notifyAlarms } from "@/server/alarms/notify";
 import type { MeterIndex } from "./meters";
 import type { AgentSite } from "./token";
+import { plantTag } from "@/lib/meter-label";
 
 /**
  * Alarmes do gateway na nuvem. A cada envio ao vivo o gateway manda a
@@ -194,7 +195,7 @@ export async function syncClosedPainelAlarms(
         meterId: index[equipmentId] ?? null,
         source: "PAINEL" as const,
         severity: SEVERITY_BY_PRIORITY[a.prioridade?.toLowerCase() ?? ""] ?? "WARNING",
-        title: `${meter?.tag ?? equipmentId} — ${a.mensagem}`,
+        title: `${plantTag(meter?.tag) ?? meter?.name ?? equipmentId} — ${a.mensagem}`,
         message: describe(a, meter?.name ?? equipmentId, info.name),
         value: a.valor ?? null,
         startedAt: new Date(startedAt),

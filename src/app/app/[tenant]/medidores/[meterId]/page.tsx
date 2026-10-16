@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { requireTenant } from "@/server/auth/dal";
 import { hasTenantRole } from "@/server/auth/permissions";
 import { findTenantMeter } from "@/server/telemetry/service";
+import { plantTag } from "@/lib/meter-label";
 
 export const metadata: Metadata = { title: "Medidor" };
 
@@ -33,9 +34,11 @@ export default async function MeterPage({ params }: PageProps<"/app/[tenant]/med
         back={{ href: `/app/${tenant.slug}/medidores`, label: "Medidores" }}
         title={
           <>
-            <span className="mr-3 rounded-md bg-muted px-2 py-0.5 align-middle font-mono text-base text-muted-foreground">
-              {meter.tag}
-            </span>
+            {plantTag(meter.tag) && (
+              <span className="mr-3 rounded-md bg-muted px-2 py-0.5 align-middle font-mono text-base text-muted-foreground">
+                {plantTag(meter.tag)}
+              </span>
+            )}
             {meter.name}
           </>
         }

@@ -48,6 +48,7 @@ import { FIELD_BY_KEY } from "@/lib/meter-fields";
 import type { EnergyResponse, HistoryResponse } from "@/lib/telemetry-types";
 import type { EnergyPeriodId } from "@/lib/time-range";
 import { cn } from "@/lib/utils";
+import { plantTag } from "@/lib/meter-label";
 
 export type CompareSite = {
   id: string;
@@ -65,7 +66,16 @@ const SLOT_COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)"] as co
 type Selected = { id: string; slot: number };
 
 /** `label` identifica o medidor no tooltip; inclui a unidade quando a comparação tem mais de uma. */
-type Series = { key: string; tag: string; name: string; siteName: string; label: string; color: string };
+/** tag: TAG da planta (null quando é só o id do configurador); short: a TAG ou, sem ela, o nome. */
+type Series = {
+  key: string;
+  tag: string | null;
+  short: string;
+  name: string;
+  siteName: string;
+  label: string;
+  color: string;
+};
 
 type Row = { t: number } & Record<string, number>;
 
@@ -130,7 +140,8 @@ export function CompareView({
   const manySites = new Set(chosen.map((c) => c.meter.siteId)).size > 1;
   const series: Series[] = chosen.map(({ meter: m, color }) => ({
     key: m.id,
-    tag: m.tag,
+    tag: plantTag(m.tag),
+    short: plantTag(m.tag) ?? m.name,
     name: m.name,
     siteName: m.siteName,
     label: manySites ? `${m.name} · ${m.siteName}` : m.name,
@@ -168,7 +179,7 @@ export function CompareView({
   const fieldMeta = FIELD_BY_KEY.get(field);
   const historyErrors = series.flatMap((s) => {
     const error = history.data?.[s.key]?.error;
-    return error ? [`${s.tag}: ${error}`] : [];
+    return error ? [`${s.short}: ${error}`] : [];
   });
   const every = ids.map((id) => history.data?.[id]?.data?.every).find(Boolean);
   const mains = sites.flatMap((s) => s.meters.filter((m) => m.isMain).slice(0, 1));
@@ -182,7 +193,7 @@ export function CompareView({
             className="inline-flex min-h-9 max-w-full items-center gap-2 rounded-lg border bg-card py-1 pr-1 pl-3 text-sm"
           >
             <span aria-hidden className="h-1 w-4 shrink-0 rounded-full" style={{ backgroundColor: s.color }} />
-            <span className="font-mono text-xs text-muted-foreground">{s.tag}</span>
+            {s.tag && <span className="font-mono text-xs text-muted-foreground">{s.tag}</span>}
             <span className="truncate font-medium">{s.name}</span>
             {manySites && <span className="truncate text-xs text-muted-foreground">{s.siteName}</span>}
             <Button
@@ -207,7 +218,10 @@ export function CompareView({
                   <SelectLabel>{site.name}</SelectLabel>
                   {site.meters.map((m) => (
                     <SelectItem key={m.id} value={m.id} disabled={ids.includes(m.id)}>
-                      <span className="font-mono text-xs text-muted-foreground">{m.tag}</span> {m.name}
+                      {plantTag(m.tag) && (
+                        <span className="font-mono text-xs text-muted-foreground">{plantTag(m.tag)}</span>
+                      )}{" "}
+                      {m.name}
                     </SelectItem>
                   ))}
                 </SelectGroup>
@@ -470,7 +484,8 @@ export function CompareView({
                           />
                           <span className="min-w-0">
                             <span className="block truncate font-medium">
-                              <span className="font-mono text-xs text-muted-foreground">{s.tag}</span> {s.name}
+                              {s.tag && <span className="font-mono text-xs text-muted-foreground">{s.tag}</span>}{" "}
+                              {s.name}
                             </span>
                             <span className="block truncate text-xs text-muted-foreground">{s.siteName}</span>
                           </span>
@@ -544,9 +559,9 @@ function EndLabels({ rows, series, withSite }: { rows: Row[]; series: Series[]; 
             dominantBaseline="middle"
             fontSize={11}
             fill="var(--foreground)"
-            className="font-mono"
+            className={p.tag ? "font-mono" : undefined}
           >
-            {p.tag}
+            {p.short}
           </text>
           {withSite && (
             <text
@@ -632,7 +647,7 @@ function EnergyTable({
             <TableHead>Período</TableHead>
             {series.map((s) => (
               <TableHead key={s.key} className="text-right whitespace-nowrap">
-                {s.tag} (kWh)
+                {s.short} (kWh)
               </TableHead>
             ))}
           </TableRow>

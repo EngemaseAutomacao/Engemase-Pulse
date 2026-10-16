@@ -7,6 +7,7 @@ import { getCache } from "@/server/cache";
 import { db } from "@/server/db";
 import { getSiteBilling, getTariff, hourlyEnergy, monthWindow } from "@/server/queries/billing";
 import { getTenantTopology } from "@/server/telemetry/topology";
+import { meterLabel } from "@/lib/meter-label";
 
 /**
  * Metas mensais de consumo e custo: o andamento do mês contra a meta de cada
@@ -75,7 +76,7 @@ export async function getSiteTargets(tenantId: string, siteId?: string, now = ne
           scope: meterScope(meter.id),
           siteId: site.id,
           meterId: meter.id,
-          label: `${meter.tag} ${meter.name}`,
+          label: meterLabel(meter),
           detail: "Custo da energia do setor",
           kwhSoFar: kwh,
           kwhProjected: projectedKwh,

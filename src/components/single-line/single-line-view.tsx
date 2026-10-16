@@ -17,6 +17,7 @@ import type { LiveMeter } from "@/lib/telemetry-types";
 import { generatorStatusText, transferState, type TransferState } from "@/lib/transfer-switch";
 import type { GeneratorView, UtilitiesResponse } from "@/lib/utility-types";
 import { cn } from "@/lib/utils";
+import { plantTag } from "@/lib/meter-label";
 
 export type SingleLineSite = {
   id: string;
@@ -155,8 +156,8 @@ export function SingleLineView({ tenantSlug, sites }: { tenantSlug: string; site
             <>
               <Stem on={busOn} />
               <p className="max-w-md py-2 text-center text-xs text-muted-foreground">
-                Sem entrada geral marcada no gateway desta unidade. Marque o equipamento da entrada como principal para ver
-                o total e o consumo não medido.
+                Sem entrada geral marcada no gateway desta unidade. Marque o equipamento da entrada como principal para
+                ver o total e o consumo não medido.
               </p>
               <Stem on={busOn} />
             </>
@@ -238,7 +239,7 @@ function SourcesWithTransfer({
         {/* Grupo gerador */}
         <Link
           href={`/app/${tenantSlug}/gerador`}
-          className="flex flex-col items-center rounded-lg text-center transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex flex-col items-center rounded-lg text-center transition-colors hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
           <p className="flex items-center gap-1.5 text-sm font-medium">
             <span
@@ -256,14 +257,22 @@ function SourcesWithTransfer({
           <Breaker
             on={fromGenerator}
             open={gen.live?.online ? gen.breakerClosed === false : undefined}
-            label={gen.live?.online && gen.breakerClosed !== null ? (gen.breakerClosed ? "fechado" : "aberto") : undefined}
+            label={
+              gen.live?.online && gen.breakerClosed !== null ? (gen.breakerClosed ? "fechado" : "aberto") : undefined
+            }
           />
         </Link>
       </div>
       {/* Coletor das duas fontes até o QTA */}
       <div aria-hidden className="relative h-1 w-full">
-        <span className="absolute top-0 h-1 rounded-l-full" style={{ left: "calc((100% - 1.5rem) / 4)", right: "50%", ...line(fromMains) }} />
-        <span className="absolute top-0 h-1 rounded-r-full" style={{ left: "50%", right: "calc((100% - 1.5rem) / 4)", ...line(fromGenerator) }} />
+        <span
+          className="absolute top-0 h-1 rounded-l-full"
+          style={{ left: "calc((100% - 1.5rem) / 4)", right: "50%", ...line(fromMains) }}
+        />
+        <span
+          className="absolute top-0 h-1 rounded-r-full"
+          style={{ left: "50%", right: "calc((100% - 1.5rem) / 4)", ...line(fromGenerator) }}
+        />
       </div>
       <Stem on={fromMains || fromGenerator} />
       <div
@@ -385,7 +394,17 @@ function Stem({ on, dashed = false, tall = false }: { on: boolean; dashed?: bool
  * Disjuntor no padrão de diagrama unifilar: chave com um "×" no contato fixo.
  * A cor de destaque aparece com carga alta ou acima do disjuntor.
  */
-function Breaker({ on, level, label, open = false }: { on: boolean; level?: BreakerLevel; label?: string; open?: boolean }) {
+function Breaker({
+  on,
+  level,
+  label,
+  open = false,
+}: {
+  on: boolean;
+  level?: BreakerLevel;
+  label?: string;
+  open?: boolean;
+}) {
   const stroke = on ? LINE_COLOR.on : LINE_COLOR.off;
   const accent = level ? LEVEL_COLOR[level] : null;
   return (
@@ -460,7 +479,9 @@ function MainCard({ tenantSlug, meter, live }: { tenantSlug: string; meter: Mete
     >
       <div className="flex items-start justify-between gap-2">
         <p className="min-w-0 truncate font-medium">
-          <span className="mr-2 font-mono text-xs text-muted-foreground">{meter.tag}</span>
+          {plantTag(meter.tag) && (
+            <span className="mr-2 font-mono text-xs text-muted-foreground">{plantTag(meter.tag)}</span>
+          )}
           {meter.name}
         </p>
         <span className="shrink-0 text-[11px] text-muted-foreground">Entrada geral</span>
@@ -524,7 +545,7 @@ function FeederCard({
       href={`/app/${tenantSlug}/medidores/${meter.id}`}
       className="block w-full rounded-xl border bg-card p-3 transition-colors hover:border-primary/40 focus-visible:border-primary focus-visible:outline-none"
     >
-      <p className="font-mono text-[11px] text-muted-foreground">{meter.tag}</p>
+      {plantTag(meter.tag) && <p className="font-mono text-[11px] text-muted-foreground">{plantTag(meter.tag)}</p>}
       <p className="line-clamp-2 min-h-10 text-sm leading-5 font-medium">{meter.name}</p>
       {online ? (
         <>
