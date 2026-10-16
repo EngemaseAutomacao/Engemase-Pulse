@@ -13,6 +13,15 @@ test("painel mostra a unidade com os medidores do gateway e a carga do disjuntor
   await expect(page.getByText(/Disjuntor 400 A/)).toBeVisible();
 });
 
+test("consumo do dia em energia aparente (kVAh)", async ({ page }) => {
+  await page.goto(`/app/${E2E.slug}/consumo`);
+  await expect(page.getByText("Consumo do dia")).toBeVisible();
+  await page.getByRole("radio", { name: "Aparente · kVAh" }).click();
+  await expect(page.getByText("Energia aparente do dia")).toBeVisible();
+  await expect(page.getByText("kVAh", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("Não medido", { exact: true })).toHaveCount(0);
+});
+
 test("consumo do mês tem setores, custo e planilha", async ({ page }) => {
   await page.goto(`/app/${E2E.slug}/consumo`);
   await page.getByRole("radio", { name: "Mês" }).click();
@@ -40,6 +49,10 @@ test("unifilar desenha entrada, setores e não medido", async ({ page }) => {
   await expect(page.getByText("Rede da concessionária")).toBeVisible();
   await expect(page.getByText("Padaria").first()).toBeVisible();
   await expect(page.getByText("Não medido").first()).toBeVisible();
+  // unidade com grupo gerador: as duas fontes chegam ao QTA
+  await expect(page.getByText("QTA · chave de transferência")).toBeVisible();
+  await expect(page.getByText("Carga na rede")).toBeVisible();
+  await expect(page.getByRole("link", { name: /Gerador E2E/ })).toBeVisible();
 });
 
 test("comparar dois medidores", async ({ page }) => {
@@ -141,6 +154,11 @@ test("água: menu do módulo, reservatório com volume e consumo por dia", async
   await expect(page.getByText("de 10.000 L")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Consumo por dia" })).toBeVisible();
   await expect(page.getByText("Nível", { exact: true })).toBeVisible();
+  // linhas de nível e sinais do CLP, como na tela antiga do gateway
+  await expect(page.getByRole("list", { name: "Linhas de nível" }).getByText("partida da bomba")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sinais do reservatório" })).toBeVisible();
+  await expect(page.getByText("Automático", { exact: true })).toBeVisible();
+  await expect(page.getByText("Horímetro da bomba")).toBeVisible();
 });
 
 test("gerador: pronto para partir, indicadores e partidas com a falha", async ({ page }) => {
@@ -150,4 +168,10 @@ test("gerador: pronto para partir, indicadores e partidas com a falha", async ({
   await expect(page.getByText("tanque de 400 L")).toBeVisible();
   await expect(page.getByRole("cell", { name: /falha de partida/ })).toBeVisible();
   await expect(page.getByText("1 com falha")).toBeVisible();
+  // motor e anunciador de falhas
+  await expect(page.getByRole("heading", { name: "Motor e alternador" })).toBeVisible();
+  await expect(page.getByText("32 °C")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Anunciador de falhas" })).toBeVisible();
+  await expect(page.getByText("nenhuma falha ligada")).toBeVisible();
+  await expect(page.getByText("Baixa pressão do óleo")).toBeVisible();
 });

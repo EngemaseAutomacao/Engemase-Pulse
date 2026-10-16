@@ -30,6 +30,27 @@ export function formatDateTime(value: Date | string | number | null | undefined)
   return dateTimeFormatter.format(new Date(value));
 }
 
+/**
+ * Data e hora no fuso da unidade ("15/10/2026, 16:29"). No servidor (Vercel, em
+ * UTC) o formatDateTime sairia três horas adiantado para quem está no Brasil.
+ */
+export function formatDateTimeIn(
+  value: Date | string | number | null | undefined,
+  timeZone: string,
+  withSeconds = false,
+): string {
+  if (value === null || value === undefined) return "—";
+  return new Intl.DateTimeFormat("pt-BR", {
+    timeZone,
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    ...(withSeconds ? { second: "2-digit" } : {}),
+  }).format(new Date(value));
+}
+
 const relativeFormatter = new Intl.RelativeTimeFormat("pt-BR", { numeric: "auto" });
 
 /** "há 12 segundos", "há 3 horas"… */

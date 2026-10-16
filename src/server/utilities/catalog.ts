@@ -25,8 +25,8 @@ export type UtilityEquipmentRef = {
   name: string;
   tag: string | null;
   profile: string | null;
-  /** Parâmetros do gateway: capacidade_litros, capacidade_tanque_litros, potencia_nominal_kw… */
-  settings: Record<string, number | string | boolean | null>;
+  /** Parâmetros do gateway: capacidade_litros, capacidade_tanque_litros, potencia_nominal_kw… e as linhas de nível (`marcas`). */
+  settings: Record<string, unknown>;
   tagInfo: Record<string, TagInfo> | null;
 };
 

@@ -54,7 +54,7 @@ export const calendarMonth = z
 
 /** Consumo por setor de uma unidade num dia (date) ou num mês (month). */
 export const consumptionParams = z.union([
-  z.object({ site: z.uuid(), date: calendarDate }),
+  z.object({ site: z.uuid(), date: calendarDate, grandeza: z.enum(["ativa", "aparente"]).default("ativa") }),
   z.object({ site: z.uuid(), month: calendarMonth }),
 ]);
 

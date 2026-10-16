@@ -1,13 +1,14 @@
 import "server-only";
 import type { ConsumptionResponse, SectorConsumption } from "@/lib/telemetry-types";
-import { energyBucketStarts, type EnergyWindow } from "@/lib/time-range";
+import { energyBucketStarts, type EnergyQuantity, type EnergyWindow } from "@/lib/time-range";
 import { addZoned, zonedTimeToUtc } from "@/lib/tz";
 import { sourceFor, toMeterRef } from "@/server/telemetry/sources";
 import { getTenantTopology } from "@/server/telemetry/topology";
 import { TelemetryError } from "@/server/telemetry/types";
 
 /**
- * Consumo de uma unidade num dia, hora a hora, por setor. Com entrada geral
+ * Consumo de uma unidade num dia, hora a hora, por setor (energia ativa, ou a
+ * aparente em kVAh). Com entrada geral
  * cadastrada, os demais medidores são os setores (alimentadores) e o "não
  * medido" é a entrada menos a soma deles: perdas, circuitos sem medidor ou
  * medidor com defeito. Funciona com qualquer fonte de leituras.
@@ -18,6 +19,7 @@ export async function getSiteDayConsumption(
   tenantId: string,
   siteId: string,
   date: string,
+  quantity: EnergyQuantity = "ACTIVE",
 ): Promise<ConsumptionResponse | null> {
   const site = (await getTenantTopology(tenantId)).find((s) => s.id === siteId);
   if (!site) return null;
@@ -29,6 +31,7 @@ export async function getSiteDayConsumption(
     stop: addZoned("day", start, 1, site.timezone),
     interval: "1h",
     timeZone: site.timezone,
+    quantity,
   };
   const hours = energyBucketStarts(window).map((h) => h.getTime());
 
@@ -67,7 +70,9 @@ export async function getSiteDayConsumption(
   };
 
   let unmeasured: ConsumptionResponse["unmeasured"] = null;
-  if (mains.length > 0 && feeders.length > 0) {
+  // Na aparente, a entrada não é a soma dos setores (os fatores de potência diferem):
+  // o "não medido" só existe na energia ativa.
+  if (quantity === "ACTIVE" && mains.length > 0 && feeders.length > 0) {
     // Hora sem leitura de algum alimentador não tem "não medido" confiável. Diferença
     // negativa (soma dos alimentadores um pouco acima da entrada) é erro de medição: vira 0.
     const kwh = hours.map((_, i) => {
@@ -78,7 +83,18 @@ export async function getSiteDayConsumption(
     unmeasured = { kwh, total: sum(kwh) };
   }
 
-  return { siteId: site.id, date, timeZone: site.timezone, hours, sectors, entrance, unmeasured, error };
+  return {
+    siteId: site.id,
+    date,
+    quantity,
+    unit: quantity === "APPARENT" ? "kVAh" : "kWh",
+    timeZone: site.timezone,
+    hours,
+    sectors,
+    entrance,
+    unmeasured,
+    error,
+  };
 }
 
 function sum(values: (number | null)[]): number {

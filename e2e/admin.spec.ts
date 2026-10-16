@@ -7,6 +7,8 @@ test("saúde do sistema lista a unidade enviando", async ({ page }) => {
   const row = page.getByRole("row", { name: new RegExp(E2E.siteName) });
   await expect(row).toBeVisible();
   await expect(row.getByText("Enviando")).toBeVisible();
+  // endereço do gateway na VPN de manutenção (para o SSH e o configurador)
+  await expect(row.getByText("10.88.1.5")).toBeVisible();
 });
 
 test("convite: o administrador do cliente cria o acesso e a pessoa define a senha", async ({ page, browser }) => {

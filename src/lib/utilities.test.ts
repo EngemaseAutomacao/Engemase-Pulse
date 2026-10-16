@@ -1,14 +1,19 @@
 import { describe, expect, it } from "vitest";
 import {
   activeFaults,
+  annunciator,
+  belowCritical,
   generatorStats,
   kindForGroup,
   leakCheck,
+  levelMarks,
   resolveModules,
   normalizeModules,
   recentUsageRate,
   reservoirAutonomyHours,
+  trackFaultOnsets,
   waterDays,
+  waterSignals,
   waterUsage,
   type WaterDay,
   type WaterSample,
@@ -148,6 +153,77 @@ describe("gerador", () => {
     ).toEqual([{ name: "falha_bateria", label: "Bateria fraca" }]);
     expect(activeFaults({ bomba_falha: 1, sensor_falha: 0 }, "WATER")).toEqual([
       { name: "bomba_falha", label: "Falha da bomba de recalque" },
+    ]);
+  });
+});
+
+describe("anunciador do gerador", () => {
+  const tags = {
+    falha_partida: { label: "Falha de partida" },
+    falha_pressao_oleo: { label: "Baixa pressão do óleo" },
+    falha_bateria: { label: "Bateria fraca" },
+    potencia: { label: "Potência", unit: "kW" },
+  };
+
+  it("uma janela por falha do cadastro, ligada ou não, e a bateria como atenção", () => {
+    const w = annunciator({ falha_partida: 0, falha_bateria: 1 }, "GENERATOR", tags, { falha_bateria: "2026-10-10T10:00:00.000Z" });
+    expect(w.map((x) => x.name)).toEqual(["falha_partida", "falha_pressao_oleo", "falha_bateria"]);
+    expect(w.find((x) => x.name === "falha_bateria")).toMatchObject({ active: true, tone: "warning", first: true });
+    expect(w.find((x) => x.name === "falha_partida")).toMatchObject({ active: false, tone: "critical", since: null });
+  });
+
+  it("1ª falha é a ligada há mais tempo; empate fica com a ordem do cadastro", () => {
+    const since = { falha_partida: "2026-10-10T10:00:05.000Z", falha_pressao_oleo: "2026-10-10T10:00:00.000Z" };
+    const w = annunciator({ falha_partida: 1, falha_pressao_oleo: 1 }, "GENERATOR", tags, since);
+    expect(w.filter((x) => x.first).map((x) => x.name)).toEqual(["falha_pressao_oleo"]);
+    const tie = annunciator({ falha_partida: 1, falha_pressao_oleo: 1 }, "GENERATOR", tags, {});
+    expect(tie.filter((x) => x.first).map((x) => x.name)).toEqual(["falha_partida"]);
+  });
+
+  it("guarda desde quando cada falha está ligada entre uma leitura e a próxima", () => {
+    const t1 = "2026-10-10T10:00:00.000Z";
+    const t2 = "2026-10-10T10:00:10.000Z";
+    const first = trackFaultOnsets({ falha_partida: 1, potencia: 0 }, true, t1, null);
+    expect(first).toEqual({ falha_partida: t1 });
+    const second = trackFaultOnsets({ falha_partida: 1, falha_pressao_oleo: 1 }, true, t2, first);
+    expect(second).toEqual({ falha_partida: t1, falha_pressao_oleo: t2 });
+    // o alarme do gateway sobre a mesma tag dá o horário exato
+    expect(trackFaultOnsets({ falha_tensao: 1 }, true, t2, null, { falha_tensao: t1 })).toEqual({ falha_tensao: t1 });
+    // apagou: sai da lista; sem comunicação: fica como estava
+    expect(trackFaultOnsets({ falha_partida: 0 }, true, t2, first)).toEqual({});
+    expect(trackFaultOnsets({}, false, null, second)).toEqual(second);
+  });
+});
+
+describe("linhas de nível e sinais do reservatório", () => {
+  it("só as linhas válidas, de cima para baixo, com o tom da prioridade", () => {
+    const marks = levelMarks([
+      { valor: 30, rotulo: "baixo", prioridade: "media" },
+      { valor: 97, rotulo: "alto", prioridade: "media" },
+      { valor: 15, rotulo: "crítico", prioridade: "alta" },
+      { valor: 60, rotulo: "partida da bomba", prioridade: "info" },
+      { valor: 120, rotulo: "fora" },
+      { valor: 50 },
+      "lixo",
+    ]);
+    expect(marks.map((m) => [m.value, m.label, m.tone])).toEqual([
+      [97, "alto", "warning"],
+      [60, "partida da bomba", "info"],
+      [30, "baixo", "warning"],
+      [15, "crítico", "critical"],
+    ]);
+    expect(levelMarks(null)).toEqual([]);
+    expect(belowCritical(12, marks)).toBe(true);
+    expect(belowCritical(20, marks)).toBe(false);
+  });
+
+  it("boias, bomba em automático e falhas, só as que o CLP informa", () => {
+    const s = waterSignals({ bomba_ligada: 1, modo_automatico: 0, boia_baixo: 1, sensor_falha: 0, nivel: 40 });
+    expect(s.map((x) => [x.name, x.state, x.tone])).toEqual([
+      ["bomba_ligada", "Ligada", "info"],
+      ["modo_automatico", "Manual", "warning"],
+      ["boia_baixo", "Atuada", "warning"],
+      ["sensor_falha", "Normal", "ok"],
     ]);
   });
 });

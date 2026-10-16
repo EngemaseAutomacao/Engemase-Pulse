@@ -70,6 +70,7 @@ export default async function HealthPage() {
                 <TableHead className="pl-4">Cliente / unidade</TableHead>
                 <TableHead>Situação</TableHead>
                 <TableHead>Último envio</TableHead>
+                <TableHead className="hidden md:table-cell">Na VPN</TableHead>
                 <TableHead className="hidden pr-4 sm:table-cell">Versão do gateway</TableHead>
               </TableRow>
             </TableHeader>
@@ -85,6 +86,9 @@ export default async function HealthPage() {
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     <RelativeTime value={s.lastSeenAt} />
+                  </TableCell>
+                  <TableCell className="hidden font-mono text-xs text-muted-foreground md:table-cell">
+                    {s.vpnIp ?? "—"}
                   </TableCell>
                   <TableCell className="hidden pr-4 font-mono text-xs text-muted-foreground sm:table-cell">
                     {s.version ?? "—"}

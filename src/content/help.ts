@@ -194,6 +194,10 @@ export const HELP_SECTIONS: HelpSection[] = [
         kind: "p",
         text: "**Relatório do mês** abre uma página pronta para imprimir ou salvar em PDF (use Imprimir › Salvar como PDF).",
       },
+      {
+        kind: "p",
+        text: "Além do relatório de energia, há outros no mesmo formato, trocados pelas abas no topo da página: **Demanda e fator de potência** (a maior demanda de cada dia contra a contratada, os maiores picos e as horas abaixo de 0,92), **Gerador** (teste semanal, partidas, tempo pronto para partir, diesel e bateria), **Água** (consumo em m³ por dia, madrugadas com suspeita de vazamento, bomba e nível) e o **Comparativo entre unidades**. As telas Gerador, Água e Ranking também têm o botão do relatório.",
+      },
     ],
   },
   {
@@ -533,6 +537,7 @@ export const FAQ: FaqItem[] = [
     section: "fatura",
     answer: [
       "Na tela Fatura, clique em **Relatório do mês** e depois em Imprimir; no destino da impressão, escolha **Salvar como PDF**.",
+      "Os relatórios de demanda, gerador, água e o comparativo entre unidades ficam nas abas do topo da mesma página, e também nos botões das telas Fatura, Gerador, Água e Ranking.",
     ],
   },
   {

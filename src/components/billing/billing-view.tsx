@@ -5,7 +5,15 @@ import Link from "next/link";
 import useSWR from "swr";
 import { Bar, BarChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { TooltipContentProps } from "recharts";
-import { ActivityIcon, CalculatorIcon, FileTextIcon, GaugeIcon, ReceiptTextIcon, SunsetIcon, TriangleAlertIcon } from "lucide-react";
+import {
+  ActivityIcon,
+  CalculatorIcon,
+  FileTextIcon,
+  GaugeIcon,
+  ReceiptTextIcon,
+  SunsetIcon,
+  TriangleAlertIcon,
+} from "lucide-react";
 import { AXIS_TICK, ChartMessage, GRID_STROKE, TooltipBox } from "@/components/charts/chart-parts";
 import { MonthNav, localMonth } from "@/components/consumption/month-consumption";
 import { DemandNow } from "@/components/demand/demand-now";
@@ -78,6 +86,12 @@ export function BillingView({ tenantSlug, sites }: { tenantSlug: string; sites: 
             <a href={`/relatorio/${tenantSlug}?unidade=${site.id}&mes=${month}`} target="_blank" rel="noopener">
               <FileTextIcon />
               Relatório do mês
+            </a>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <a href={`/relatorio/${tenantSlug}/demanda?unidade=${site.id}&mes=${month}`} target="_blank" rel="noopener">
+              <FileTextIcon />
+              Relatório de demanda e FP
             </a>
           </Button>
         </div>

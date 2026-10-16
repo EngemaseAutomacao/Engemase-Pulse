@@ -2,21 +2,41 @@
 
 import { useState } from "react";
 import useSWR from "swr";
-import { Bar, BarChart, CartesianGrid, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import type { TooltipContentProps } from "recharts";
-import { ActivityIcon, DropletsIcon, InfoIcon, OctagonAlertIcon, TimerIcon, TriangleAlertIcon, WavesIcon } from "lucide-react";
+import {
+  ActivityIcon,
+  DropletsIcon,
+  FileTextIcon,
+  InfoIcon,
+  OctagonAlertIcon,
+  TimerIcon,
+  TriangleAlertIcon,
+  WavesIcon,
+} from "lucide-react";
 import { AXIS_TICK, ChartMessage, GRID_STROKE, TooltipBox } from "@/components/charts/chart-parts";
 import { StatTile } from "@/components/dashboard/stat-tile";
+import { Button } from "@/components/ui/button";
 import { RelativeTime } from "@/components/meters/relative-time";
 import { StatusBadge } from "@/components/meters/status-badge";
 import { EmptyState } from "@/components/shell/page";
 import { fetchJson } from "@/lib/fetcher";
 import { formatNumber } from "@/lib/format";
-import { LEAK_FACTOR, type WaterDay } from "@/lib/utilities";
+import { LEAK_FACTOR, type SignalTone, type WaterDay } from "@/lib/utilities";
 import type { UtilitiesResponse, WaterView as Water } from "@/lib/utility-types";
 import { cn } from "@/lib/utils";
 import { SitePicker, UtilitiesLoading, liveStatus } from "./shared";
-import { TankFigure } from "./tank-figure";
+import { LevelMarksLegend, TankFigure } from "./tank-figure";
 import { TrendRangePicker, UtilityTrend, type TrendRange } from "./utility-trend";
 
 const m3 = (liters: number | null | undefined, digits = 1) =>
@@ -47,7 +67,17 @@ export function WaterModuleView({ tenantSlug }: { tenantSlug: string }) {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <SitePicker sites={sites} value={site?.id ?? null} onChange={setSiteId} />
-        <TrendRangePicker value={range} onChange={setRange} />
+        <div className="flex flex-wrap items-center gap-2">
+          {site && (
+            <Button asChild variant="outline" size="sm">
+              <a href={`/relatorio/${tenantSlug}/agua?unidade=${site.id}`} target="_blank" rel="noopener">
+                <FileTextIcon />
+                Relatório do mês
+              </a>
+            </Button>
+          )}
+          <TrendRangePicker value={range} onChange={setRange} />
+        </div>
       </div>
       {!site || site.equipment.length === 0 ? (
         <EmptyState
@@ -63,6 +93,22 @@ export function WaterModuleView({ tenantSlug }: { tenantSlug: string }) {
     </div>
   );
 }
+
+const SIGNAL_TONE: Record<SignalTone, string> = {
+  critical: "border-destructive/50 bg-destructive/10",
+  warning: "border-warning/50 bg-warning/10",
+  info: "border-info/40 bg-info/10",
+  ok: "border-border",
+  muted: "border-border bg-muted/40",
+};
+
+const SIGNAL_DOT: Record<SignalTone, string> = {
+  critical: "bg-destructive",
+  warning: "bg-warning",
+  info: "bg-info",
+  ok: "bg-success",
+  muted: "bg-muted-foreground/50",
+};
 
 function TankSection({ tenantSlug, tank, range }: { tenantSlug: string; tank: Water; range: TrendRange }) {
   const status = liveStatus(tank.live);
@@ -93,13 +139,15 @@ function TankSection({ tenantSlug, tank, range }: { tenantSlug: string; tank: Wa
       )}
       {noCapacity && (
         <Notice tone="info" icon={<InfoIcon />}>
-          Informe a capacidade do reservatório (litros) no Pulse Configurador da unidade para calcular volume, consumo e autonomia.
+          Informe a capacidade do reservatório (litros) no Pulse Configurador da unidade para calcular volume, consumo e
+          autonomia.
         </Notice>
       )}
 
       <div className="grid gap-4 lg:grid-cols-[auto_minmax(0,1fr)]">
-        <div className="surface flex items-center justify-center p-4">
-          <TankFigure levelPct={tank.levelPct} label={`Nível de ${tank.name}`} low={20} />
+        <div className="flex flex-col items-center justify-center gap-3 surface p-4">
+          <TankFigure levelPct={tank.levelPct} label={`Nível de ${tank.name}`} low={20} marks={tank.marks} />
+          <LevelMarksLegend marks={tank.marks} className="w-full max-w-48" />
         </div>
         <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-3">
           <StatTile
@@ -107,7 +155,12 @@ function TankSection({ tenantSlug, tank, range }: { tenantSlug: string; tank: Wa
             value={tank.volumeL === null ? "—" : formatNumber(tank.volumeL, 0)}
             unit="L"
             icon={<DropletsIcon />}
-            detail={tank.capacityL ? `de ${formatNumber(tank.capacityL, 0)} L` : "capacidade não informada"}
+            detail={[
+              tank.capacityL ? `de ${formatNumber(tank.capacityL, 0)} L` : "capacidade não informada",
+              tank.columnM !== null ? `coluna ${formatNumber(tank.columnM, 2)} m` : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
           />
           <StatTile
             label="Consumo hoje"
@@ -147,12 +200,38 @@ function TankSection({ tenantSlug, tank, range }: { tenantSlug: string; tank: Wa
                 .join(" · ")}
             />
           )}
+          {tank.pumpHours !== null && (
+            <StatTile
+              label="Horímetro da bomba"
+              value={formatNumber(tank.pumpHours, 0)}
+              unit="h"
+              icon={<TimerIcon />}
+              detail="horas de funcionamento"
+            />
+          )}
         </div>
       </div>
 
+      {tank.signals.length > 0 && (
+        <div className="space-y-3 surface p-4">
+          <h3 className="font-semibold">Sinais do reservatório</h3>
+          <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
+            {tank.signals.map((sig) => (
+              <li key={sig.name} className={cn("rounded-lg border px-3 py-2", SIGNAL_TONE[sig.tone])}>
+                <p className="text-xs text-muted-foreground">{sig.label}</p>
+                <p className="flex items-center gap-1.5 text-sm font-medium">
+                  <span className={cn("size-2 shrink-0 rounded-full", SIGNAL_DOT[sig.tone])} aria-hidden />
+                  {sig.state}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {!noCapacity && (
         <div className="grid gap-4 lg:grid-cols-2">
-          <div className="surface space-y-3 p-4">
+          <div className="space-y-3 surface p-4">
             <ChartHeader
               title="Consumo por dia"
               note={
@@ -163,7 +242,7 @@ function TankSection({ tenantSlug, tank, range }: { tenantSlug: string; tank: Wa
             />
             <DailyChart days={tank.days} timeZone={tank.timeZone} />
           </div>
-          <div className="surface space-y-3 p-4">
+          <div className="space-y-3 surface p-4">
             <ChartHeader
               title="Madrugada (hora mais calma, 0h–5h)"
               note="Vazamento aparece aqui: fora do expediente, o consumo deveria ser sempre parecido."
@@ -173,7 +252,7 @@ function TankSection({ tenantSlug, tank, range }: { tenantSlug: string; tank: Wa
         </div>
       )}
 
-      <div className={cn("surface grid gap-6 p-4", (!tank.levelOnly || tank.pressure !== null) && "lg:grid-cols-2")}>
+      <div className={cn("grid gap-6 surface p-4", (!tank.levelOnly || tank.pressure !== null) && "lg:grid-cols-2")}>
         <UtilityTrend
           tenantSlug={tenantSlug}
           equipmentId={tank.id}
@@ -224,9 +303,10 @@ function LeakNotice({ tank }: { tank: Water }) {
   const today = tank.days.at(-1)?.day === leak.day;
   return (
     <Notice tone="warning" icon={<TriangleAlertIcon />}>
-      <strong className="font-semibold">Possível vazamento.</strong> Na madrugada {today ? "de hoje" : "de ontem"}, a hora mais
-      calma gastou {formatNumber(leak.nightMinLh, 0)} L/h; o normal desta unidade é {formatNumber(leak.baselineLh, 0)} L/h
-      (últimas {leak.nights} noites). Confira descargas, boias, torneiras e o próprio reservatório.
+      <strong className="font-semibold">Possível vazamento.</strong> Na madrugada {today ? "de hoje" : "de ontem"}, a
+      hora mais calma gastou {formatNumber(leak.nightMinLh, 0)} L/h; o normal desta unidade é{" "}
+      {formatNumber(leak.baselineLh, 0)} L/h (últimas {leak.nights} noites). Confira descargas, boias, torneiras e o
+      próprio reservatório.
     </Notice>
   );
 }
@@ -272,14 +352,32 @@ const weekday = (day: string) =>
 function DailyChart({ days, timeZone }: { days: WaterDay[]; timeZone: string }) {
   const todayKey = new Date().toLocaleDateString("sv-SE", { timeZone });
   const rows = days.map((d) => ({ ...d, m3: d.liters / 1000, today: d.day === todayKey }));
-  if (rows.length === 0) return <div className="h-48"><ChartMessage>Sem histórico ainda.</ChartMessage></div>;
+  if (rows.length === 0)
+    return (
+      <div className="h-48">
+        <ChartMessage>Sem histórico ainda.</ChartMessage>
+      </div>
+    );
   return (
     <div className="h-48">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={rows} margin={{ top: 8, right: 8, bottom: 0, left: 0 }} barCategoryGap={2}>
           <CartesianGrid stroke={GRID_STROKE} vertical={false} />
-          <XAxis dataKey="day" tickFormatter={dayLabel} tick={AXIS_TICK} axisLine={false} tickLine={false} minTickGap={12} />
-          <YAxis width={40} tick={AXIS_TICK} tickFormatter={(v: number) => formatNumber(v, 0)} axisLine={false} tickLine={false} />
+          <XAxis
+            dataKey="day"
+            tickFormatter={dayLabel}
+            tick={AXIS_TICK}
+            axisLine={false}
+            tickLine={false}
+            minTickGap={12}
+          />
+          <YAxis
+            width={40}
+            tick={AXIS_TICK}
+            tickFormatter={(v: number) => formatNumber(v, 0)}
+            axisLine={false}
+            tickLine={false}
+          />
           <Tooltip
             cursor={{ fill: "var(--muted)" }}
             content={(props: TooltipContentProps) => {
@@ -288,13 +386,19 @@ function DailyChart({ days, timeZone }: { days: WaterDay[]; timeZone: string }) 
               return (
                 <TooltipBox
                   title={`${weekday(d.day)} ${dayLabel(d.day)}${d.today ? " (até agora)" : ""}`}
-                  subtitle={d.coverage < 0.95 && !d.today ? `leituras em ${formatNumber(d.coverage * 100, 0)} % do dia` : undefined}
+                  subtitle={
+                    d.coverage < 0.95 && !d.today
+                      ? `leituras em ${formatNumber(d.coverage * 100, 0)} % do dia`
+                      : undefined
+                  }
                   rows={[
                     { key: "c", label: "Consumo", value: `${m3(d.liters)} m³`, color: "var(--chart-1)" },
                     ...(d.estimatedShare > 0.005
                       ? [{ key: "e", label: "Parte estimada", value: `${formatNumber(d.estimatedShare * 100, 0)} %` }]
                       : []),
-                    ...(d.pumpHours !== null ? [{ key: "b", label: "Bomba ligada", value: `${formatNumber(d.pumpHours, 1)} h` }] : []),
+                    ...(d.pumpHours !== null
+                      ? [{ key: "b", label: "Bomba ligada", value: `${formatNumber(d.pumpHours, 1)} h` }]
+                      : []),
                     ...(d.nightMinLh !== null
                       ? [{ key: "n", label: "Madrugada", value: `${formatNumber(d.nightMinLh, 0)} L/h` }]
                       : []),
@@ -320,15 +424,32 @@ function NightChart({ days, baseline, timeZone }: { days: WaterDay[]; baseline: 
   const limit = baseline === null ? null : baseline * LEAK_FACTOR;
   const todayKey = new Date().toLocaleDateString("sv-SE", { timeZone });
   if (rows.length === 0) {
-    return <div className="h-48"><ChartMessage>Ainda sem uma madrugada completa.</ChartMessage></div>;
+    return (
+      <div className="h-48">
+        <ChartMessage>Ainda sem uma madrugada completa.</ChartMessage>
+      </div>
+    );
   }
   return (
     <div className="h-48">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={rows} margin={{ top: 8, right: 8, bottom: 0, left: 0 }} barCategoryGap={2}>
           <CartesianGrid stroke={GRID_STROKE} vertical={false} />
-          <XAxis dataKey="day" tickFormatter={dayLabel} tick={AXIS_TICK} axisLine={false} tickLine={false} minTickGap={12} />
-          <YAxis width={40} tick={AXIS_TICK} tickFormatter={(v: number) => formatNumber(v, 0)} axisLine={false} tickLine={false} />
+          <XAxis
+            dataKey="day"
+            tickFormatter={dayLabel}
+            tick={AXIS_TICK}
+            axisLine={false}
+            tickLine={false}
+            minTickGap={12}
+          />
+          <YAxis
+            width={40}
+            tick={AXIS_TICK}
+            tickFormatter={(v: number) => formatNumber(v, 0)}
+            axisLine={false}
+            tickLine={false}
+          />
           {limit !== null && (
             <ReferenceLine
               y={limit}
@@ -348,8 +469,15 @@ function NightChart({ days, baseline, timeZone }: { days: WaterDay[]; baseline: 
                   title={`Madrugada de ${weekday(d.day)} ${dayLabel(d.day)}${d.day === todayKey ? " (hoje)" : ""}`}
                   subtitle={high ? "acima do normal da unidade" : undefined}
                   rows={[
-                    { key: "n", label: "Hora mais calma", value: `${formatNumber(d.nightMinLh, 0)} L/h`, color: high ? "var(--warning)" : "var(--chart-1)" },
-                    ...(baseline !== null ? [{ key: "b", label: "Normal da unidade", value: `${formatNumber(baseline, 0)} L/h` }] : []),
+                    {
+                      key: "n",
+                      label: "Hora mais calma",
+                      value: `${formatNumber(d.nightMinLh, 0)} L/h`,
+                      color: high ? "var(--warning)" : "var(--chart-1)",
+                    },
+                    ...(baseline !== null
+                      ? [{ key: "b", label: "Normal da unidade", value: `${formatNumber(baseline, 0)} L/h` }]
+                      : []),
                   ]}
                 />
               );

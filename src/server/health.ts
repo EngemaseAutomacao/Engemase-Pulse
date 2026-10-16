@@ -1,4 +1,5 @@
 import "server-only";
+import { agentVpn } from "@/lib/agent-vpn";
 import { getEvaluatorHealth } from "@/server/alarms/engine";
 import { SITE_OFFLINE_AFTER_MS } from "@/server/alarms/heartbeat";
 import { getCache } from "@/server/cache";
@@ -31,6 +32,8 @@ export type StoreHealth = {
   lastSeenAt: string | null;
   state: StoreState;
   version: string | null;
+  /** Endereço na VPN de manutenção, se o gateway está nela. */
+  vpnIp: string | null;
 };
 
 /** Agendador externo chamando há menos que isso = ativo (ele roda a cada 5 min). */
@@ -67,6 +70,7 @@ export async function getSystemHealth() {
       state:
         age === null ? "waiting" : age > SITE_OFFLINE_AFTER_MS ? "offline" : age > STORE_LATE_MS ? "late" : "sending",
       version: typeof info.versao === "string" ? info.versao : null,
+      vpnIp: agentVpn(s.agentInfo)?.ip ?? null,
     };
   });
 

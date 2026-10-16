@@ -8,6 +8,8 @@ import {
   CircleCheckIcon,
   CircleDashedIcon,
   CircleXIcon,
+  CogIcon,
+  FileTextIcon,
   FuelIcon,
   LoaderCircleIcon,
   OctagonAlertIcon,
@@ -17,6 +19,7 @@ import {
   ZapIcon,
 } from "lucide-react";
 import { StatTile } from "@/components/dashboard/stat-tile";
+import { Button } from "@/components/ui/button";
 import { RelativeTime } from "@/components/meters/relative-time";
 import { StatusBadge } from "@/components/meters/status-badge";
 import { EmptyState } from "@/components/shell/page";
@@ -24,10 +27,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { fetchJson } from "@/lib/fetcher";
 import { formatNumber } from "@/lib/format";
 import { DAYS_WITHOUT_RUN_ALERT, DAYS_WITHOUT_RUN_WARN } from "@/lib/utilities";
+import type { AnnunciatorWindow } from "@/lib/utilities";
 import type { GeneratorRunView, GeneratorView, UtilitiesResponse } from "@/lib/utility-types";
 import { cn } from "@/lib/utils";
 import { SitePicker, UtilitiesLoading, liveStatus } from "./shared";
-import { TankFigure } from "./tank-figure";
+import { LevelMarksLegend, TankFigure } from "./tank-figure";
 import { TrendRangePicker, UtilityTrend, type TrendRange } from "./utility-trend";
 
 /** Tela do módulo Gerador: grupos geradores de cada unidade. */
@@ -55,7 +59,17 @@ export function GeneratorModuleView({ tenantSlug }: { tenantSlug: string }) {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <SitePicker sites={sites} value={site?.id ?? null} onChange={setSiteId} />
-        <TrendRangePicker value={range} onChange={setRange} />
+        <div className="flex flex-wrap items-center gap-2">
+          {site && (
+            <Button asChild variant="outline" size="sm">
+              <a href={`/relatorio/${tenantSlug}/gerador?unidade=${site.id}`} target="_blank" rel="noopener">
+                <FileTextIcon />
+                Relatório do mês
+              </a>
+            </Button>
+          )}
+          <TrendRangePicker value={range} onChange={setRange} />
+        </div>
       </div>
       {!site || site.equipment.length === 0 ? (
         <EmptyState
@@ -72,11 +86,21 @@ export function GeneratorModuleView({ tenantSlug }: { tenantSlug: string }) {
   );
 }
 
-export type Readiness = { label: string; detail: string; tone: "ok" | "info" | "warn" | "critical" | "muted"; icon: React.ReactNode };
+export type Readiness = {
+  label: string;
+  detail: string;
+  tone: "ok" | "info" | "warn" | "critical" | "muted";
+  icon: React.ReactNode;
+};
 
 export function readinessOf(gen: GeneratorView): Readiness {
   if (!gen.live?.online) {
-    return { label: "Sem comunicação", detail: "Sem leitura recente do controlador.", tone: "muted", icon: <CircleDashedIcon /> };
+    return {
+      label: "Sem comunicação",
+      detail: "Sem leitura recente do controlador.",
+      tone: "muted",
+      icon: <CircleDashedIcon />,
+    };
   }
   if (gen.state === "Em falha" || gen.faults.length > 0) {
     return {
@@ -91,7 +115,12 @@ export function readinessOf(gen: GeneratorView): Readiness {
       gen.powerKw !== null
         ? ` · ${formatNumber(gen.powerKw, 0)} kW${gen.nominalKw ? ` de ${formatNumber(gen.nominalKw, 0)} kW` : ""}`
         : "";
-    return { label: "Em operação", detail: `${gen.state ?? "Rodando"}${power}`, tone: "info", icon: <LoaderCircleIcon /> };
+    return {
+      label: "Em operação",
+      detail: `${gen.state ?? "Rodando"}${power}`,
+      tone: "info",
+      icon: <LoaderCircleIcon />,
+    };
   }
   if (gen.ready === false) {
     return {
@@ -101,7 +130,12 @@ export function readinessOf(gen: GeneratorView): Readiness {
       icon: <TriangleAlertIcon />,
     };
   }
-  return { label: "Pronto para partir", detail: "Em automático, sem falha, com diesel e bateria.", tone: "ok", icon: <CircleCheckIcon /> };
+  return {
+    label: "Pronto para partir",
+    detail: "Em automático, sem falha, com diesel e bateria.",
+    tone: "ok",
+    icon: <CircleCheckIcon />,
+  };
 }
 
 export const READINESS_TONE = {
@@ -116,7 +150,14 @@ function GeneratorSection({ tenantSlug, gen, range }: { tenantSlug: string; gen:
   const readiness = readinessOf(gen);
   const s = gen.stats30;
   const days = gen.daysSinceRun;
-  const daysTone = days === null ? "" : days >= DAYS_WITHOUT_RUN_ALERT ? "text-destructive" : days >= DAYS_WITHOUT_RUN_WARN ? "text-warning" : "";
+  const daysTone =
+    days === null
+      ? ""
+      : days >= DAYS_WITHOUT_RUN_ALERT
+        ? "text-destructive"
+        : days >= DAYS_WITHOUT_RUN_WARN
+          ? "text-warning"
+          : "";
 
   return (
     <section aria-labelledby={`gen-${gen.id}`} className="space-y-4">
@@ -133,7 +174,12 @@ function GeneratorSection({ tenantSlug, gen, range }: { tenantSlug: string; gen:
         )}
       </div>
 
-      <div className={cn("flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl border p-4", READINESS_TONE[readiness.tone])}>
+      <div
+        className={cn(
+          "flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl border p-4",
+          READINESS_TONE[readiness.tone],
+        )}
+      >
         <div className="flex items-center gap-3 [&_svg]:size-7">
           {readiness.icon}
           <div>
@@ -150,13 +196,20 @@ function GeneratorSection({ tenantSlug, gen, range }: { tenantSlug: string; gen:
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[auto_minmax(0,1fr)]">
-        <div className="surface flex items-center justify-center p-4">
-          <TankFigure levelPct={gen.dieselPct} label="Diesel no tanque" low={30} fluid="diesel" />
+        <div className="flex flex-col items-center justify-center gap-3 surface p-4">
+          <TankFigure levelPct={gen.dieselPct} label="Diesel no tanque" low={30} marks={gen.marks} fluid="diesel" />
+          <LevelMarksLegend marks={gen.marks} className="w-full max-w-48" />
         </div>
         <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-3">
           <StatTile
             label="Diesel"
-            value={gen.dieselL !== null ? formatNumber(gen.dieselL, 0) : gen.dieselPct !== null ? formatNumber(gen.dieselPct, 0) : "—"}
+            value={
+              gen.dieselL !== null
+                ? formatNumber(gen.dieselL, 0)
+                : gen.dieselPct !== null
+                  ? formatNumber(gen.dieselPct, 0)
+                  : "—"
+            }
             unit={gen.dieselL !== null ? "L" : "%"}
             icon={<FuelIcon />}
             detail={gen.tankL ? `tanque de ${formatNumber(gen.tankL, 0)} L` : "capacidade do tanque não informada"}
@@ -166,14 +219,20 @@ function GeneratorSection({ tenantSlug, gen, range }: { tenantSlug: string; gen:
             value={gen.autonomyH === null ? "—" : formatNumber(gen.autonomyH, 1)}
             unit="h"
             icon={<TimerIcon />}
-            detail={s.litersPerHour ? `consumo medido ${formatNumber(s.litersPerHour, 0)} L/h` : "pelo consumo do cadastro"}
+            detail={
+              s.litersPerHour ? `consumo medido ${formatNumber(s.litersPerHour, 0)} L/h` : "pelo consumo do cadastro"
+            }
           />
           <StatTile
             label="Bateria"
             value={gen.batteryV === null ? "—" : formatNumber(gen.batteryV, 1)}
             unit="V"
             icon={<BatteryMediumIcon />}
-            detail={s.lastBatteryDrop !== null ? `caiu ${formatNumber(s.lastBatteryDrop, 1)} V no último arranque` : "em repouso"}
+            detail={
+              s.lastBatteryDrop !== null
+                ? `caiu ${formatNumber(s.lastBatteryDrop, 1)} V no último arranque`
+                : "em repouso"
+            }
           />
           <StatTile
             label="Última partida"
@@ -181,7 +240,11 @@ function GeneratorSection({ tenantSlug, gen, range }: { tenantSlug: string; gen:
             unit={days === 1 ? "dia" : "dias"}
             icon={<CalendarClockIcon />}
             className={daysTone}
-            detail={days !== null && days >= DAYS_WITHOUT_RUN_WARN ? "o teste semanal está atrasado" : "teste semanal recomendado"}
+            detail={
+              days !== null && days >= DAYS_WITHOUT_RUN_WARN
+                ? "o teste semanal está atrasado"
+                : "teste semanal recomendado"
+            }
           />
           <StatTile
             label="Potência"
@@ -199,10 +262,17 @@ function GeneratorSection({ tenantSlug, gen, range }: { tenantSlug: string; gen:
         </div>
       </div>
 
-      <div className="surface space-y-3 p-4">
+      <div className="grid gap-4 lg:grid-cols-2">
+        <EngineCard gen={gen} />
+        <Annunciator gen={gen} />
+      </div>
+
+      <div className="space-y-3 surface p-4">
         <div>
           <h3 className="font-semibold">Últimos 30 dias</h3>
-          <p className="text-xs text-muted-foreground">Das corridas que o configurador registrou: da partida até parar.</p>
+          <p className="text-xs text-muted-foreground">
+            Das corridas que o configurador registrou: da partida até parar.
+          </p>
         </div>
         <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
           <Indicator
@@ -216,7 +286,12 @@ function GeneratorSection({ tenantSlug, gen, range }: { tenantSlug: string; gen:
             detail={s.failedStarts ? `${s.failedStarts} com falha` : "nenhuma falha"}
             alert={s.failedStarts > 0}
           />
-          <Indicator label="Horas rodando" value={formatNumber(s.hours, 1)} detail={s.trips ? `${s.trips} desarme(s)` : "sem desarme"} alert={s.trips > 0} />
+          <Indicator
+            label="Horas rodando"
+            value={formatNumber(s.hours, 1)}
+            detail={s.trips ? `${s.trips} desarme(s)` : "sem desarme"}
+            alert={s.trips > 0}
+          />
           <Indicator label="Diesel gasto" value={`${formatNumber(s.liters, 0)} L`} />
           <Indicator label="Energia gerada" value={`${formatNumber(s.kwh, 0)} kWh`} />
           <Indicator
@@ -229,7 +304,7 @@ function GeneratorSection({ tenantSlug, gen, range }: { tenantSlug: string; gen:
 
       <RunsTable runs={gen.runs} timeZone={gen.timeZone} />
 
-      <div className="surface grid gap-6 p-4 lg:grid-cols-2">
+      <div className="grid gap-6 surface p-4 lg:grid-cols-2">
         <UtilityTrend
           tenantSlug={tenantSlug}
           equipmentId={gen.id}
@@ -258,7 +333,128 @@ function GeneratorSection({ tenantSlug, gen, range }: { tenantSlug: string; gen:
   );
 }
 
-function Indicator({ label, value, detail, alert }: { label: string; value: string; detail?: string; alert?: boolean }) {
+/** Leituras do motor e do alternador, ao vivo. */
+function EngineCard({ gen }: { gen: GeneratorView }) {
+  return (
+    <div className="space-y-3 surface p-4">
+      <div className="flex items-center gap-2">
+        <CogIcon className="size-4 text-primary" aria-hidden />
+        <h3 className="font-semibold">Motor e alternador</h3>
+      </div>
+      {!gen.live?.online ? (
+        <p className="text-sm text-muted-foreground">Sem leitura recente do controlador.</p>
+      ) : gen.engine.length === 0 ? (
+        <p className="text-sm text-muted-foreground">O controlador deste grupo não informa as leituras do motor.</p>
+      ) : (
+        <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+          {gen.engine.map((r) => (
+            <Indicator
+              key={r.name}
+              label={r.label}
+              value={`${formatNumber(r.value, r.decimals)}${r.unit ? ` ${r.unit}` : ""}`}
+            />
+          ))}
+        </dl>
+      )}
+    </div>
+  );
+}
+
+const WINDOW_TONE = {
+  critical: "border-destructive/60 bg-destructive/15 text-foreground [&_svg]:text-destructive",
+  warning: "border-warning/60 bg-warning/15 text-foreground [&_svg]:text-warning",
+} as const;
+
+/**
+ * Anunciador de falhas, como o painel do grupo: uma janela por falha que o
+ * controlador informa. A que acendeu primeiro fica marcada como 1ª falha — é a
+ * causa provável quando várias acendem juntas.
+ */
+function Annunciator({ gen }: { gen: GeneratorView }) {
+  const windows = gen.annunciator;
+  const active = windows.filter((w) => w.active);
+  const first = windows.find((w) => w.first) ?? null;
+  const at = (iso: string) =>
+    new Date(iso).toLocaleString("pt-BR", {
+      timeZone: gen.timeZone,
+      day: "2-digit",
+      month: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+  return (
+    <div className="space-y-3 surface p-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <h3 className="font-semibold">Anunciador de falhas</h3>
+        <p className="text-xs text-muted-foreground" aria-live="polite">
+          {!gen.live?.online
+            ? "sem leitura recente"
+            : active.length === 0
+              ? "nenhuma falha ligada"
+              : `${active.length} ${active.length === 1 ? "falha ligada" : "falhas ligadas"}`}
+        </p>
+      </div>
+      {first && active.length > 1 && (
+        <p className="text-sm">
+          <span className="font-medium">1ª falha:</span> {first.label}
+          {first.since && <span className="text-muted-foreground"> · desde {at(first.since)}</span>}
+        </p>
+      )}
+      {windows.length === 0 ? (
+        <p className="text-sm text-muted-foreground">O controlador deste grupo não informa as falhas uma a uma.</p>
+      ) : (
+        <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {windows.map((w) => (
+            <AnnunciatorCell key={w.name} w={w} showFirst={active.length > 1} at={at} />
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function AnnunciatorCell({
+  w,
+  showFirst,
+  at,
+}: {
+  w: AnnunciatorWindow;
+  showFirst: boolean;
+  at: (iso: string) => string;
+}) {
+  const Icon = w.tone === "critical" ? OctagonAlertIcon : TriangleAlertIcon;
+  const first = showFirst && w.first;
+  return (
+    <li
+      aria-label={`${w.label}: ${w.active ? (first ? "ligada, 1ª falha" : "ligada") : "normal"}`}
+      className={cn(
+        "flex min-h-14 flex-col justify-center gap-0.5 rounded-lg border px-2.5 py-2 text-sm",
+        w.active ? WINDOW_TONE[w.tone] : "border-border bg-muted/40 text-muted-foreground",
+        first && "ring-2 ring-destructive ring-offset-1 ring-offset-background",
+      )}
+    >
+      {first && <span className="text-[11px] font-semibold tracking-wide text-destructive uppercase">1ª falha</span>}
+      <span className={cn("flex items-start gap-1.5 leading-tight", w.active && "font-medium")}>
+        {w.active && <Icon className="mt-0.5 size-3.5 shrink-0" aria-hidden />}
+        {w.label}
+      </span>
+      {w.active && w.since && <span className="text-[11px] text-muted-foreground tabular">desde {at(w.since)}</span>}
+    </li>
+  );
+}
+
+function Indicator({
+  label,
+  value,
+  detail,
+  alert,
+}: {
+  label: string;
+  value: string;
+  detail?: string;
+  alert?: boolean;
+}) {
   return (
     <div className="space-y-0.5">
       <dt className="text-xs text-muted-foreground">{label}</dt>
@@ -290,7 +486,7 @@ const RUN_STATUS = {
 
 function RunsTable({ runs, timeZone }: { runs: GeneratorRunView[]; timeZone: string }) {
   return (
-    <div className="surface space-y-3 p-4">
+    <div className="space-y-3 surface p-4">
       <h3 className="font-semibold">Partidas</h3>
       {runs.length === 0 ? (
         <p className="text-sm text-muted-foreground">Nenhuma partida registrada nos últimos 90 dias.</p>
@@ -330,8 +526,12 @@ function RunsTable({ runs, timeZone }: { runs: GeneratorRunView[]; timeZone: str
                       </span>
                     </TableCell>
                     <TableCell className="text-right tabular">{duration(r.durationSeconds)}</TableCell>
-                    <TableCell className="text-right tabular">{r.liters ? `${formatNumber(r.liters, 0)} L` : "—"}</TableCell>
-                    <TableCell className="text-right tabular">{r.kwh ? `${formatNumber(r.kwh, 0)} kWh` : "—"}</TableCell>
+                    <TableCell className="text-right tabular">
+                      {r.liters ? `${formatNumber(r.liters, 0)} L` : "—"}
+                    </TableCell>
+                    <TableCell className="text-right tabular">
+                      {r.kwh ? `${formatNumber(r.kwh, 0)} kWh` : "—"}
+                    </TableCell>
                     <TableCell className="text-right tabular">
                       {r.batteryDrop === null ? "—" : `${formatNumber(r.batteryDrop, 1)} V`}
                     </TableCell>

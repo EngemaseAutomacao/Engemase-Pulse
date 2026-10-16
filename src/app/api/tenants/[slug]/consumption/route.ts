@@ -6,7 +6,8 @@ import { getSiteDayConsumption } from "@/server/queries/consumption";
 
 /**
  * Consumo de uma unidade por setor, no fuso da unidade: num dia (`date`, hora
- * a hora) ou num mês (`month`, dia a dia, com custo e comparações).
+ * a hora; `grandeza=aparente` para kVAh) ou num mês (`month`, dia a dia, com
+ * custo e comparações).
  */
 export async function GET(request: NextRequest, ctx: RouteContext<"/api/tenants/[slug]/consumption">) {
   const { slug } = await ctx.params;
@@ -19,7 +20,12 @@ export async function GET(request: NextRequest, ctx: RouteContext<"/api/tenants/
   const { tenant } = access.context;
   const data =
     "date" in params.data
-      ? await getSiteDayConsumption(tenant.id, params.data.site, params.data.date)
+      ? await getSiteDayConsumption(
+          tenant.id,
+          params.data.site,
+          params.data.date,
+          params.data.grandeza === "aparente" ? "APPARENT" : "ACTIVE",
+        )
       : await getSiteMonthConsumption(tenant.id, params.data.site, params.data.month);
   if (!data) return jsonError(404, "Unidade não encontrada");
   return NextResponse.json(data, { headers: NO_STORE_HEADERS });

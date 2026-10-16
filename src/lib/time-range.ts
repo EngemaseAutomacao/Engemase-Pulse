@@ -76,7 +76,17 @@ export const ENERGY_PERIOD_IDS = ENERGY_PERIODS.map((p) => p.id) as [EnergyPerio
 
 export const INTERVAL_UNIT: Record<EnergyInterval, CalendarUnit> = { "1h": "hour", "1d": "day", "1mo": "month" };
 
-export type EnergyWindow = { start: Date; stop: Date; interval: EnergyInterval; timeZone: string };
+/** Energia ativa (kWh, a padrão) ou aparente (kVAh). */
+export type EnergyQuantity = "ACTIVE" | "APPARENT";
+
+export type EnergyWindow = {
+  start: Date;
+  stop: Date;
+  interval: EnergyInterval;
+  timeZone: string;
+  /** Sem informar: energia ativa. */
+  quantity?: EnergyQuantity;
+};
 
 /** Período de consumo alinhado ao calendário local da unidade. */
 export function resolveEnergyPeriod(periodId: EnergyPeriodId, now: Date, timeZone: string): EnergyWindow {

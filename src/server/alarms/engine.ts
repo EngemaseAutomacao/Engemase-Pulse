@@ -8,6 +8,7 @@ import { statusOf } from "@/server/telemetry/service";
 import { getTenantTopology } from "@/server/telemetry/topology";
 import { RENOTIFY_AFTER_MS, notifyAlarms } from "./notify";
 import { getAlarmState, listTenantsWithRules, openKeyOf, saveAlarmState } from "./state";
+import { plantTag } from "@/lib/meter-label";
 /** Quantos clientes avaliar ao mesmo tempo. */
 const CONCURRENCY = 6;
 /** Tempo máximo de uma execução; o que sobrar fica para a próxima (em rodízio). */
@@ -120,7 +121,7 @@ export async function evaluateTenant(tenantId: string): Promise<TenantResult> {
             ruleId: rule.id,
             meterId: meter.id,
             severity: rule.severity,
-            title: `${meter.tag} — ${rule.name}`,
+            title: `${plantTag(meter.tag) ?? meter.name} — ${rule.name}`,
             message: `${describeRule(rule)}. ${evaluation.detail}. ${meter.name} · ${meter.siteName}`,
             value: evaluation.value,
           });

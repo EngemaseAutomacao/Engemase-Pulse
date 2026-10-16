@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { BreakerLoadBar } from "./breaker-load";
 import { RelativeTime } from "./relative-time";
 import { StatusBadge } from "./status-badge";
+import { plantTag } from "@/lib/meter-label";
 
 export type MeterSummary = {
   id: string;
@@ -51,9 +52,11 @@ export function MeterCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate font-medium">
-            <span className="mr-2 rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
-              {meter.tag}
-            </span>
+            {plantTag(meter.tag) && (
+              <span className="mr-2 rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
+                {plantTag(meter.tag)}
+              </span>
+            )}
             {meter.name}
           </p>
           <p className="mt-1 truncate text-xs text-muted-foreground">

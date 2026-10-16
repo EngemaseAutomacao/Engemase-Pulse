@@ -13,6 +13,7 @@ import { formatField } from "@/lib/format";
 import type { MeterSummary } from "./meter-card";
 import { RelativeTime } from "./relative-time";
 import { StatusBadge } from "./status-badge";
+import { plantTag } from "@/lib/meter-label";
 
 const PAGE_SIZE = 50;
 
@@ -61,10 +62,12 @@ export function MetersTable({ tenantSlug, meters }: { tenantSlug: string; meters
           const live = data?.meters[meter.id];
           return (
             <li key={meter.id}>
-              <Link href={`/app/${tenantSlug}/medidores/${meter.id}`} className="surface block space-y-2 p-3">
+              <Link href={`/app/${tenantSlug}/medidores/${meter.id}`} className="block space-y-2 surface p-3">
                 <div className="flex items-start justify-between gap-2">
                   <span className="min-w-0">
-                    <span className="font-mono text-xs text-muted-foreground">{meter.tag}</span>
+                    {plantTag(meter.tag) && (
+                      <span className="font-mono text-xs text-muted-foreground">{plantTag(meter.tag)}</span>
+                    )}
                     <span className="block truncate font-medium">{meter.name}</span>
                     <span className="block truncate text-xs text-muted-foreground">{meter.siteName}</span>
                   </span>
@@ -74,7 +77,7 @@ export function MetersTable({ tenantSlug, meters }: { tenantSlug: string; meters
                   {COLUMNS.map((c) => (
                     <div key={c.key} className="min-w-0">
                       <dt className="text-muted-foreground">{c.label}</dt>
-                      <dd className="tabular truncate font-medium">{formatField(c.key, live?.values[c.key])}</dd>
+                      <dd className="truncate font-medium tabular">{formatField(c.key, live?.values[c.key])}</dd>
                     </div>
                   ))}
                 </dl>
@@ -82,10 +85,12 @@ export function MetersTable({ tenantSlug, meters }: { tenantSlug: string; meters
             </li>
           );
         })}
-        {rows.length === 0 && <li className="py-6 text-center text-sm text-muted-foreground">Nenhum medidor encontrado.</li>}
+        {rows.length === 0 && (
+          <li className="py-6 text-center text-sm text-muted-foreground">Nenhum medidor encontrado.</li>
+        )}
       </ul>
 
-      <div className="surface hidden overflow-hidden md:block">
+      <div className="hidden overflow-hidden surface md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -107,7 +112,9 @@ export function MetersTable({ tenantSlug, meters }: { tenantSlug: string; meters
                 <TableRow key={meter.id}>
                   <TableCell>
                     <Link href={`/app/${tenantSlug}/medidores/${meter.id}`} className="group block">
-                      <span className="font-mono text-xs text-muted-foreground">{meter.tag}</span>
+                      {plantTag(meter.tag) && (
+                        <span className="font-mono text-xs text-muted-foreground">{plantTag(meter.tag)}</span>
+                      )}
                       <span className="block font-medium group-hover:text-primary">{meter.name}</span>
                     </Link>
                   </TableCell>
@@ -116,7 +123,7 @@ export function MetersTable({ tenantSlug, meters }: { tenantSlug: string; meters
                     <StatusBadge status={isLoading && !live ? "loading" : (live?.status ?? "no-data")} />
                   </TableCell>
                   {COLUMNS.map((c) => (
-                    <TableCell key={c.key} className="tabular text-right whitespace-nowrap">
+                    <TableCell key={c.key} className="text-right whitespace-nowrap tabular">
                       {formatField(c.key, live?.values[c.key])}
                     </TableCell>
                   ))}

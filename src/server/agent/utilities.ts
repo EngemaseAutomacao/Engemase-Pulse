@@ -2,7 +2,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 import type { Prisma } from "@/generated/prisma/client";
 import type { AgentEquipment, AgentGeneratorRun, AgentPayload } from "@/lib/agent-payload";
-import { kindForGroup, normalizeDeclared, type TagInfo, type UtilityKind } from "@/lib/utilities";
+import { isFaultTag, kindForGroup, normalizeDeclared, trackFaultOnsets, type TagInfo, type UtilityKind } from "@/lib/utilities";
 import { audit } from "@/server/audit";
 import { getCache } from "@/server/cache";
 import { db } from "@/server/db";
@@ -32,8 +32,24 @@ function tagInfoOf(e: AgentEquipment): Record<string, TagInfo> | null {
   );
 }
 
+/** Parâmetros do gateway mais as linhas de nível (em `marcas`), num JSON só. */
+function settingsOf(e: AgentEquipment): Prisma.InputJsonValue | undefined {
+  if (!e.parametros && !e.marcas?.length) return undefined;
+  const marcas = e.marcas?.map((m) => ({ valor: m.valor, rotulo: m.rotulo, prioridade: m.prioridade ?? null }));
+  return { ...(e.parametros ?? {}), ...(marcas?.length ? { marcas } : {}) } as Prisma.InputJsonValue;
+}
+
 function signatureOf(equipment: AgentEquipment[]): string {
-  const relevant = equipment.map((e) => [e.id, e.nome, e.grupo, e.tag_isa ?? null, e.perfil ?? null, e.parametros ?? null, e.tags ?? null]);
+  const relevant = equipment.map((e) => [
+    e.id,
+    e.nome,
+    e.grupo,
+    e.tag_isa ?? null,
+    e.perfil ?? null,
+    e.parametros ?? null,
+    e.marcas ?? null,
+    e.tags ?? null,
+  ]);
   return createHash("sha256").update(JSON.stringify(relevant)).digest("hex");
 }
 
@@ -77,7 +93,7 @@ async function syncEquipment(site: AgentSite, relevant: AgentEquipment[]): Promi
       name: e.nome,
       tag: e.tag_isa ?? null,
       profile: e.perfil ?? null,
-      settings: (e.parametros ?? undefined) as Prisma.InputJsonValue | undefined,
+      settings: settingsOf(e),
       tagInfo: (tagInfoOf(e) ?? undefined) as Prisma.InputJsonValue | undefined,
       sortOrder: position,
     };
@@ -104,23 +120,55 @@ async function syncEquipment(site: AgentSite, relevant: AgentEquipment[]): Promi
 }
 
 /** Leitura atual de um equipamento de água ou gerador (nomes de tag do gateway). */
-export type UtilityReading = { time: string | null; online: boolean; values: Record<string, number> };
+export type UtilityReading = {
+  time: string | null;
+  online: boolean;
+  values: Record<string, number>;
+  /** Desde quando cada falha ligada está ligada (ISO): dá a 1ª falha do anunciador. */
+  faultsSince?: Record<string, string>;
+};
 
-/** Leituras ao vivo por id do equipamento na nuvem, com o horário corrigido pelo relógio da unidade. */
+/** Algum equipamento de água ou gerador com falha ligada ou sem comunicação (aí a leitura anterior conta). */
+export function needsPreviousLive(payload: AgentPayload, index: UtilityIndex): boolean {
+  return (payload.equipamentos ?? []).some(
+    (e) => index[e.id] && (!e.online || Object.entries(e.valores).some(([name, v]) => isFaultTag(name) && (v ?? 0) >= 0.5)),
+  );
+}
+
+/**
+ * Leituras ao vivo por id do equipamento na nuvem, com o horário corrigido pelo
+ * relógio da unidade. `previous` (a leitura anterior) guarda desde quando cada
+ * falha está ligada; o alarme do gateway sobre a mesma tag, quando existe, dá o
+ * horário exato.
+ */
 export function utilityLiveReadings(
   payload: AgentPayload,
   index: UtilityIndex,
   receivedAt: number,
+  previous?: Record<string, UtilityReading> | null,
 ): Record<string, UtilityReading> {
   const skew = receivedAt - payload.ts;
+  const alarmStarts = new Map<string, Record<string, string>>();
+  for (const a of payload.alarmes ?? []) {
+    const dot = a.tag.indexOf(".");
+    if (dot <= 0) continue;
+    const [equipment, tag] = [a.tag.slice(0, dot), a.tag.slice(dot + 1)];
+    const starts = alarmStarts.get(equipment) ?? {};
+    const at = new Date(a.inicio + skew).toISOString();
+    if (!starts[tag] || at < starts[tag]) starts[tag] = at;
+    alarmStarts.set(equipment, starts);
+  }
+
   const readings: Record<string, UtilityReading> = {};
   for (const e of payload.equipamentos ?? []) {
     const ref = index[e.id];
     if (!ref) continue;
     const readAt = e.lido_em ?? (e.online ? payload.ts : null);
+    const time = readAt === null ? null : new Date(readAt + skew).toISOString();
     const values: Record<string, number> = {};
     for (const [name, value] of Object.entries(e.valores)) if (value !== null && Number.isFinite(value)) values[name] = value;
-    readings[ref.id] = { time: readAt === null ? null : new Date(readAt + skew).toISOString(), online: e.online, values };
+    const faultsSince = trackFaultOnsets(values, e.online, time, previous?.[ref.id]?.faultsSince, alarmStarts.get(e.id));
+    readings[ref.id] = { time, online: e.online, values, ...(Object.keys(faultsSince).length ? { faultsSince } : {}) };
   }
   return readings;
 }

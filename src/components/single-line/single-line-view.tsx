@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import useSWR from "swr";
 import { OctagonAlertIcon, RefreshCwIcon, TriangleAlertIcon, UtilityPoleIcon } from "lucide-react";
 import { StaleSitesNotice, staleSites } from "@/components/dashboard/stale-sites";
 import { BreakerLoadBar } from "@/components/meters/breaker-load";
@@ -10,13 +11,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useLive } from "@/hooks/use-live";
 import { breakerLoad, type BreakerLevel } from "@/lib/breaker";
+import { fetchJson } from "@/lib/fetcher";
 import { formatField, formatNumber } from "@/lib/format";
 import type { LiveMeter } from "@/lib/telemetry-types";
+import { generatorStatusText, transferState, type TransferState } from "@/lib/transfer-switch";
+import type { GeneratorView, UtilitiesResponse } from "@/lib/utility-types";
 import { cn } from "@/lib/utils";
+import { plantTag } from "@/lib/meter-label";
 
 export type SingleLineSite = {
   id: string;
   name: string;
+  /** Tem grupo gerador (módulo Gerador): a entrada mostra rede, gerador e o QTA. */
+  hasGenerator?: boolean;
   meters: { id: string; tag: string; name: string; isMain: boolean; breakerAmps: number | null }[];
 };
 
@@ -58,7 +65,22 @@ export function SingleLineView({ tenantSlug, sites }: { tenantSlug: string; site
           (mainLive.values.Total_kW ?? 0) - feeders.reduce((sum, f) => sum + (live[f.id].values.Total_kW ?? 0), 0),
         )
       : null;
-  const busOn = main ? isEnergized(mainLive) : feeders.some((f) => isEnergized(live[f.id]));
+  const { data: utilities } = useSWR<UtilitiesResponse>(
+    site.hasGenerator ? `/api/tenants/${tenantSlug}/utilities?module=gerador&site=${site.id}` : null,
+    fetchJson,
+    { refreshInterval: 10_000, keepPreviousData: true },
+  );
+  const generator =
+    (site.hasGenerator &&
+      utilities?.sites
+        .find((s) => s.id === site.id)
+        ?.equipment.find((e): e is GeneratorView => e.kind === "GENERATOR")) ||
+    null;
+  const transfer = generator
+    ? transferState(generator, mainLive?.status === "online" ? isEnergized(mainLive) : null)
+    : null;
+  const busOn =
+    (main ? isEnergized(mainLive) : feeders.some((f) => isEnergized(live[f.id]))) || transfer?.source === "generator";
 
   const columns: Column[] = [
     ...feeders.map((meter) => ({ kind: "meter" as const, meter })),
@@ -107,13 +129,17 @@ export function SingleLineView({ tenantSlug, sites }: { tenantSlug: string; site
       <section aria-label={`Diagrama unifilar — ${site.name}`} className="overflow-hidden surface p-4 sm:p-6">
         {/* Entrada: concessionária → disjuntor geral → medidor da entrada */}
         <div className="flex flex-col items-center">
-          <p className="flex items-center gap-2 text-sm text-muted-foreground">
-            <UtilityPoleIcon className="size-4" aria-hidden />
-            Rede da concessionária
-            {mainLive?.values.VLL_AVG !== undefined && (
-              <span className="text-foreground tabular">· {formatField("VLL_AVG", mainLive.values.VLL_AVG)}</span>
-            )}
-          </p>
+          {generator && transfer ? (
+            <SourcesWithTransfer tenantSlug={tenantSlug} gen={generator} transfer={transfer} mainLive={mainLive} />
+          ) : (
+            <p className="flex items-center gap-2 text-sm text-muted-foreground">
+              <UtilityPoleIcon className="size-4" aria-hidden />
+              Rede da concessionária
+              {mainLive?.values.VLL_AVG !== undefined && (
+                <span className="text-foreground tabular">· {formatField("VLL_AVG", mainLive.values.VLL_AVG)}</span>
+              )}
+            </p>
+          )}
           {main ? (
             <>
               <Breaker
@@ -130,8 +156,8 @@ export function SingleLineView({ tenantSlug, sites }: { tenantSlug: string; site
             <>
               <Stem on={busOn} />
               <p className="max-w-md py-2 text-center text-xs text-muted-foreground">
-                Sem entrada geral marcada no gateway desta unidade. Marque o equipamento da entrada como principal para ver
-                o total e o consumo não medido.
+                Sem entrada geral marcada no gateway desta unidade. Marque o equipamento da entrada como principal para
+                ver o total e o consumo não medido.
               </p>
               <Stem on={busOn} />
             </>
@@ -165,6 +191,101 @@ export function SingleLineView({ tenantSlug, sites }: { tenantSlug: string; site
 }
 
 type Column = { kind: "meter"; meter: Meter } | { kind: "unmeasured"; kw: number };
+
+// ---------------------------------------------------------------------------
+// Entrada com grupo gerador: rede e gerador chegam ao QTA (chave de transferência)
+// ---------------------------------------------------------------------------
+
+const TRANSFER_TONE = {
+  ok: "border-success/40",
+  info: "border-info/50 bg-info/10",
+  warn: "border-warning/50 bg-warning/10",
+  critical: "border-destructive/50 bg-destructive/10",
+  muted: "border-border bg-muted/40",
+} as const;
+
+function SourcesWithTransfer({
+  tenantSlug,
+  gen,
+  transfer,
+  mainLive,
+}: {
+  tenantSlug: string;
+  gen: GeneratorView;
+  transfer: TransferState;
+  mainLive: LiveMeter | undefined;
+}) {
+  const fromMains = transfer.source === "mains";
+  const fromGenerator = transfer.source === "generator";
+  const line = (on: boolean) => ({ background: on ? LINE_COLOR.on : LINE_COLOR.off, opacity: on ? 1 : 0.5 });
+
+  return (
+    <div className="flex w-full max-w-xl flex-col items-center">
+      <div className="grid w-full grid-cols-2 gap-x-6">
+        {/* Rede da concessionária */}
+        <div className="flex flex-col items-center text-center">
+          <p className="flex items-center gap-1.5 text-sm font-medium">
+            <UtilityPoleIcon className="size-4 text-muted-foreground" aria-hidden />
+            Rede da concessionária
+          </p>
+          <p className="text-xs text-muted-foreground tabular">
+            {transfer.mainsPresent === null ? "sem leitura" : transfer.mainsPresent ? "presente" : "ausente"}
+            {mainLive?.status === "online" && mainLive.values.VLL_AVG !== undefined && (
+              <> · {formatField("VLL_AVG", mainLive.values.VLL_AVG)}</>
+            )}
+          </p>
+          <Breaker on={fromMains} />
+        </div>
+        {/* Grupo gerador */}
+        <Link
+          href={`/app/${tenantSlug}/gerador`}
+          className="flex flex-col items-center rounded-lg text-center transition-colors hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+        >
+          <p className="flex items-center gap-1.5 text-sm font-medium">
+            <span
+              aria-hidden
+              className="inline-flex size-4 items-center justify-center rounded-full border border-current text-[10px] font-semibold text-muted-foreground"
+            >
+              G
+            </span>
+            {gen.name}
+          </p>
+          <p className="text-xs text-muted-foreground tabular">
+            {generatorStatusText(gen)}
+            {gen.running && gen.powerKw !== null && <> · {formatNumber(gen.powerKw, 0)} kW</>}
+          </p>
+          <Breaker
+            on={fromGenerator}
+            open={gen.live?.online ? gen.breakerClosed === false : undefined}
+            label={
+              gen.live?.online && gen.breakerClosed !== null ? (gen.breakerClosed ? "fechado" : "aberto") : undefined
+            }
+          />
+        </Link>
+      </div>
+      {/* Coletor das duas fontes até o QTA */}
+      <div aria-hidden className="relative h-1 w-full">
+        <span
+          className="absolute top-0 h-1 rounded-l-full"
+          style={{ left: "calc((100% - 1.5rem) / 4)", right: "50%", ...line(fromMains) }}
+        />
+        <span
+          className="absolute top-0 h-1 rounded-r-full"
+          style={{ left: "50%", right: "calc((100% - 1.5rem) / 4)", ...line(fromGenerator) }}
+        />
+      </div>
+      <Stem on={fromMains || fromGenerator} />
+      <div
+        role="status"
+        className={cn("w-full max-w-sm rounded-xl border-2 px-4 py-2 text-center", TRANSFER_TONE[transfer.tone])}
+      >
+        <p className="text-[11px] text-muted-foreground">QTA · chave de transferência</p>
+        <p className="font-semibold">{transfer.label}</p>
+        <p className="text-xs text-muted-foreground">{transfer.detail}</p>
+      </div>
+    </div>
+  );
+}
 
 type BusProps = {
   columns: Column[];
@@ -273,7 +394,17 @@ function Stem({ on, dashed = false, tall = false }: { on: boolean; dashed?: bool
  * Disjuntor no padrão de diagrama unifilar: chave com um "×" no contato fixo.
  * A cor de destaque aparece com carga alta ou acima do disjuntor.
  */
-function Breaker({ on, level, label }: { on: boolean; level?: BreakerLevel; label?: string }) {
+function Breaker({
+  on,
+  level,
+  label,
+  open = false,
+}: {
+  on: boolean;
+  level?: BreakerLevel;
+  label?: string;
+  open?: boolean;
+}) {
   const stroke = on ? LINE_COLOR.on : LINE_COLOR.off;
   const accent = level ? LEVEL_COLOR[level] : null;
   return (
@@ -299,12 +430,12 @@ function Breaker({ on, level, label }: { on: boolean; level?: BreakerLevel; labe
           strokeWidth="2"
           strokeDasharray={on ? undefined : "4 3"}
         />
-        {/* lâmina fechada e o × do contato fixo */}
+        {/* lâmina (fechada, ou inclinada quando aberta) e o × do contato fixo */}
         <line
           x1="12"
           y1="44"
-          x2="12"
-          y2="20"
+          x2={open ? "24" : "12"}
+          y2={open ? "24" : "20"}
           stroke={accent ?? stroke}
           strokeOpacity={on || accent ? 1 : 0.5}
           strokeWidth="2.5"
@@ -348,7 +479,9 @@ function MainCard({ tenantSlug, meter, live }: { tenantSlug: string; meter: Mete
     >
       <div className="flex items-start justify-between gap-2">
         <p className="min-w-0 truncate font-medium">
-          <span className="mr-2 font-mono text-xs text-muted-foreground">{meter.tag}</span>
+          {plantTag(meter.tag) && (
+            <span className="mr-2 font-mono text-xs text-muted-foreground">{plantTag(meter.tag)}</span>
+          )}
           {meter.name}
         </p>
         <span className="shrink-0 text-[11px] text-muted-foreground">Entrada geral</span>
@@ -412,7 +545,7 @@ function FeederCard({
       href={`/app/${tenantSlug}/medidores/${meter.id}`}
       className="block w-full rounded-xl border bg-card p-3 transition-colors hover:border-primary/40 focus-visible:border-primary focus-visible:outline-none"
     >
-      <p className="font-mono text-[11px] text-muted-foreground">{meter.tag}</p>
+      {plantTag(meter.tag) && <p className="font-mono text-[11px] text-muted-foreground">{plantTag(meter.tag)}</p>}
       <p className="line-clamp-2 min-h-10 text-sm leading-5 font-medium">{meter.name}</p>
       {online ? (
         <>

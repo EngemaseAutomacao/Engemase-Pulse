@@ -46,6 +46,7 @@
  */
 
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 
 const PRAZO_MS = 15000;
@@ -136,7 +137,8 @@ export class Nuvem {
   /**
    * @param {() => object} lerConfig  devolve a configuração atual (ela muda quando a Engenharia aplica)
    * @param {object} banco            instância de Banco (src/db.js)
-   * @param {{ versao?: string, ligacao?: LigacaoNuvem }} [info]  ligacao: o que a interface gravou
+   * @param {{ versao?: string, ligacao?: LigacaoNuvem, interfaces?: () => object }} [info]
+   *   ligacao: o que a interface gravou; interfaces: os.networkInterfaces (trocado nos testes)
    */
   constructor(lerConfig, banco, info = {}) {
     this.lerConfig = lerConfig;
@@ -259,7 +261,9 @@ export class Nuvem {
       };
       if (grupo === 'agua' || grupo === 'gerador') {
         const secao = grupo === 'agua' ? 'caixa_agua' : 'gerador';
-        linha.parametros = config[secao]?.medidor === e.id ? parametrosDe(config[secao], PARAMETROS[secao]) : null;
+        const daqui = config[secao]?.medidor === e.id;
+        linha.parametros = daqui ? parametrosDe(config[secao], PARAMETROS[secao]) : null;
+        linha.marcas = daqui ? marcasDe(config[secao].marcas) : null;
         linha.tags = (d.tags || [])
           .filter((t) => t?.nome && !t.oculto)
           .slice(0, 200)
@@ -272,6 +276,20 @@ export class Nuvem {
       }
       return linha;
     });
+  }
+
+  /**
+   * Endereço deste gateway na VPN de manutenção (interface wg0, faixa 10.88.x.x)
+   * e a porta do configurador: a administração do Pulse mostra, para o técnico
+   * abrir o SSH e o configurador pela VPN. Sem VPN, null.
+   */
+  vpn() {
+    const interfaces = (this.info.interfaces || os.networkInterfaces)();
+    const ip = (interfaces.wg0 || []).find((a) => (a.family === 'IPv4' || a.family === 4) && /^10\.88\.\d{1,3}\.\d{1,3}$/.test(a.address))?.address;
+    if (!ip) return null;
+    const config = this.lerConfig();
+    const porta = Number(config.porta_http) || 8080;
+    return { ip, porta, https: Boolean(config.seguranca?.tls) };
   }
 
   /** Módulos que esta unidade usa: os da configuração ou, sem ela, os que existem aqui. */
@@ -508,7 +526,12 @@ export class Nuvem {
     const corpo = {
       versao: 1,
       ts: Date.now(),
-      agente: { versao: this.info.versao || null, planta: this.lerConfig().planta || null, modulos: this.modulos() },
+      agente: {
+        versao: this.info.versao || null,
+        planta: this.lerConfig().planta || null,
+        modulos: this.modulos(),
+        vpn: this.vpn(),
+      },
       ...parte,
     };
     try {
@@ -559,6 +582,25 @@ function parametrosDe(secao, chaves) {
     else if (typeof v === 'boolean') saida[chave] = v;
   }
   return Object.keys(saida).length ? saida : null;
+}
+
+/**
+ * Linhas de nível do reservatório ou do tanque ("alto 97 %", "partida da bomba
+ * 60 %"), no formato que a nuvem aceita: 0–100 %, rótulo curto, no máximo 12.
+ * A nuvem antiga ignora o campo.
+ */
+function marcasDe(marcas) {
+  if (!Array.isArray(marcas)) return null;
+  const saida = marcas
+    .filter((m) => m && Number.isFinite(m.valor) && m.valor >= 0 && m.valor <= 100
+      && typeof m.rotulo === 'string' && m.rotulo.trim())
+    .slice(0, 12)
+    .map((m) => ({
+      valor: m.valor,
+      rotulo: m.rotulo.trim().slice(0, 60),
+      prioridade: typeof m.prioridade === 'string' ? m.prioridade.slice(0, 20) : null,
+    }));
+  return saida.length ? saida : null;
 }
 
 /** Só números (bits viram 0/1): a nuvem recusa o envio inteiro se vier texto. */

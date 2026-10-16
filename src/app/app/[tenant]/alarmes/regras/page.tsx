@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { describeRule } from "@/lib/alarms";
 import { requireTenant } from "@/server/auth/dal";
 import { listAlarmRules } from "@/server/queries/alarms";
+import { meterLabel } from "@/lib/meter-label";
 
 export const metadata: Metadata = { title: "Regras de alarme" };
 
@@ -53,7 +54,7 @@ export default async function AlarmRulesPage({ params }: PageProps<"/app/[tenant
                     {!rule.enabled && <Badge variant="outline">Desativada</Badge>}
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    {describeRule(rule)} · {rule.meter ? `${rule.meter.tag} — ${rule.meter.name}` : "Todos os medidores"}
+                    {describeRule(rule)} · {rule.meter ? meterLabel(rule.meter) : "Todos os medidores"}
                   </p>
                 </div>
                 {rule._count.alarms > 0 && (

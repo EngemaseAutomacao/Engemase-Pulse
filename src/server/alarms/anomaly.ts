@@ -4,6 +4,7 @@ import { formatNumber } from "@/lib/format";
 import { getCache } from "@/server/cache";
 import { db } from "@/server/db";
 import { RENOTIFY_AFTER_MS, notifyAlarms, type AlarmNotice } from "./notify";
+import { meterLabel } from "@/lib/meter-label";
 
 /**
  * Consumo fora do padrão por medidor, pelas horas fechadas que o gateway
@@ -95,7 +96,7 @@ export async function checkAnomalies(now = Date.now()): Promise<{ opened: number
         siteId: meter.site.id,
         meterId: meter.id,
         severity: "WARNING" as const,
-        title: `Consumo ${state === "high" ? "acima" : "abaixo"} do normal — ${meter.tag} ${meter.name}`,
+        title: `Consumo ${state === "high" ? "acima" : "abaixo"} do normal — ${meterLabel(meter)}`,
         message:
           state === "high"
             ? `${span}, ${formatNumber(average, 1)} kWh por hora; ${normal} (até ${formatNumber(baseline.high, 1)}). Veja se algum equipamento ficou ligado ou está com defeito.`
