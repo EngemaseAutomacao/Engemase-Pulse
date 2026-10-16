@@ -1,17 +1,20 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { KeyRoundIcon, Loader2Icon } from "lucide-react";
+import { ExternalLinkIcon, KeyRoundIcon, Loader2Icon, NetworkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CopyButton, CopyField } from "@/components/forms/copy-field";
 import { RelativeTime } from "@/components/meters/relative-time";
 import type { AgentTokenResult } from "@/app/admin/unidades/actions";
+import { configuratorUrl, type AgentVpn } from "@/lib/agent-vpn";
 
 export type AgentStatus = {
   hasToken: boolean;
   lastSeenAt: string | null;
   version: string | null;
   plant: string | null;
+  /** Endereço do gateway na VPN de manutenção (gateway que não está na VPN: null). */
+  vpn: AgentVpn | null;
 };
 
 /**
@@ -75,6 +78,8 @@ export function AgentConnection({
         </p>
       </div>
 
+      {status?.vpn && <VpnAccess vpn={status.vpn} />}
+
 
       <div className="flex flex-wrap items-center gap-3">
         <Button type="button" variant="outline" onClick={generate} disabled={pending}>
@@ -100,6 +105,32 @@ export function AgentConnection({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/** SSH e configurador do gateway pela VPN de manutenção (com o túnel do técnico ligado). */
+function VpnAccess({ vpn }: { vpn: AgentVpn }) {
+  const url = configuratorUrl(vpn);
+  return (
+    <div className="grid gap-2 rounded-lg border bg-muted/30 p-3">
+      <p className="flex items-center gap-2 text-sm font-medium">
+        <NetworkIcon className="size-4 text-muted-foreground" aria-hidden />
+        Na VPN de manutenção: <span className="font-mono">{vpn.ip}</span>
+      </p>
+      <CopyField label="SSH" value={`ssh usuario@${vpn.ip}`} />
+      <a
+        href={url}
+        target="_blank"
+        rel="noreferrer"
+        className="inline-flex items-center gap-1.5 text-sm text-primary underline-offset-4 hover:underline"
+      >
+        Abrir o Pulse Configurador ({url.replace(/\/$/, "")})
+        <ExternalLinkIcon className="size-3.5" aria-hidden />
+      </a>
+      <p className="text-xs text-muted-foreground">
+        Só abre com o túnel do WireGuard do técnico ligado. Troque <code>usuario</code> pelo usuário da placa.
+      </p>
     </div>
   );
 }

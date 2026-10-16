@@ -9,6 +9,7 @@ import { PageContainer, PageHeader } from "@/components/shell/page";
 import { Badge } from "@/components/ui/badge";
 import { getSiteForEdit, getSiteTariff } from "@/server/admin/sites";
 import { tenantOptions } from "@/server/admin/tenants";
+import { agentVpn } from "@/lib/agent-vpn";
 import { MODULE_INFO, type UtilityModule } from "@/lib/utilities";
 import { requirePlatformAdmin } from "@/server/auth/dal";
 import { removeSite, rotateAgentToken, saveSite, saveSiteTariff } from "../actions";
@@ -22,6 +23,7 @@ function agentStatus(site: { hasAgentToken: boolean; agentLastSeenAt: Date | nul
     lastSeenAt: site.agentLastSeenAt?.toISOString() ?? null,
     version: typeof info.versao === "string" ? info.versao : null,
     plant: typeof info.planta === "string" ? info.planta : null,
+    vpn: agentVpn(site.agentInfo),
   };
 }
 

@@ -98,7 +98,12 @@ function painelPayloads(now: number) {
   const live = {
     versao: 1,
     ts: now,
-    agente: { versao: "e2e", planta: "Unidade E2E", modulos: ["energia", "agua", "gerador"] },
+    agente: {
+      versao: "e2e",
+      planta: "Unidade E2E",
+      modulos: ["energia", "agua", "gerador"],
+      vpn: { ip: "10.88.1.5", porta: 8080, https: false },
+    },
     equipamentos: [
       ...equipments.map((e) => ({
         id: e.id,

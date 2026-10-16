@@ -115,6 +115,14 @@ export const agentPayloadSchema = z.object({
       planta: z.string().max(200).nullish(),
       /** Módulos que o gateway da unidade declara usar ("energia", "agua", "gerador"). */
       modulos: z.array(z.string().max(20)).max(10).nullish(),
+      /** Endereço do gateway na VPN de manutenção e a porta do configurador (só a administração vê). */
+      vpn: z
+        .object({
+          ip: z.ipv4(),
+          porta: z.number().int().min(1).max(65_535).nullish(),
+          https: z.boolean().nullish(),
+        })
+        .nullish(),
     })
     .nullish(),
   equipamentos: z.array(agentEquipmentSchema).max(200).optional(),
